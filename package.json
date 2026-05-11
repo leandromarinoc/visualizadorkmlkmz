@@ -1,0 +1,13 @@
+{
+  "name": "conversor-kmz",
+  "version": "1.0.0",
+  "description": "Função Serverless para converter KMZ em GeoJSON",
+  "dependencies": {
+    "@tmcw/togeojson": "^5.8.1",
+    "@xmldom/xmldom": "^0.8.10",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^5.4.2"
+  }
+}

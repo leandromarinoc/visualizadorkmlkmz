@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Manual Inspecao Pro</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+
+<div style="background: #ffebee; border: 3px solid #f44336; border-radius: 8px; padding: 20px; margin-bottom: 30px; text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+    <div style="color: #c62828; font-weight: bold; font-size: 14px;">
+        TODOS OS CÁLCULOS SÃO APENAS DE REFERÊNCIA PARA AJUDAR O ELETRICISTA EM CAMPO, PARA TER UMA BASE DE COMO OS EQUIPAMENTOS SE COMPORTAM E PARA MELHOR CONHECIMENTO E ENTENDIMENTO, MAS TODA E QUALQUER DÚVIDA E ATITUDE OU CÁLCULO EM CAMPO, TEM QUE SER ALINHADA E INFORMADA COM O CENTRO DE OPERAÇÕES. SEMPRE TRABALHE COM SEGURANÇA, SEMPRE SIGA AS REGRAS COM SEGURANÇA, LEMBRE-SE: SEGURANÇA É INEGOCIÁVEL.
+    </div>
+</div>
+
+<h1 style="color: #1a237e; border-bottom: 3px solid #1a237e; padding-bottom: 10px;">📘 Manual do Usuário - Inspeção Pro 3.0.0</h1>
+
+<h2 style="color: #1a237e;">Sobre o Sistema</h2>
+<p>O <b>Inspeção Pro</b> é um sistema web/PWA desenvolvido para apoiar técnicos e equipes de campo na localização e inspeção de equipamentos elétricos, chaves de manobra, rotas e pontos de poda em redes de distribuição de energia.</p>
+
+<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+    <b>🎯 Objetivos:</b> Visualização em mapa • Localização GPS • Comunicação em tempo real • Cadastro de equipamentos • Calculadoras técnicas • Relatórios
+</div>
+
+<h2 style="color: #1a237e;">🔘 Botões do Sistema</h2>
+<table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+    <tr style="background: #f5f5f5;"><td style="padding: 10px; border: 1px solid #ddd;"><b>🔄 ATUALIZAR</b></td><td style="padding: 10px; border: 1px solid #ddd;">Recarrega o sistema para atualizar para a versão mais recente</td></tr>
+    <tr><td style="padding: 10px; border: 1px solid #ddd;"><b>👁️ VISÍVEL</b></td><td style="padding: 10px; border: 1px solid #ddd;">Ativa/desativa radar de localização em tempo real</td></tr>
+    <tr style="background: #f5f5f5;"><td style="padding: 10px; border: 1px solid #ddd;"><b>⚡ ALIM</b></td><td style="padding: 10px; border: 1px solid #ddd;">Filtros de alimentadores</td></tr>
+    <tr><td style="padding: 10px; border: 1px solid #ddd;"><b>📏 VÃO</b></td><td style="padding: 10px; border: 1px solid #ddd;">Medição de distâncias no mapa</td></tr>
+    <tr style="background: #f5f5f5;"><td style="padding: 10px; border: 1px solid #ddd;"><b>📋 LISTAS</b></td><td style="padding: 10px; border: 1px solid #ddd;">Pendências de poda</td></tr>
+    <tr><td style="padding: 10px; border: 1px solid #ddd;"><b>⚙️ AJUSTES</b></td><td style="padding: 10px; border: 1px solid #ddd;">Configurações do sistema</td></tr>
+    <tr style="background: #f5f5f5;"><td style="padding: 10px; border: 1px solid #ddd;"><b>📄 ARQUIVOS</b></td><td style="padding: 10px; border: 1px solid #ddd;">Importar/exportar dados</td></tr>
+    <tr><td style="padding: 10px; border: 1px solid #ddd;"><b>✏️ MELHORIA</b></td><td style="padding: 10px; border: 1px solid #ddd;">Ferramenta de desenho</td></tr>
+    <tr style="background: #f5f5f5;"><td style="padding: 10px; border: 1px solid #ddd;"><b>🚶 S.VIEW</b></td><td style="padding: 10px; border: 1px solid #ddd;">Street View</td></tr>
+    <tr><td style="padding: 10px; border: 1px solid #ddd;"><b>🛰️ MAPA</b></td><td style="padding: 10px; border: 1px solid #ddd;">Alterna ruas/satelite</td></tr>
+    <tr style="background: #f5f5f5;"><td style="padding: 10px; border: 1px solid #ddd;"><b>🔖 VERSÃO</b></td><td style="padding: 10px; border: 1px solid #ddd;">Mostra versão atual</td></tr>
+    <tr><td style="padding: 10px; border: 1px solid #ddd;"><b>📖 DOC</b></td><td style="padding: 10px; border: 1px solid #ddd;">Este manual</td></tr>
+    <tr style="background: #e8f5e9;"><td style="padding: 10px; border: 1px solid #ddd;"><b>📍 ROTA NO APP</b></td><td style="padding: 10px; border: 1px solid #ddd;"><b>NOVO!</b> Navegação dentro do app</td></tr>
+</table>
+
+<h2 style="color: #1a237e;">📍 ROTA NO APP (NOVA)</h2>
+<p><b>Como usar:</b> Clique em um equipamento no mapa → Clique em '📍 ROTA NO APP' → Veja as instruções no painel → Clique em '🚀 INICIAR' para começar a navegar.</p>
+<ul>
+    <li>Rota seguindo as ruas (não linha reta)</li>
+    <li>Mostra distância em quilômetros</li>
+    <li>Mostra tempo estimado de chegada</li>
+    <li>Instruções passo a passo (vire à direita, vire à esquerda)</li>
+    <li>Marcador 🚗 mostra sua posição em tempo real</li>
+    <li>Linha azul brilhante no mapa mostra o caminho</li>
+    <li>Botão '✕ CANCELAR ROTA' para parar a qualquer momento</li>
+    <li>O mapa continua livre para você mover, fazer zoom, etc.</li>
+</ul>
+
+<h2 style="color: #1a237e;">⚡ Interação com Linhas de Rede (Alimentadores)</h2>
+<div style="background: #fff9c4; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #fbc02d;">
+    <p style="margin-top: 0; color: #f57f17;"><b>IMPORTANTE:</b> Para abrir as opções do alimentador, você deve <b>clicar ou tocar EXATAMENTE sobre a linha (cabo)</b> e não sobre o ícone ou número do equipamento.</p>
+    <p>Ao clicar na linha, um balão branco abrirá com as seguintes opções e informações:</p>
+    <ul>
+        <li><b>🎨 EDITAR COR:</b> Altere a cor visual do alimentador no mapa para facilitar a identificação.</li>
+        <li><b>✏️ EDITAR NOME/NÚMERO:</b> Permite modificar a identificação do alimentador (ex: mudar de AL01 para AL05).</li>
+        <li><b>📏 EXTENSÃO DA REDE:</b> O sistema mostra automaticamente o tamanho total daquele trecho em Quilômetros (KM).</li>
+        <li><b>🏞️ CLASSIFICAÇÃO DA ÁREA:</b> Informa se o trecho da rede atravessa uma área RURAL, URBANA ou se é uma rede mista.</li>
+    </ul>
+</div>
+
+<h2 style="color: #1a237e;">⚡ Calculadoras dos Balões (Popups)</h2>
+<p>Quando você clica em um equipamento no mapa, um balão branco aparece. Cada tipo de equipamento tem uma calculadora específica:</p>
+
+<div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #ff9800;">
+    <h3 style="margin-top: 0; color: #e65100;">🔧 TRANSFORMADOR (TRAFO)</h3>
+    <p><b>O que informar:</b> Potência do transformador em KVA (ex: 75, 150, 300)</p>
+    <p><b>O que a calculadora mostra:</b></p>
+    <ul>
+        <li><b>Corrente nominal:</b> Quanto de energia (amperes) o transformador trabalha normalmente</li>
+        <li><b>Corrente estimada dia/noite:</b> Quanto de energia passa durante o dia e durante a noite (horários de pico)</li>
+        <li><b>Carregamento atual:</b> Quanto o transformador está trabalhando agora em porcentagem (0% a 100%)</li>
+    </ul>
+    <p><b>Para que serve:</b> Saber se o transformador está sobrecarregado ou se ainda tem capacidade para ligar mais clientes.</p>
+</div>
+
+<div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #4caf50;">
+    <h3 style="margin-top: 0; color: #2e7d32;">🔪 CHAVE FACA (FA)</h3>
+    <p><b>O que informar:</b> Capacidade da chave em amperes e quantos clientes estão ligados nela</p>
+    <p><b>O que a calculadora mostra:</b></p>
+    <ul>
+        <li><b>Corrente nominal da chave:</b> Quanto de energia ela pode passar no máximo</li>
+        <li><b>Potência passante:</b> Quanto de energia em KVA está passando pela chave agora</li>
+        <li><b>Corrente estimada dia/noite:</b> Quanto de energia passa em horários de pico</li>
+        <li><b>Carregamento:</b> Quanto a chave está trabalhando em porcentagem</li>
+    </ul>
+    <p><b>Para que serve:</b> Verificar se a chave está trabalhando dentro da capacidade ou se está sobrecarregada.</p>
+</div>
+
+<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #2196f3;">
+    <h3 style="margin-top: 0; color: #1565c0;">⚡ CHAVE LÂMINA (FD)</h3>
+    <p><b>O que informar:</b> Capacidade da chave em amperes e quantos clientes estão ligados nela</p>
+    <p><b>O que a calculadora mostra:</b></p>
+    <ul>
+        <li><b>Corrente nominal da chave:</b> Quanto de energia ela pode passar no máximo</li>
+        <li><b>Potência passante:</b> Quanto de energia em KVA está passando pela chave agora</li>
+        <li><b>Corrente estimada dia/noite:</b> Quanto de energia passa em horários de pico</li>
+        <li><b>Carregamento:</b> Quanto a chave está trabalhando em porcentagem</li>
+    </ul>
+    <p><b>Para que serve:</b> Mesma função da chave faca, mas para chaves do tipo lâmina.</p>
+</div>
+
+<div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #f44336;">
+    <h3 style="margin-top: 0; color: #c62828;">🔴 CHAVE FUSÍVEL (FU)</h3>
+    <p><b>O que informar:</b> Quantidade de clientes ligados e qual o tamanho do elo fusível (ex: 10A, 15A, 25A)</p>
+    <p><b>O que a calculadora mostra:</b></p>
+    <ul>
+        <li><b>Capacidade do elo:</b> Quanto de energia o fusível pode passar no máximo antes de queimar</li>
+        <li><b>Potência passante:</b> Quanto de energia em KVA está passando agora</li>
+        <li><b>Corrente estimada:</b> Quanto de energia os clientes usam em média</li>
+        <li><b>Carregamento:</b> Quanto o fusível está trabalhando em porcentagem</li>
+    </ul>
+    <p><b>Para que serve:</b> Saber se o fusível está do tamanho certo - pequeno demais queima toda hora, grande demais não protege.</p>
+</div>
+
+<div style="background: #f3e5f5; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #9c27b0;">
+    <h3 style="margin-top: 0; color: #6a1b9a;">⚡ DISJUNTOR (DI)</h3>
+    <p><b>O que informar (opcional):</b> Se souber, informe a corrente que o disjuntor suporta (ex: 100A, 200A). Se não souber, o sistema calcula sozinho.</p>
+    <p><b>O que a calculadora mostra:</b></p>
+    <ul>
+        <li><b>Potência passante:</b> Quanto de energia em KVA está passando pelo disjuntor</li>
+        <li><b>Corrente estimada:</b> Quanto de energia está passando em amperes</li>
+        <li><b>Carregamento:</b> Quanto o disjuntor está trabalhando em porcentagem</li>
+        <li>Cálculos separados para dia e noite</li>
+    </ul>
+    <p><b>Importante:</b> O disjuntor também é telecomandado, então as informações reais podem ser vistas em tempo real no sistema da concessionária.</p>
+</div>
+
+<div style="background: #fce4ec; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #e91e63;">
+    <h3 style="margin-top: 0; color: #ad1457;">🟢 RELIGADOR NA (Aberto)</h3>
+    <p><b>Não tem cálculo.</b></p>
+    <p>O religador é um equipamento telecomandado (controlado à distância pelo Centro de Operações). Todas as informações dele (corrente, tensão, estado aberto/fechado) são enviadas em tempo real para o sistema.</p>
+    <p><b>O que você vê no popup:</b> Informações reais e atualizadas do equipamento, enviadas diretamente pelo sistema de telemedida.</p>
+</div>
+
+<div style="background: #fce4ec; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 5px solid #e91e63;">
+    <h3 style="margin-top: 0; color: #ad1457;">🔴 RELIGADOR NF (Fechado)</h3>
+    <p><b>Não tem cálculo.</b></p>
+    <p>O religador é um equipamento telecomandado (controlado à distância pelo Centro de Operações). Todas as informações dele (corrente, tensão, estado aberto/fechado) são enviadas em tempo real para o sistema.</p>
+    <p><b>O que você vê no popup:</b> Informações reais e atualizadas do equipamento, enviadas diretamente pelo sistema de telemedida, mesmo quando está manobrado ou fechado.</p>
+</div>
+
+<h2 style="color: #1a237e;">🎯 Funcionalidades Principais</h2>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px;">
+        <b>📡 Radar de Equipes</b><br>
+        Veja onde seus colegas estão em tempo real no mapa. Útil para coordenar trabalhos e evitar deslocamentos desnecessários.
+    </div>
+    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+        <b>💬 Chat em Tempo Real</b><br>
+        Converse com a equipe. Envie mensagens para todos ou mensagens privadas para um colega específico.
+    </div>
+    <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+        <b>📴 Mapas Offline</b><br>
+        O sistema funciona mesmo sem internet após o primeiro carregamento. Os dados ficam salvos no seu celular.
+    </div>
+    <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
+        <b>🔄 Sincronização Automática</b><br>
+        Quando voltar a ter internet, todos os dados são sincronizados automaticamente entre os dispositivos da equipe.
+    </div>
+</div>
+
+<h2 style="color: #1a237e;">💡 Dicas de Uso</h2>
+<ol>
+    <li>Sempre mantenha o GPS do celular ligado para melhor precisão</li>
+    <li>Ative o radar quando estiver trabalhando em equipe para todos se verem</li>
+    <li>Use os filtros de alimentador para focar apenas no circuito que você vai trabalhar</li>
+    <li>Salve frequentemente quando estiver cadastrando muitos equipamentos</li>
+    <li>Use as calculadoras dos balões para ter uma base dos cálculos em campo</li>
+    <li>Verifique a versão do sistema periodicamente para manter atualizado</li>
+    <li>A navegação 'ROTA NO APP' economiza dados do celular (não precisa abrir Google Maps)</li>
+    <li>Em áreas sem internet, o sistema continua funcionando normalmente</li>
+</ol>
+
+<div style="background: #ffebee; border: 3px solid #f44336; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center;">
+    <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+    <div style="color: #c62828; font-weight: bold; font-size: 14px;">
+        TODOS OS CÁLCULOS SÃO APENAS DE REFERÊNCIA PARA AJUDAR O ELETRICISTA EM CAMPO, PARA TER UMA BASE DE COMO OS EQUIPAMENTOS SE COMPORTAM E PARA MELHOR CONHECIMENTO E ENTENDIMENTO, MAS TODA E QUALQUER DÚVIDA E ATITUDE OU CÁLCULO EM CAMPO, TEM QUE SER ALINHADA E INFORMADA COM O CENTRO DE OPERAÇÕES. SEMPRE TRABALHE COM SEGURANÇA, SEMPRE SIGA AS REGRAS COM SEGURANÇA, LEMBRE-SE: SEGURANÇA É INEGOCIÁVEL.
+    </div>
+</div>
+
+<h2 style="color: #1a237e;">📞 Contato e Suporte</h2>
+<div style="background: #e8f5e9; padding: 20px; border-radius: 8px; text-align: center; border: 2px solid #4caf50;">
+    <p style="margin: 0 0 15px 0; font-size: 16px;"><b>TODA E QUALQUER DÚVIDA FAVOR ENTRAR EM CONTATO:</b></p>
+    <p style="margin: 5px 0; font-size: 14px;">
+        📧 <b>E-mail:</b> leandromarinoc@gmail.com<br>
+        📱 <b>WhatsApp:</b> (17) 99272-4973
+    </p>
+    <p style="margin: 15px 0 0 0; font-size: 12px; color: #666;">
+        Horário de atendimento: Segunda a Sexta, das 7h às 17h
+    </p>
+</div>
+
+<div style="margin-top: 40px; padding: 30px; background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%); color: white; border-radius: 8px; text-align: center;">
+    <div style="font-size: 16px; margin-bottom: 10px;">Responsável Técnico pelo Sistema</div>
+    <div style="font-size: 28px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px;">LEANDRO CORDEIRO MARINO</div>
+    <div style="font-size: 14px; opacity: 0.9;">Inspeção Pro 3.0.0</div>
+    <div style="font-size: 12px; opacity: 0.7; margin-top: 15px;">
+        Documento gerado em: 19/04/2026
+    </div>
+</div>
+
+</body>
+</html>

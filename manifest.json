@@ -1,0 +1,45 @@
+{
+  "id": "inspecao-pro-v1",
+  "name": "Inspeção Pro - Visualizador",
+  "short_name": "Inspeção Pro",
+  "description": "Visualizador offline de KML/KMZ para inspeção de redes elétricas.",
+  "start_url": "./",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#300050",
+  "orientation": "any",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/vnd.google-earth.kml+xml": [".kml"],
+        "application/vnd.google-earth.kmz": [".kmz"]
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "print1.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Interface do Mapa"
+    }
+  ]
+}
