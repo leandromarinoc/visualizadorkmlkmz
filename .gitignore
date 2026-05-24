@@ -1,0 +1,20 @@
+# Codigo-fonte legivel - NAO SUBIR PARA O REPO PUBLICO
+index.source.html
+
+# Backups locais
+*.bak
+*.backup
+*~
+
+# Sistema operacional
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Node (se usar)
+node_modules/
