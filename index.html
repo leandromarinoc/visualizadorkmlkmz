@@ -3394,9 +3394,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         td('Autor', pr.autor) +
                         td('Data registro', pr.dataRegisto) +
                         td('Observação', pr.observacao) +
-                        td('Lat / Lng (chave DE)', lat !== '—' ? lat + ' / ' + lng : null) +
-                        td('Lat / Lng (chave ATÉ)', pr.podaAteLat ? pr.podaAteLat + ' / ' + pr.podaAteLng : null) +
-                        td('Lat / Lng (GPS)', latGps !== '—' ? latGps + ' / ' + lngGps : null) +
+                        td('Coordenada (chave DE)', (lat !== '—' && lng !== '—') ? '<a href="https://www.google.com/maps?q=' + lat + ',' + lng + '" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + lat + ',' + lng + '</a>' : null) +
+                        td('Coordenada (chave ATÉ)', (pr.podaAteLat && pr.podaAteLng) ? '<a href="https://www.google.com/maps?q=' + pr.podaAteLat + ',' + pr.podaAteLng + '" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + pr.podaAteLat + ',' + pr.podaAteLng + '</a>' : null) +
+                        td('Coordenada (GPS)', (latGps !== '—' && lngGps !== '—') ? '<a href="https://www.google.com/maps?q=' + latGps + ',' + lngGps + '" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + latGps + ',' + lngGps + '</a>' : null) +
                         '</table>' +
                         (capDE && capDE.base64 ? '<div class="foto-label">🗺️ Localização — Chave DE (' + (pr.podaDeNome || '') + '):</div><img class="foto-mapa" src="' + capDE.base64 + '">' : '') +
                         (capATE && capATE.base64 ? '<div class="foto-label">🗺️ Localização — Chave ATÉ (' + (pr.podaAteNome || '') + '):</div><img class="foto-mapa" src="' + capATE.base64 + '">' : '') +
@@ -3469,9 +3469,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         campo('Autor', pr.autor) +
                         campo('Data registro', pr.dataRegisto) +
                         campo('Observação', pr.observacao) +
-                        campo('Lat / Lng (chave DE)', lat !== '—' ? lat + ' / ' + lng : null) +
-                        campo('Lat / Lng (chave ATÉ)', pr.podaAteLat ? pr.podaAteLat + ' / ' + pr.podaAteLng : null) +
-                        campo('Lat / Lng (GPS)', latGps !== '—' ? latGps + ' / ' + lngGps : null) +
+                        campo('Coordenada (chave DE)', (lat !== '—' && lng !== '—') ? '<a href="https://www.google.com/maps?q=' + lat + ',' + lng + '" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + lat + ',' + lng + '</a>' : null) +
+                        campo('Coordenada (chave ATÉ)', (pr.podaAteLat && pr.podaAteLng) ? '<a href="https://www.google.com/maps?q=' + pr.podaAteLat + ',' + pr.podaAteLng + '" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + pr.podaAteLat + ',' + pr.podaAteLng + '</a>' : null) +
+                        campo('Coordenada (GPS)', (latGps !== '—' && lngGps !== '—') ? '<a href="https://www.google.com/maps?q=' + latGps + ',' + lngGps + '" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + latGps + ',' + lngGps + '</a>' : null) +
                         '</table>' +
                         (capDE && capDE.base64 ? '<div style="font-weight:bold;color:#E65100;font-size:12px;margin-bottom:6px;margin-top:8px;">🗺️ Localização — Chave DE (' + (pr.podaDeNome || '') + '):</div><img src="' + capDE.base64 + '" style="width:100%;max-height:260px;object-fit:cover;border-radius:8px;border:2px solid #FF0000;display:block;margin-bottom:8px;">' : '') +
                         (capATE && capATE.base64 ? '<div style="font-weight:bold;color:#E65100;font-size:12px;margin-bottom:6px;">🗺️ Localização — Chave ATÉ (' + (pr.podaAteNome || '') + '):</div><img src="' + capATE.base64 + '" style="width:100%;max-height:260px;object-fit:cover;border-radius:8px;border:2px solid #FF0000;display:block;margin-bottom:8px;">' : '') +
@@ -4098,7 +4098,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
           var coordLat = relatorio.lat || 0;
           var coordLon = relatorio.lon || 0;
-          linhas.push(['Coordenada', 'Lat: ' + (relatorio.lat ? relatorio.lat.toFixed(6) : '') + '  Lon: ' + (relatorio.lon ? relatorio.lon.toFixed(6) : '')]);
+          linhas.push(['Coordenada', 'https://www.google.com/maps?q=' + (relatorio.lat ? relatorio.lat.toFixed(6) : '0') + ',' + (relatorio.lon ? relatorio.lon.toFixed(6) : '0')]);
 
           linhas.forEach(function(par){
             doc.setFont(undefined, 'bold');
@@ -4275,7 +4275,7 @@ document.addEventListener('DOMContentLoaded', function() {
           '<textarea id="podaRelChavesInput" placeholder="Ex.: CH-01, CH-02..." rows="3" style="width:100%;box-sizing:border-box;padding:10px 12px;border:2px solid #ccc;border-radius:9px;font-size:14px;outline:none;margin-bottom:12px;resize:vertical;"></textarea>' +
         '</div>' +
 
-        '<div style="font-size:12px;color:#888;margin-bottom:18px;padding:7px 10px;background:#f5f5f5;border-radius:8px;">📍 Coordenada: Lat: <span id="podaRelLatLon">' + latVal.toFixed(6) + ', ' + lonVal.toFixed(6) + '</span></div>' +
+        '<div style="font-size:12px;color:#1565C0;margin-bottom:18px;padding:7px 10px;background:#f5f5f5;border-radius:8px;">📍 Coordenada: <a id="podaRelLatLon" href="https://www.google.com/maps?q=' + latVal.toFixed(6) + ',' + lonVal.toFixed(6) + '" target="_blank" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + latVal.toFixed(6) + ',' + lonVal.toFixed(6) + '</a></div>' +
 
         '<div style="display:flex;gap:10px;">' +
           '<button id="podaRelBtnCancelar" style="flex:1;padding:13px;background:#888;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;min-height:44px;">Cancelar</button>' +
@@ -4561,6 +4561,7 @@ document.addEventListener('DOMContentLoaded', function() {
       '<div style="font-size:13px;color:#555;margin-bottom:22px;">O que deseja fazer?</div>' +
       '<button id="podaModalContinuar" style="width:100%;padding:13px;background:#28A745;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:10px;box-shadow:0 3px 10px rgba(40,167,69,0.4);">Continuar marcando poda</button>' +
       '<button id="podaModalEnviar" style="width:100%;padding:13px;background:#FF8C00;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:10px;box-shadow:0 3px 10px rgba(255,140,0,0.4);">Encerrar e enviar</button>' +
+      '<button id="podaModalSalvar" style="width:100%;padding:13px;background:#7B1FA2;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:10px;box-shadow:0 3px 10px rgba(123,31,162,0.4);">💾 Salvar</button>' +
       '<button id="podaModalExportar" style="width:100%;padding:13px;background:#1976D2;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:10px;box-shadow:0 3px 10px rgba(25,118,210,0.4);">Exportar imagem marcada para poda</button>' +
       '<button id="podaModalSair" style="width:100%;padding:13px;background:#888;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;">Sair</button>' +
       '</div>';
@@ -4578,6 +4579,97 @@ document.addEventListener('DOMContentLoaded', function() {
       fecharModal();
       compartilharArquivoPreparado();
     };
+    var salvo = false;
+    document.getElementById('podaModalSalvar').onclick = function(ev){
+      if (salvo) return;
+      ev.preventDefault && ev.preventDefault();
+      ev.stopPropagation && ev.stopPropagation();
+
+      // Validar relatorioAtual
+      var rel = relatorioAtual || {};
+      if (!rel.nome || !rel.nome.trim()) {
+        alert('Preencha o relatório rápido antes de salvar (Nome/Equipe é obrigatório).');
+        return;
+      }
+
+      salvo = true;
+
+      // Gerar imagem JPEG do mapa (mesmo fluxo de prepararArquivo, mas reduzida para economizar localStorage)
+      var m = MAP_GLOBAL();
+      var imagemDataUrl = null;
+      if (m) {
+        try {
+          m.triggerRepaint();
+          var src = m.getCanvas();
+          var dpr = window.devicePixelRatio || 1;
+          var tmpCanvas = document.createElement('canvas');
+          tmpCanvas.width = src.width;
+          tmpCanvas.height = src.height;
+          var tmpCtx = tmpCanvas.getContext('2d');
+          tmpCtx.drawImage(src, 0, 0);
+          tmpCtx.save();
+          tmpCtx.scale(dpr, dpr);
+          segmentos.forEach(function(seg){
+            try {
+              var p1px = m.project(seg.p1);
+              var p2px = m.project(seg.p2);
+              _desenharX(tmpCtx, p1px.x, p1px.y);
+              _desenharX(tmpCtx, p2px.x, p2px.y);
+              _desenharLabel(tmpCtx, (p1px.x+p2px.x)/2, (p1px.y+p2px.y)/2, seg.texto);
+            } catch(e) {}
+          });
+          tmpCtx.restore();
+          // Redimensionar para max 1280px para economizar espaço no localStorage
+          var MAX_SALVAR = 1280;
+          var outC = tmpCanvas;
+          if (tmpCanvas.width > MAX_SALVAR) {
+            var sc = MAX_SALVAR / tmpCanvas.width;
+            outC = document.createElement('canvas');
+            outC.width = Math.round(tmpCanvas.width * sc);
+            outC.height = Math.round(tmpCanvas.height * sc);
+            outC.getContext('2d').drawImage(tmpCanvas, 0, 0, outC.width, outC.height);
+          }
+          imagemDataUrl = outC.toDataURL('image/jpeg', 0.7);
+        } catch(e) {
+          alert('❌ Não foi possível capturar a imagem do mapa. Tente novamente.');
+          salvo = false;
+          return;
+        }
+      }
+
+      // Montar objeto do relatório para salvar
+      var obj = {
+        id: 'poda_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+        dataISO: new Date().toISOString(),
+        criadoEm: new Date().toISOString(),
+        nome: rel.nome || '',
+        data: rel.data || new Date().toISOString(),
+        temEndereco: rel.temEndereco || false,
+        endereco: rel.endereco || '',
+        cidade: rel.cidade || '',
+        alimentador: rel.alimentador || '',
+        temChaves: rel.temChaves || false,
+        chaves: rel.chaves || '',
+        lat: rel.lat || null,
+        lon: rel.lon || null,
+        coordenada: { lat: rel.lat || null, lng: rel.lon || null },
+        imagemJpegBase64: imagemDataUrl,
+        origem: 'salvar'
+      };
+
+      // O relatório JÁ foi salvo automaticamente quando o usuário clicou OK no relatório rápido.
+      // Aqui apenas confirmamos e fechamos. (Não gravar de novo para não duplicar.)
+
+      // Fechar modal, limpar traçado e desativar ferramenta
+      fecharModal();
+      limparTudo();
+      desativar(false);
+
+      // Toast de confirmação
+      mostrarToast("✅ Relatório salvo. Use 'Exportar relatório de podas manuais' para acessar.");
+      setTimeout(ocultarToast, 4000);
+    };
+
     var exportado = false;
     document.getElementById('podaModalExportar').onclick = function(ev){
       if (exportado) return;
@@ -4791,7 +4883,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (rel.cidade || rel.alimentador) linhas.push({ l: rel.cidade ? 'Cidade: ' + rel.cidade : '', r: rel.alimentador ? 'Alimentador: ' + rel.alimentador : '' });
             if (rel.temEndereco && rel.endereco) linhas.push({ l: 'Endereço: ' + rel.endereco, r: '' });
             if (rel.temChaves && rel.chaves) linhas.push({ l: 'Chaves de referência: ' + rel.chaves, r: '' });
-            if (rel.lat && rel.lon) linhas.push({ l: 'Coordenada: ' + Number(rel.lat).toFixed(6) + ', ' + Number(rel.lon).toFixed(6), r: '', coord: true });
+            if (rel.lat && rel.lon) linhas.push({ l: 'https://www.google.com/maps?q=' + Number(rel.lat).toFixed(6) + ',' + Number(rel.lon).toFixed(6), r: '', coord: true });
             var RODAPE_H = FOOTER_PAD * 2 + linhas.length * FOOTER_LINE_H + 22; // 22 = linha do gerado em
 
             var totalH = HEADER_H + imgH + RODAPE_H;
@@ -5501,7 +5593,7 @@ document.addEventListener('DOMContentLoaded', function() {
               if (r.temChaves && r.chaves) linhas2.push(['Chaves de referência', r.chaves]);
               var rCoordLat = r.lat || 0;
               var rCoordLon = r.lon || 0;
-              linhas2.push(['Coordenada', 'Lat: ' + rCoordLat.toFixed(6) + '  Lon: ' + rCoordLon.toFixed(6)]);
+              linhas2.push(['Coordenada', 'https://www.google.com/maps?q=' + rCoordLat.toFixed(6) + ',' + rCoordLon.toFixed(6)]);
 
               linhas2.forEach(function(par){
                 doc.setFont(undefined, 'bold');
@@ -5587,7 +5679,7 @@ document.addEventListener('DOMContentLoaded', function() {
               if (r.temEndereco && r.endereco) resumo += 'Endereço: ' + r.endereco + '\n';
               resumo += 'Alimentador: ' + (r.alimentador||'') + '\n';
               if (r.temChaves && r.chaves) resumo += 'Chaves: ' + r.chaves + '\n';
-              resumo += 'Lat: ' + (r.lat||0).toFixed(6) + '  Lon: ' + (r.lon||0).toFixed(6) + '\n\n';
+              resumo += 'https://www.google.com/maps?q=' + (r.lat||0).toFixed(6) + ',' + (r.lon||0).toFixed(6) + '\n\n';
 
               if (r.imagemJpegBase64) {
                 try {
@@ -5619,13 +5711,14 @@ document.addEventListener('DOMContentLoaded', function() {
         carregarScript('https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js', 'XLSX', function(err){
           if (err || !window.XLSX) { mostrarToast('Erro: SheetJS não carregou'); return; }
           try {
-            var cabecalho = ['ID','Criado em','Nome/Equipe','Data','Endereço','Cidade','Alimentador','Chaves de referência','Latitude','Longitude'];
+            var cabecalho = ['ID','Criado em','Nome/Equipe','Data','Endereço','Cidade','Alimentador','Chaves de referência','Coordenada'];
             var linhasXls = filtrados.map(function(r){
               var dataFmt3 = '';
               try { dataFmt3 = new Date(r.data||r.criadoEm).toLocaleString('pt-BR'); } catch(e8) { dataFmt3 = r.data||''; }
               return [r.id||'', new Date(r.criadoEm).toLocaleString('pt-BR'), r.nome||'', dataFmt3,
                 r.temEndereco ? (r.endereco||'') : '', r.cidade||'', r.alimentador||'',
-                r.temChaves ? (r.chaves||'') : '', r.lat||0, r.lon||0];
+                r.temChaves ? (r.chaves||'') : '',
+                (r.lat && r.lon) ? 'https://www.google.com/maps?q=' + Number(r.lat).toFixed(6) + ',' + Number(r.lon).toFixed(6) : ''];
             });
             var wsData = [cabecalho].concat(linhasXls);
             var wb = XLSX.utils.book_new();
