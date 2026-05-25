@@ -2780,7 +2780,7 @@ function aplicarEstiloHibrido(){selecionarEstilo('hibrido');}
 function aplicarEstiloPadrao(){selecionarEstilo('ruas');}
 document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharMenuStilo();});
 function _restaurarEstiloSalvo(){var s=localStorage.getItem('inspecao-pro-estilo-mapa');if(s==='esri-satelite')s='satelite';// [TEMP] esri desativado
-var _ep=s||'satelite';if(_ep!=='ruas'){setTimeout(function(){selecionarEstilo(_ep);},300);}else{_atualizarChecksEstilo('ruas');}}
+var _ep=s||'satelite';setTimeout(function(){selecionarEstilo(_ep);},300);}
 if(typeof map!=='undefined'&&map.loaded()){_restaurarEstiloSalvo();}else if(typeof map!=='undefined'){map.once('load',_restaurarEstiloSalvo);}else{window.addEventListener('load',function(){if(typeof map!=='undefined'){if(map.loaded())_restaurarEstiloSalvo();else map.once('load',_restaurarEstiloSalvo);}});}
 </script>
 
