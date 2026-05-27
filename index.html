@@ -2868,10 +2868,24 @@ window._comentDB={_db:null,open:function(){var self=this;if(self._db)return Prom
   }
 
   // ---- Capturar imagem do mapa (MapLibre getCanvas) ----
-  function __melhFixCapturarImagem(callback) {
+  // tracadoCoords: array de [lng, lat] — se fornecido, aplica fitBounds antes de capturar
+  function __melhFixCapturarImagem(callback, tracadoCoords) {
     try {
       var m = window.__mapPodaManual__ || window.map;
       if (!m) { callback(null); return; }
+
+      // Salvar estado atual para restaurar após captura
+      var savedCenter = m.getCenter();
+      var savedZoom = m.getZoom();
+
+      // Se temos coords do traçado, enquadrar o mapa na área correta antes de capturar
+      if (tracadoCoords && tracadoCoords.length >= 2) {
+        try {
+          var bounds = new maplibregl.LngLatBounds();
+          tracadoCoords.forEach(function(c) { bounds.extend(c); });
+          m.fitBounds(bounds, { padding: { top: 80, bottom: 80, left: 60, right: 60 }, animate: false, duration: 0 });
+        } catch(e) { console.warn('[MelhFix] fitBounds falhou', e); }
+      }
 
       // Esconder canvas da caneta para evitar duplicação (o traçado já está nos layers fixos)
       var canetaCanvas = document.getElementById('canvasCaneta');
@@ -2904,9 +2918,12 @@ window._comentDB={_db:null,open:function(){var self=this;if(self._db)return Prom
             var dataUrl = outCanvas.toDataURL('image/jpeg', 0.7);
             // Restaurar canvas da caneta
             if (canetaEraVisivel && canetaCanvas) canetaCanvas.style.display = 'block';
+            // Restaurar posição original do mapa (não perder a visão do usuário)
+            try { m.jumpTo({ center: savedCenter, zoom: savedZoom }); } catch(e) {}
             callback(dataUrl);
           } catch(e) {
             if (canetaEraVisivel && canetaCanvas) canetaCanvas.style.display = 'block';
+            try { m.jumpTo({ center: savedCenter, zoom: savedZoom }); } catch(e2) {}
             console.error('[MelhFix] captura imagem falhou', e);
             callback(null);
           }
@@ -3215,6 +3232,7 @@ window._comentDB={_db:null,open:function(){var self=this;if(self._db)return Prom
       __melhFixDesenharLayer();
 
       // Capturar imagem com os layers fixos visíveis e caneta oculta
+      // Passar tracadoCoords para que fitBounds enquadre o traçado corretamente (corrige distorção no mobile)
       __melhFixCapturarImagem(function(imgDataUrl) {
         if (imgDataUrl) {
           var listaAtual = __melhFixLer();
@@ -3226,7 +3244,7 @@ window._comentDB={_db:null,open:function(){var self=this;if(self._db)return Prom
           }
           __melhFixSalvar(listaAtual);
         }
-      });
+      }, tracadoCoords);
 
       // Fechar ferramenta MELHORIA (cancelarCaneta)
       if (typeof window.cancelarCaneta === 'function') window.cancelarCaneta();
@@ -3398,7 +3416,15 @@ window._comentDB={_db:null,open:function(){var self=this;if(self._db)return Prom
           doc.textWithLink(coordLabel, margin, y, { url: coordUrl });
           doc.setDrawColor(0, 100, 200);
           doc.line(margin, y + 1, margin + doc.getTextWidth(coordLabel), y + 1);
-          y += 20;
+          y += 14;
+          // URL em texto simples como fallback (alguns leitores PDF no Android não abrem links clicáveis)
+          doc.setFontSize(8);
+          doc.setTextColor(120, 120, 120);
+          doc.setFont('helvetica', 'normal');
+          doc.text(coordUrl, margin, y);
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(11);
+          y += 12;
 
           // Observação
           doc.setTextColor(50, 50, 50);
@@ -3502,6 +3528,37 @@ window._comentDB={_db:null,open:function(){var self=this;if(self._db)return Prom
 
   function __melhFixEnviarUmaWPP(item, fecharExportModal) {
     if (fecharExportModal) fecharExportModal();
+    // Mobile: usar Web Share API com arquivo (WhatsApp abre com imagem + texto juntos)
+    var onMobile = (typeof _isMobile !== 'undefined' && _isMobile) || /Mobi|Android|iPhone/i.test(navigator.userAgent);
+    if (onMobile && item.imagemJpegBase64 && navigator.canShare) {
+      try {
+        fetch(item.imagemJpegBase64)
+          .then(function(r) { return r.blob(); })
+          .then(function(blob) {
+            var file = new File([blob], 'melhoria-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+            if (navigator.canShare({ files: [file] })) {
+              var texto = __melhFixTextoWPP(item);
+              navigator.share({ title: 'Melhoria - Insp. Pro', text: texto, files: [file] })
+                .catch(function(e) {
+                  // Usuário cancelou ou share falhou — fallback clipboard
+                  console.warn('[MelhFix] Web Share cancelado/falhou', e);
+                  __melhFixCopiarParaClipboardEAbrirWpp(item, null);
+                });
+              return;
+            }
+            // canShare({files}) não suportado neste browser mobile — fallback
+            __melhFixCopiarParaClipboardEAbrirWpp(item, null);
+          })
+          .catch(function(e) {
+            console.warn('[MelhFix] fetch imagem para share falhou', e);
+            __melhFixCopiarParaClipboardEAbrirWpp(item, null);
+          });
+        return; // aguardar a promise acima
+      } catch(e) {
+        console.warn('[MelhFix] Web Share setup falhou', e);
+      }
+    }
+    // Desktop / fallback: clipboard + abrir WhatsApp Web
     __melhFixCopiarParaClipboardEAbrirWpp(item, null);
   }
 
