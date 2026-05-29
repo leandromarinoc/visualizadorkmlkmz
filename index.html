@@ -2907,23 +2907,49 @@ function verificarPeriodoTeste() {
         if (btn && !isIOS) {
             btn.addEventListener('click', async () => {
                 if (typeof deferredPrompt !== 'undefined' && deferredPrompt) {
+                    // Mobile: exibe overlay de progresso antes de chamar prompt()
+                    var _isMobileInstall = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    if (_isMobileInstall && typeof __pwaInstallProgressShow === 'function') {
+                        __pwaInstallProgressShow();
+                    }
                     // Chamar prompt() IMEDIATAMENTE — sem await antes dele
                     try {
                         deferredPrompt.prompt();
                         const { outcome } = await deferredPrompt.userChoice;
-                        if (outcome === 'accepted') {
-                            deferredPrompt = null;
-                            localStorage.setItem('appInstaladaPWA', 'true');
-                            localStorage.setItem('app_status_liberado', 'true');
-                            var pw = document.getElementById('paywallModalOverlay');
-                            var il = document.getElementById('installLockOverlay');
-                            if (pw) pw.style.setProperty('display', 'none', 'important');
-                            if (il) il.style.setProperty('display', 'none', 'important');
-                            // Sem overlay fullscreen — appinstalled já exibe toast
+                        if (outcome === 'dismissed') {
+                            // Usuário cancelou — fecha overlay de progresso
+                            if (_isMobileInstall && typeof __pwaInstallHide === 'function') {
+                                __pwaInstallHide();
+                            }
+                            return;
                         }
-                        // outcome === 'dismissed': usuário cancelou, não faz nada
+                        // outcome === 'accepted': mantém overlay visível, aguarda appinstalled
+                        deferredPrompt = null;
+                        localStorage.setItem('appInstaladaPWA', 'true');
+                        localStorage.setItem('app_status_liberado', 'true');
+                        var pw = document.getElementById('paywallModalOverlay');
+                        var il = document.getElementById('installLockOverlay');
+                        if (pw) pw.style.setProperty('display', 'none', 'important');
+                        if (il) il.style.setProperty('display', 'none', 'important');
+                        // Em mobile: arma timeout de segurança (60s)
+                        if (_isMobileInstall) {
+                            window.__pwaInstallTimeout = setTimeout(function() {
+                                if (typeof __pwaInstallHide === 'function') __pwaInstallHide();
+                                var errOverlay = document.createElement('div');
+                                errOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:1000000;display:flex;align-items:center;justify-content:center;';
+                                errOverlay.innerHTML = '<div style="background:rgba(20,20,35,0.98);border-radius:20px;padding:32px 24px;max-width:300px;width:88%;text-align:center;">'
+                                    + '<p style="color:#fff;font-size:20px;font-weight:900;margin:0 0 10px 0;">❌ Algo deu errado.</p>'
+                                    + '<p style="color:#b0b0c8;font-size:14px;margin:0 0 20px 0;">A instalação demorou demais. Tente recarregar a página e instalar novamente.</p>'
+                                    + '<button onclick="location.reload()" style="background:linear-gradient(90deg,#43e97b,#38f9d7);color:#111;border:none;border-radius:10px;padding:12px 28px;font-size:16px;font-weight:800;cursor:pointer;">Recarregar</button>'
+                                    + '</div>';
+                                document.body.appendChild(errOverlay);
+                            }, 60000);
+                        }
                     } catch(promptErr) {
-                        // Erro no prompt() → oferecer reload (com limite de 1 reload por sessão)
+                        // Erro no prompt() — fecha overlay e oferece reload
+                        if (_isMobileInstall && typeof __pwaInstallHide === 'function') {
+                            __pwaInstallHide();
+                        }
                         var _reloads = parseInt(sessionStorage.getItem('_pwaInstallReloads') || '0', 10);
                         if (_reloads < 1) {
                             var ok = confirm('Não foi possível abrir o instalador.\n\nPara instalar, vamos recarregar a página. Continuar?');
@@ -12017,6 +12043,89 @@ function verificarCidadeEEstado(lng, lat) {
     } catch(e) {}
   }
 
+  // ── PWA Install Progress Overlay (mobile only) ──────────────────────────────
+  window.__pwaInstallTimeout = null;
+
+  function __pwaInstallProgressShow() {
+    try {
+      var existing = document.getElementById('__pwaInstallProgressOverlay');
+      if (existing) existing.remove();
+      var style = document.createElement('style');
+      style.id = '__pwaInstallStyles';
+      style.textContent = [
+        '@keyframes __pwaPulseGlow {',
+        '  0%   { box-shadow: 0 0 0 0 rgba(67,233,123,0.5); transform: scale(1); }',
+        '  50%  { box-shadow: 0 0 0 18px rgba(67,233,123,0.15); transform: scale(1.05); }',
+        '  100% { box-shadow: 0 0 0 0 rgba(67,233,123,0); transform: scale(1); }',
+        '}',
+        '@keyframes __pwaProgressBar {',
+        '  0%   { width: 0%;  margin-left: 0%; }',
+        '  50%  { width: 60%; margin-left: 20%; }',
+        '  100% { width: 0%;  margin-left: 100%; }',
+        '}',
+        '@keyframes __pwaCheckPop {',
+        '  0%   { transform: scale(0.3); opacity: 0; }',
+        '  70%  { transform: scale(1.15); opacity: 1; }',
+        '  100% { transform: scale(1); opacity: 1; }',
+        '}'
+      ].join('\n');
+      if (!document.getElementById('__pwaInstallStyles')) {
+        document.head.appendChild(style);
+      }
+      var overlay = document.createElement('div');
+      overlay.id = '__pwaInstallProgressOverlay';
+      overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);z-index:1000000;display:flex;align-items:center;justify-content:center;';
+      var manifestIcon = '';
+      try {
+        var linkIcon = document.querySelector('link[rel="apple-touch-icon"], link[rel="icon"][sizes="192x192"], link[rel="icon"][sizes="512x512"]');
+        if (linkIcon) manifestIcon = linkIcon.href;
+      } catch(e2) {}
+      var iconHtml = manifestIcon
+        ? '<img src="' + manifestIcon + '" style="width:80px;height:80px;border-radius:18px;animation:__pwaPulseGlow 1.8s ease-in-out infinite;object-fit:cover;" alt="App icon">'
+        : '<div style="width:80px;height:80px;border-radius:18px;background:linear-gradient(135deg,#43e97b,#38f9d7);animation:__pwaPulseGlow 1.8s ease-in-out infinite;display:flex;align-items:center;justify-content:center;font-size:36px;">📲</div>';
+      overlay.innerHTML = '<div style="background:rgba(20,20,35,0.98);border-radius:20px;padding:36px 28px;max-width:320px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.6);">'
+        + '<div style="display:flex;justify-content:center;margin-bottom:20px;" id="__pwaIconArea">' + iconHtml + '</div>'
+        + '<div id="__pwaProgressContent">'
+        + '<p style="color:#fff;font-size:20px;font-weight:900;margin:0 0 8px 0;">Instalando Inspeção Pro...</p>'
+        + '<p style="color:#b0b0c8;font-size:14px;margin:0 0 20px 0;">Aguarde enquanto preparamos o app no seu celular.</p>'
+        + '<div style="width:100%;height:8px;background:rgba(255,255,255,0.12);border-radius:4px;overflow:hidden;margin-bottom:16px;">'
+        + '<div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#43e97b,#38f9d7);animation:__pwaProgressBar 1.8s ease-in-out infinite;"></div>'
+        + '</div>'
+        + '<p style="color:#888;font-size:12px;margin:0;">Não feche esta página.</p>'
+        + '</div>'
+        + '<div id="__pwaSuccessContent" style="display:none;">'
+        + '<div id="__pwaCheckIcon" style="font-size:60px;animation:__pwaCheckPop 0.45s cubic-bezier(.36,1.5,.5,1) forwards;">✅</div>'
+        + '<p style="color:#fff;font-size:22px;font-weight:900;margin:12px 0 10px 0;">Aplicativo instalado!</p>'
+        + '<p style="color:#d0d0e0;font-size:14px;line-height:1.6;margin:0 0 16px 0;">Verifique na sua tela inicial ou onde ficam seus aplicativos instalados por último.</p>'
+        + '<p style="color:#666;font-size:11px;margin:0;">Pode fechar este navegador agora.</p>'
+        + '</div>'
+        + '</div>';
+      document.body.appendChild(overlay);
+    } catch(e) {}
+  }
+
+  function __pwaInstallSuccessShow() {
+    try {
+      var overlay = document.getElementById('__pwaInstallProgressOverlay');
+      if (!overlay) { __pwaInstallProgressShow(); overlay = document.getElementById('__pwaInstallProgressOverlay'); }
+      if (!overlay) return;
+      var progressContent = document.getElementById('__pwaProgressContent');
+      var successContent  = document.getElementById('__pwaSuccessContent');
+      var iconArea        = document.getElementById('__pwaIconArea');
+      if (progressContent) progressContent.style.display = 'none';
+      if (successContent)  { successContent.style.display = 'block'; }
+      if (iconArea) iconArea.style.display = 'none';
+    } catch(e) {}
+  }
+
+  function __pwaInstallHide() {
+    try {
+      var el = document.getElementById('__pwaInstallProgressOverlay');
+      if (el) el.remove();
+    } catch(e) {}
+  }
+  // ── fim PWA Install Progress Overlay ────────────────────────────────────────
+
   window.addEventListener('beforeinstallprompt', (e) => {
     // Impede que o navegador mostre o aviso padrão dele
     e.preventDefault();
@@ -12025,6 +12134,11 @@ function verificarCidadeEEstado(lng, lat) {
   });
 
   window.addEventListener('appinstalled', () => {
+    // Cancela timeout de segurança (mobile)
+    if (window.__pwaInstallTimeout) {
+        clearTimeout(window.__pwaInstallTimeout);
+        window.__pwaInstallTimeout = null;
+    }
     deferredPrompt = null;
     localStorage.setItem('appInstaladaPWA', 'true');
     localStorage.setItem('app_status_liberado', 'true');
@@ -12039,14 +12153,11 @@ function verificarCidadeEEstado(lng, lat) {
         bc.postMessage({ type: 'APP_INSTALLED' });
         bc.close();
     }
-    // Toast curto (3s) — sem overlay fullscreen
-    try {
-        var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:12px 20px;border-radius:10px;z-index:999999;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);pointer-events:none;';
-        toast.textContent = '\u2705 App instalado! Abra pelo \u00edcone na sua tela inicial.';
-        document.body.appendChild(toast);
-        setTimeout(function() { try { toast.remove(); } catch(e) {} }, 3000);
-    } catch(e) {}
+    // Em mobile: transita para tela de sucesso (overlay permanente, sem timer)
+    var _isMobileInstalled = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (_isMobileInstalled && typeof __pwaInstallSuccessShow === 'function') {
+        __pwaInstallSuccessShow();
+    }
   });
 
   // Fix PWA desktop: detecta quando a janela passa para standalone em tempo real
