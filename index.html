@@ -10646,8 +10646,8 @@ function abrirPopupPonto(e) {
     else if (nomeChave.includes('-FD') || nomeChave.includes(' FD ') || /\bFD\b/.test(nomeChave)) { tipoChaveDetectada = 'FD'; } 
     else if (nomeChave.includes('-DI') || nomeChave.includes(' DI ') || /\bDI\b/.test(nomeChave)) { tipoChaveDetectada = 'DI'; }
 
+    const uid = 'chave_' + Date.now() + '_' + Math.floor(Math.random()*100);
     if (tipoChaveDetectada) {
-        const uid = 'chave_' + Date.now() + Math.floor(Math.random()*100);
         
         // Verifica se é verde (tanto #00FF00 quanto #00C853 dos pins)
         const isVerdeChave = f.corPonto === '#00FF00' || f.corPonto === '#00C853';
