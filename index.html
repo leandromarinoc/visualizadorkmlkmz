@@ -5820,10 +5820,35 @@ window.addEventListener('load', () => {
         }
 
         async function salvarTudo() {
-            await StorageManager.saveState(circuitosState, filtrosStatus);
-            await StorageManager.saveVisibility(window.arquivosVisiveis || {});
-            const featuresInterligacao = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === 'INTERLIGACAO');
-            await StorageManager.saveFile('INTERLIGACAO', featuresInterligacao);
+            try {
+                await StorageManager.saveState(circuitosState, filtrosStatus);
+
+                // Garantir que arquivosVisiveis existe e cobre TODOS os sourceFiles presentes
+                if (!window.arquivosVisiveis) window.arquivosVisiveis = {};
+                const grupos = {};
+                for (const f of geoJsonGlobal.features) {
+                    const sf = (f && f.properties && f.properties.sourceFile) || null;
+                    if (!sf) continue; // ignorar features sem origem
+                    if (!grupos[sf]) grupos[sf] = [];
+                    grupos[sf].push(f);
+                    // Garantir entrada de visibilidade para sourceFiles novos (ex: MANUAL, alteracaoXXX)
+                    if (window.arquivosVisiveis[sf] === undefined) window.arquivosVisiveis[sf] = true;
+                }
+
+                await StorageManager.saveVisibility(window.arquivosVisiveis);
+
+                // Salvar cada grupo de sourceFile SEQUENCIALMENTE
+                // (paralelo causa race condition no _metadata.json — InvalidStateError)
+                for (const sf in grupos) {
+                    try {
+                        await StorageManager.saveFile(sf, grupos[sf]);
+                    } catch (eSf) {
+                        console.error('[salvarTudo] falha ao salvar sourceFile', sf, eSf);
+                    }
+                }
+            } catch (e) {
+                console.error('[salvarTudo] erro:', e);
+            }
         }
         var _avisouMuitosPontos = false;
         var _salvarTimeout = null;
@@ -6236,11 +6261,15 @@ async function extrairTextoDoKMZ(file) {
 
 
 document.getElementById('arquivoUpload').addEventListener('change', async function(e) {
-    window._arquivosPendentes = e.target.files.length;
-    for (let file of e.target.files) {
+    // Processar arquivos UM POR VEZ (sequencial) para evitar race condition no geoJsonGlobal
+    const files = Array.from(e.target.files);
+    window._arquivosPendentes = files.length;
+    console.log('[importação] iniciando processamento sequencial de', files.length, 'arquivo(s)');
+
+    for (const file of files) {
         try {
             let kmlStringPuro = "";
-            
+
             if (file.name.toLowerCase().endsWith('.kmz')) {
                 kmlStringPuro = await extrairTextoDoKMZ(file);
             } else {
@@ -6250,20 +6279,25 @@ document.getElementById('arquivoUpload').addEventListener('change', async functi
                     reader.readAsText(file, 'UTF-8');
                 });
             }
-            
+
             if (kmlStringPuro) {
-                processarKML(kmlStringPuro, file.name, file);
+                // Aguarda conclusão dos chunks deste arquivo antes de iniciar o próximo
+                await new Promise((resolve) => {
+                    processarKML(kmlStringPuro, file.name, file, resolve);
+                });
                 window.arquivosVisiveis[file.name] = true;
             } else {
                 window._arquivosPendentes--;
+                console.warn('[importação] arquivo vazio ou não legível:', file.name);
             }
-            
+
         } catch (erro) {
-            console.error("Erro fatal ao abrir o arquivo:", erro);
+            console.error('[importação] Erro fatal ao abrir o arquivo:', file.name, erro);
             alert("Falha ao importar o arquivo " + file.name + ".");
             window._arquivosPendentes--;
         }
     }
+    console.log('[importação] todos os arquivos processados');
 });
 
 
@@ -6633,24 +6667,34 @@ function _ocultarProgressoKML() {
     if (bar) bar.style.display = 'none';
 }
 
-function processarKML(kmlStr, fileName, originalFile) {
+function processarKML(kmlStr, fileName, originalFile, onConcluido) {
     // Sugere ao GC liberar memória antes de processar arquivo grande
     if (window.gc) window.gc();
 
     const parser = new DOMParser();
     let xml = parser.parseFromString(kmlStr, "text/xml");
-    
+
     // 2. Lemos as Cores originais do KML
     if (typeof lerCoresOriginaisKML === 'function') xml = lerCoresOriginaisKML(xml);
 
     // 3. Recupera alimentadores vazios
     xml = lerAlimentadoresKML(xml);
-    
+
+    // Diagnóstico: contar Placemarks no XML antes do togeojson
+    const numPlacemarks = xml.querySelectorAll('Placemark').length;
+
     const gj = toGeoJSON.kml(xml);
     // Libera o DOM XML imediatamente — não é mais necessário após a conversão
     xml = null;
     kmlStr = null;
-    if (!gj || !gj.features) return;
+    if (!gj || !gj.features) {
+        console.warn('[processarKML]', fileName, '— toGeoJSON retornou nulo ou sem features. Placemarks no XML:', numPlacemarks);
+        if (typeof onConcluido === 'function') onConcluido();
+        return;
+    }
+
+    // Diagnóstico: comparar Placemarks vs features geradas
+    console.log('[processarKML]', fileName, '— placemarks no XML:', numPlacemarks, '| features após togeojson:', gj.features.length);
 
     // Gerencia os Alimentadores
     const novosNomes = [...new Set(
@@ -6663,79 +6707,87 @@ function processarKML(kmlStr, fileName, originalFile) {
     const total = features.length;
     const CHUNK = _detectarChunkSize();
     let i = 0;
+    let featuresIgnoradas = 0;
     // ID global único - não reinicia entre arquivos para evitar colisões
     if (!window._globalKmlIdCounter) window._globalKmlIdCounter = Date.now();
 
     function processarChunk() {
         const fim = Math.min(i + CHUNK, total);
-        for (; i < fim; i++) {
-            const f = features[i];
-            try {
-                if (!f.geometry || !f.geometry.type) continue;
-                if (!f.properties) f.properties = {};
-                
-                let feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
-                if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
-                feat.properties.sourceFile = fileName;
-                
-                // Celular: trunca description pesada para economizar memória
-                if (document.body.classList.contains('modo-celular') && feat.properties.description && feat.properties.description.length > 300) {
-                    feat.properties.description = feat.properties.description.substring(0, 300);
-                }
-                
-                let nAtivo = (feat.properties.name || "S/N").toUpperCase();
-                let descCrua = String(feat.properties.description || "");
-                
-                // Se name está vazio e description tem dados, tenta extrair número do equipamento
-                if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
-                    // Limpa HTML para buscar no texto puro
-                    const descTexto = descCrua.replace(/<[^>]*>/g, ' ');
-                    // Tenta extrair número com KVA (ex: "135001-30kVA", "135001 30kVA")
-                    const matchKVA = descTexto.match(/(\d{3,}[\-\s]*\d*\s*[kK][vV][aA])/);
-                    const matchNOper = descTexto.match(/N\s*[.\s]*Oper[.\s]*[:\s]*(\d+)/i);
-                    const matchNumero = descTexto.match(/(?:N[uú]mero|Equip[a-z]*|C[oó]d[a-z]*)\s*[:\s]*(\d{4,}[\-\w]*)/i);
-                    // Tenta pegar qualquer número com 5+ dígitos seguido de traço e algo (ex: 135001-30)
-                    const matchGenerico = descTexto.match(/(\d{5,}[\-]\d+)/);
-                    
-                    if (matchKVA) {
-                        feat.properties.name = matchKVA[1].trim();
-                    } else if (matchNOper) {
-                        feat.properties.name = 'N Oper ' + matchNOper[1];
-                    } else if (matchNumero) {
-                        feat.properties.name = matchNumero[1].trim();
-                    } else if (matchGenerico) {
-                        feat.properties.name = matchGenerico[1].trim();
-                    }
-                    nAtivo = (feat.properties.name || "S/N").toUpperCase();
-                }
-                
-                let descLimpa = descCrua.replace(/\[PASTA_SISTEMA:.*?\]\s*/, '').replace(/<[^>]*>?/gm, ' ').toUpperCase();
-                let txtTotal = nAtivo + " " + descLimpa;
-                feat.properties.textoBusca = txtTotal;
-                
-                let vinculo = novosNomes.find(c => txtTotal.includes(c)) || "OUTROS";
-                feat.properties.alimRef = vinculo;
+        try {
+            for (; i < fim; i++) {
+                const f = features[i];
+                try {
+                    if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; continue; }
+                    if (!f.properties) f.properties = {};
 
-                if (!f.geometry.type.includes('Point')) {
-                    feat.properties.isPoint = false; 
-                    feat.properties.alimRef = nAtivo;
-                    let corOriginal = f.properties.stroke;
-                    let corPaleta = circuitosState[nAtivo] ? circuitosState[nAtivo].color : null;
-                    feat.properties.corRede = corOriginal || corPaleta || '#4285F4'; 
-                } else {
-                    feat.properties.isPoint = true;
-                    const classificado = classificarEquipamento(feat.properties);
-                    if (classificado.visivel) {
-                        feat.properties.tipoEquip = classificado.tipoEquip;
-                        feat.properties.corPonto = classificado.corPonto;
-                        feat.properties.iconName = classificado.iconName;
-                        feat.properties.statusTxt = classificado.statusTxt;
-                    } else {
-                        continue; 
+                    let feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
+                    if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
+                    feat.properties.sourceFile = fileName;
+
+                    // Celular: trunca description pesada para economizar memória
+                    if (document.body.classList.contains('modo-celular') && feat.properties.description && feat.properties.description.length > 300) {
+                        feat.properties.description = feat.properties.description.substring(0, 300);
                     }
+
+                    let nAtivo = (feat.properties.name || "S/N").toUpperCase();
+                    let descCrua = String(feat.properties.description || "");
+
+                    // Se name está vazio e description tem dados, tenta extrair número do equipamento
+                    if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
+                        // Limpa HTML para buscar no texto puro
+                        const descTexto = descCrua.replace(/<[^>]*>/g, ' ');
+                        // Tenta extrair número com KVA (ex: "135001-30kVA", "135001 30kVA")
+                        const matchKVA = descTexto.match(/(\d{3,}[\-\s]*\d*\s*[kK][vV][aA])/);
+                        const matchNOper = descTexto.match(/N\s*[.\s]*Oper[.\s]*[:\s]*(\d+)/i);
+                        const matchNumero = descTexto.match(/(?:N[uú]mero|Equip[a-z]*|C[oó]d[a-z]*)\s*[:\s]*(\d{4,}[\-\w]*)/i);
+                        // Tenta pegar qualquer número com 5+ dígitos seguido de traço e algo (ex: 135001-30)
+                        const matchGenerico = descTexto.match(/(\d{5,}[\-]\d+)/);
+
+                        if (matchKVA) {
+                            feat.properties.name = matchKVA[1].trim();
+                        } else if (matchNOper) {
+                            feat.properties.name = 'N Oper ' + matchNOper[1];
+                        } else if (matchNumero) {
+                            feat.properties.name = matchNumero[1].trim();
+                        } else if (matchGenerico) {
+                            feat.properties.name = matchGenerico[1].trim();
+                        }
+                        nAtivo = (feat.properties.name || "S/N").toUpperCase();
+                    }
+
+                    let descLimpa = descCrua.replace(/\[PASTA_SISTEMA:.*?\]\s*/, '').replace(/<[^>]*>?/gm, ' ').toUpperCase();
+                    let txtTotal = nAtivo + " " + descLimpa;
+                    feat.properties.textoBusca = txtTotal;
+
+                    let vinculo = novosNomes.find(c => txtTotal.includes(c)) || "OUTROS";
+                    feat.properties.alimRef = vinculo;
+
+                    if (!f.geometry.type.includes('Point')) {
+                        feat.properties.isPoint = false;
+                        feat.properties.alimRef = nAtivo;
+                        let corOriginal = f.properties.stroke;
+                        let corPaleta = circuitosState[nAtivo] ? circuitosState[nAtivo].color : null;
+                        feat.properties.corRede = corOriginal || corPaleta || '#4285F4';
+                    } else {
+                        feat.properties.isPoint = true;
+                        const classificado = classificarEquipamento(feat.properties);
+                        if (classificado.visivel) {
+                            feat.properties.tipoEquip = classificado.tipoEquip;
+                            feat.properties.corPonto = classificado.corPonto;
+                            feat.properties.iconName = classificado.iconName;
+                            feat.properties.statusTxt = classificado.statusTxt;
+                        } else {
+                            continue;
+                        }
+                    }
+                    geoJsonGlobal.features.push(feat);
+                } catch(e) {
+                    featuresIgnoradas++;
+                    console.warn('[processarKML] feature ignorada em', fileName, 'índice', i, ':', e && e.message);
                 }
-                geoJsonGlobal.features.push(feat);
-            } catch(e) { /* feature ignorada silenciosamente */ }
+            }
+        } catch(chunkErr) {
+            console.error('[processarKML] erro no chunk de', fileName, '(i=', i, '):', chunkErr);
         }
 
         if (i < total) {
@@ -6749,11 +6801,12 @@ function processarKML(kmlStr, fileName, originalFile) {
         } else {
             // Finalizado — salvar arquivo COMPLETO e atualizar mapa
             _ocultarProgressoKML();
-            
-            // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
             const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === fileName);
+            console.log('[processarKML]', fileName, '— concluído. Features salvas:', featuresDoArquivo.length, '| ignoradas:', featuresIgnoradas);
+
+            // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
             StorageManager.saveFile(fileName, featuresDoArquivo)
-                .catch(e => console.error('Erro ao salvar arquivo:', e));
+                .catch(e => console.error('[processarKML] Erro ao salvar arquivo:', fileName, e));
             // Reaplicar comentários salvos anteriormente (permite reimportar KML sem perder comentários)
             StorageManager.loadFile('comentarios-' + fileName).then(function(comentariosSalvos) {
                 if (!comentariosSalvos || comentariosSalvos.length === 0) return;
@@ -6775,14 +6828,14 @@ function processarKML(kmlStr, fileName, originalFile) {
                 });
                 // Re-salvar arquivo com comentários reaplicados
                 const featsAtualizadas = geoJsonGlobal.features.filter(function(f) { return f.properties && f.properties.sourceFile === fileName; });
-                StorageManager.saveFile(fileName, featsAtualizadas).catch(function(e) { console.error('Erro ao re-salvar com comentários:', e); });
+                StorageManager.saveFile(fileName, featsAtualizadas).catch(function(e) { console.error('[processarKML] Erro ao re-salvar com comentários:', e); });
                 renderizarMapa();
             }).catch(function(e) { /* sem comentários salvos, normal */ });
             if (originalFile && !_isMobile && StorageManager.hasHandle()) {
                 StorageManager.saveOriginalFile(originalFile).catch(e => console.error('Erro ao copiar original:', e));
             }
-            
-            renderizarMapa(); 
+
+            renderizarMapa();
             atualizarPainel();
             // Celular: adia salvarTudo para depois de TODOS os arquivos (evita serialização repetida que causa OOM)
             if (!document.body.classList.contains('modo-celular')) {
@@ -6808,6 +6861,8 @@ function processarKML(kmlStr, fileName, originalFile) {
                     setTimeout(function() { salvarTudoSeguro(); }, 2000);
                 }
             }
+            // Notificar chamador que este arquivo terminou (permite import sequencial)
+            if (typeof onConcluido === 'function') onConcluido();
         }
     }
 
