@@ -20427,3 +20427,45 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
 })();
 // ── FIM AVISO DE ATUALIZAÇÃO ──────────────────────────────────────────────────
 </script>
+<script>
+// ── STORAGE PERSISTENTE ─────────────────────────────────────────────────────────
+async function __solicitarStoragePersist() {
+  try {
+    if (!navigator.storage || typeof navigator.storage.persist !== 'function') {
+      console.log('ℹ️ Storage persistente não suportado neste navegador.');
+      return;
+    }
+    var jaPersistente = false;
+    try { jaPersistente = await navigator.storage.persisted(); } catch(e) {}
+    if (jaPersistente) {
+      console.log('✅ Storage já estava persistente.');
+      return;
+    }
+    var concedido = await navigator.storage.persist();
+    if (concedido) {
+      console.log('✅ Storage persistente garantido — dados protegidos contra limpeza automática.');
+    } else {
+      console.log('⚠️ Navegador não concedeu storage persistente — dados podem ser apagados automaticamente em condições raras.');
+    }
+  } catch (e) {
+    console.warn('[StoragePersist] erro:', e);
+  }
+}
+async function __mostrarUsoStorage() {
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      var est = await navigator.storage.estimate();
+      var usadoMB = (est.usage / 1024 / 1024).toFixed(1);
+      var totalMB = (est.quota / 1024 / 1024).toFixed(0);
+      console.log('📊 Storage uso: ' + usadoMB + ' MB de ' + totalMB + ' MB disponíveis (' + ((est.usage/est.quota)*100).toFixed(1) + '%)');
+    }
+  } catch(e) {}
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(__solicitarStoragePersist, 2000); });
+} else {
+  setTimeout(__solicitarStoragePersist, 2000);
+}
+setTimeout(__mostrarUsoStorage, 7000);
+// ── FIM STORAGE PERSISTENTE ─────────────────────────────────────────────────────
+</script>
