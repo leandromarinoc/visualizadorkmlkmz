@@ -4719,7 +4719,7 @@ window.addEventListener('load', () => {
         let podasAvisadas = {}; let podaAtualParaResolver = null;
         function verificarProximidadePodas(lng, lat) {
             if (document.getElementById('resolvePodaModalOverlay').style.display === 'flex') return;
-            const podas = geoJsonGlobal.features.filter(f => f.properties.name === "🚨 PODA PENDENTE" || f.properties.name === "🌳 PODA DE ÁRVORE");
+            const podas = geoJsonGlobal.features.filter(f => f && f.properties && (f.properties.name === "🚨 PODA PENDENTE" || f.properties.name === "🌳 PODA DE ÁRVORE"));
             const ptUser = turf.point([lng, lat]);
 
             for (let poda of podas) {
@@ -4776,7 +4776,7 @@ window.addEventListener('load', () => {
             container.innerHTML = '';
             const filtroCidade = (document.getElementById('filtroCidadePoda')?.value || "").trim().toLowerCase();
 
-            const podas = geoJsonGlobal.features.filter(f => f.properties.name === "🚨 PODA PENDENTE" || f.properties.name === "🌳 PODA DE ÁRVORE");
+            const podas = geoJsonGlobal.features.filter(f => f && f.properties && (f.properties.name === "🚨 PODA PENDENTE" || f.properties.name === "🌳 PODA DE ÁRVORE"));
             if(podas.length === 0) {
                 container.innerHTML = '<div style="padding:15px; text-align:center; font-size:13px; color:#555; font-weight:bold;">Nenhuma pendência de poda encontrada. Tudo limpo! 🍃</div>';
                 return;
@@ -5531,6 +5531,7 @@ window.addEventListener('load', () => {
                         } catch(e) {}
                     }
                     
+                    console.log('[listFiles]', Object.keys(result).length, 'arquivos no metadata. Visíveis:', Object.values(result).filter(r => r.visivel).length);
                     return Object.values(result);
                 } catch(e) {
                     console.error('StorageManager.listFiles error:', e);
@@ -5543,10 +5544,14 @@ window.addEventListener('load', () => {
                     const files = await listFiles();
                     const vis = files.filter(f => f.visivel);
                     const allFeatures = [];
+                    console.log('[loadVisibleFiles] listFiles retornou', files.length, 'arquivos');
+                    console.log('[loadVisibleFiles] visíveis:', vis.length);
                     for (const f of vis) {
                         const feats = await loadFile(f.nome);
+                        console.log('[loadVisibleFiles]   ←', f.nome, ':', feats.length, 'features');
                         allFeatures.push(...feats);
                     }
+                    console.log('[loadVisibleFiles] TOTAL features carregadas:', allFeatures.length);
                     return allFeatures;
                 } catch(e) {
                     console.error('StorageManager.loadVisibleFiles error:', e);
@@ -5835,6 +5840,13 @@ window.addEventListener('load', () => {
                     if (window.arquivosVisiveis[sf] === undefined) window.arquivosVisiveis[sf] = true;
                 }
 
+                const totalFeatures = Object.values(grupos).reduce((a,b) => a + b.length, 0);
+                console.log('[salvarTudo] grupos criados:', Object.keys(grupos).length, 'sourceFiles, total features:', totalFeatures, 'sem origem:', geoJsonGlobal.features.length - totalFeatures);
+                console.log('[salvarTudo] arquivosVisiveis (visíveis: true) =', Object.keys(window.arquivosVisiveis).filter(k => window.arquivosVisiveis[k]).length, '/ total:', Object.keys(window.arquivosVisiveis).length);
+                for (const sf in grupos) {
+                    console.log('[salvarTudo]   →', sf, ':', grupos[sf].length, 'features, visivel:', window.arquivosVisiveis[sf]);
+                }
+
                 await StorageManager.saveVisibility(window.arquivosVisiveis);
 
                 // Salvar cada grupo de sourceFile SEQUENCIALMENTE
@@ -5851,11 +5863,19 @@ window.addEventListener('load', () => {
             }
         }
         var _avisouMuitosPontos = false;
-        var _salvarTimeout = null;
+        // Fila de saves: em vez de debounce (que descarta saves anteriores),
+        // usa uma promise-chain que executa todos em sequência, sem perder nenhum.
+        var _salvarFila = Promise.resolve();
+        var _salvarPendente = false;
         function salvarTudoSeguro() {
             if (!_avisouMuitosPontos && geoJsonGlobal.features.length > 100000) { _avisouMuitosPontos = true; console.warn('Aviso: muitos pontos no mapa (' + geoJsonGlobal.features.length + '). Considere limpar arquivos antigos.'); }
-            if (_salvarTimeout) clearTimeout(_salvarTimeout);
-            _salvarTimeout = setTimeout(() => { _salvarTimeout = null; salvarTudo().catch(e => console.error('Erro ao salvar:', e)); }, 500);
+            // Se já tem um save pendente na fila, não empilha mais um (o pendente vai pegar o estado mais recente)
+            if (_salvarPendente) return;
+            _salvarPendente = true;
+            _salvarFila = _salvarFila.then(() => {
+                _salvarPendente = false;
+                return salvarTudo().catch(e => console.error('[salvarTudoSeguro] Erro ao salvar:', e));
+            });
         }
 
         async function carregarTudo() {
@@ -5906,7 +5926,35 @@ window.addEventListener('load', () => {
                     console.log('[carregarTudo FALLBACK] total:', features.length, 'features');
                 } catch(e) { console.error('carregarTudo fallback error:', e); }
             }
+
+            // FALLBACK 2: Verificar se há arquivos no metadata que NÃO foram carregados ainda
+            // (cobre o caso de novo sourceFile de alteração que ficou "não visível" por bug)
+            if (!_isMobile && StorageManager.hasHandle()) {
+                try {
+                    const allFiles2 = await StorageManager.listFiles();
+                    // sourceFiles já presentes nas features carregadas
+                    const sfCarregados = new Set(features.map(f => f && f.properties ? f.properties.sourceFile : null).filter(Boolean));
+                    for (const f of allFiles2) {
+                        if (f.nome && f.nome.startsWith('comentarios-')) continue;
+                        if (sfCarregados.has(f.nome)) continue; // já foi carregado
+                        // Arquivo existe no metadata mas não foi carregado (ex: visivel=false por bug, ou arquivo novo de alteração)
+                        const feats2 = await StorageManager.loadFile(f.nome);
+                        if (feats2.length > 0) {
+                            console.log('[carregarTudo FALLBACK2] recuperando arquivo perdido:', f.nome, feats2.length, 'features');
+                            features.push(...feats2);
+                            if (visibility) visibility[f.nome] = true;
+                        }
+                    }
+                } catch(e) { console.error('carregarTudo fallback2 error:', e); }
+            }
             
+            const porSF = {};
+            features.forEach(f => {
+                const sf = f && f.properties ? (f.properties.sourceFile || '__sem_origem__') : '__sem_props__';
+                porSF[sf] = (porSF[sf] || 0) + 1;
+            });
+            console.log('[carregarTudo] features por sourceFile:', JSON.stringify(porSF));
+
             return {
                 geojson: { type: 'FeatureCollection', features },
                 circuitos: state.circuitos,
@@ -6260,14 +6308,134 @@ async function extrairTextoDoKMZ(file) {
 }
 
 
+// ==========================================
+// IMPORTAÇÃO: MODAL DE ARQUIVO DUPLICADO
+// ==========================================
+function _mostrarToastImportacao(msg, duracao) {
+    duracao = duracao || 4000;
+    var el = document.getElementById('_importToast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = '_importToast';
+        el.style.cssText = 'position:fixed;top:72px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,0.92);color:#fff;padding:10px 24px;border-radius:22px;font-size:14px;font-weight:600;z-index:99999;pointer-events:none;white-space:nowrap;box-shadow:0 2px 14px rgba(0,0,0,0.45);transition:opacity 0.3s;opacity:0;';
+        document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.opacity = '1';
+    clearTimeout(el._t);
+    el._t = setTimeout(function() { el.style.opacity = '0'; }, duracao);
+}
+
+function _mostrarModalArquivoExistente(fileName, qtdExistente, totalArquivos, indiceAtual) {
+    return new Promise(function(resolve) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.70);z-index:100000;display:flex;align-items:center;justify-content:center;';
+
+        var card = document.createElement('div');
+        card.style.cssText = 'background:#fff;border-radius:14px;padding:28px 30px 22px;max-width:420px;width:92vw;box-shadow:0 8px 40px rgba(0,0,0,0.35);font-family:sans-serif;';
+
+        var titulo = document.createElement('div');
+        titulo.style.cssText = 'font-size:18px;font-weight:700;margin-bottom:12px;color:#1a1a1a;';
+        titulo.textContent = '\u26A0\uFE0F Arquivo j\u00E1 existe';
+
+        var texto = document.createElement('div');
+        texto.style.cssText = 'font-size:14px;color:#333;margin-bottom:20px;line-height:1.55;';
+        texto.innerHTML = 'O arquivo <strong>' + fileName + '</strong> j\u00E1 est\u00E1 importado com <strong>' + qtdExistente + ' chave(s)</strong>. O que deseja fazer?';
+
+        var checkboxWrap = null;
+        var checkboxEl = null;
+        if (totalArquivos > 1) {
+            checkboxWrap = document.createElement('label');
+            checkboxWrap.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:#555;margin-bottom:18px;cursor:pointer;';
+            checkboxEl = document.createElement('input');
+            checkboxEl.type = 'checkbox';
+            checkboxEl.style.cssText = 'width:16px;height:16px;cursor:pointer;';
+            var checkboxTxt = document.createElement('span');
+            checkboxTxt.textContent = 'Aplicar para todos os arquivos com nome igual (' + (totalArquivos - indiceAtual) + ' restante(s))';
+            checkboxWrap.appendChild(checkboxEl);
+            checkboxWrap.appendChild(checkboxTxt);
+        }
+
+        var btns = document.createElement('div');
+        btns.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap;';
+
+        function _fechar(escolha) {
+            var aplicarTodos = checkboxEl ? checkboxEl.checked : false;
+            document.body.removeChild(overlay);
+            resolve({ escolha: escolha, aplicarParaTodos: aplicarTodos });
+        }
+
+        var btnSubst = document.createElement('button');
+        btnSubst.textContent = '\uD83D\uDD04 Substituir';
+        btnSubst.style.cssText = 'flex:1;padding:10px 6px;border:none;border-radius:8px;background:#1976D2;color:#fff;font-size:14px;font-weight:700;cursor:pointer;min-width:110px;';
+        btnSubst.onclick = function() { _fechar('substituir'); };
+
+        var btnAdicionar = document.createElement('button');
+        btnAdicionar.textContent = '\u2795 Adicionar mesmo assim';
+        btnAdicionar.style.cssText = 'flex:1;padding:10px 6px;border:none;border-radius:8px;background:#757575;color:#fff;font-size:13px;font-weight:600;cursor:pointer;min-width:110px;';
+        btnAdicionar.onclick = function() { _fechar('adicionar'); };
+
+        var btnPular = document.createElement('button');
+        btnPular.textContent = '\u274C Pular este';
+        btnPular.style.cssText = 'flex:1;padding:10px 6px;border:none;border-radius:8px;background:#FFCDD2;color:#B71C1C;font-size:13px;font-weight:600;cursor:pointer;min-width:90px;';
+        btnPular.onclick = function() { _fechar('pular'); };
+
+        btns.appendChild(btnSubst);
+        btns.appendChild(btnAdicionar);
+        btns.appendChild(btnPular);
+
+        card.appendChild(titulo);
+        card.appendChild(texto);
+        if (checkboxWrap) card.appendChild(checkboxWrap);
+        card.appendChild(btns);
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+    });
+}
+
 document.getElementById('arquivoUpload').addEventListener('change', async function(e) {
     // Processar arquivos UM POR VEZ (sequencial) para evitar race condition no geoJsonGlobal
     const files = Array.from(e.target.files);
     window._arquivosPendentes = files.length;
     console.log('[importação] iniciando processamento sequencial de', files.length, 'arquivo(s)');
 
-    for (const file of files) {
+    let _aplicarParaTodos = null; // 'substituir' | 'adicionar' | 'pular' | null
+
+    for (let _idx = 0; _idx < files.length; _idx++) {
+        const file = files[_idx];
         try {
+            // ── PRÉ-CHECK: arquivo duplicado? ──────────────────────────────
+            const qtdExistente = geoJsonGlobal.features.filter(
+                function(f) { return f && f.properties && f.properties.sourceFile === file.name; }
+            ).length;
+            const jaExiste = qtdExistente > 0;
+
+            let escolha = _aplicarParaTodos;
+            if (jaExiste && !_aplicarParaTodos) {
+                const result = await _mostrarModalArquivoExistente(file.name, qtdExistente, files.length, _idx);
+                escolha = result.escolha;
+                if (result.aplicarParaTodos) _aplicarParaTodos = escolha;
+            }
+
+            if (jaExiste && escolha === 'pular') {
+                window._arquivosPendentes--;
+                _mostrarToastImportacao('\u23ED\uFE0F ' + file.name + ' pulado (mantido o existente)');
+                continue;
+            }
+
+            if (jaExiste && escolha === 'substituir') {
+                geoJsonGlobal.features = geoJsonGlobal.features.filter(
+                    function(f) { return !(f && f.properties && f.properties.sourceFile === file.name); }
+                );
+                await StorageManager.deleteFile(file.name).catch(function() {});
+                console.log('[importação] substituindo arquivo:', file.name, '(removidas', qtdExistente, 'features antigas)');
+            }
+
+            if (jaExiste && escolha === 'adicionar') {
+                _mostrarToastImportacao('\u2795 ' + file.name + ' adicionado (somado ao existente)', 3500);
+            }
+            // ── FIM PRÉ-CHECK ──────────────────────────────────────────────
+
             let kmlStringPuro = "";
 
             if (file.name.toLowerCase().endsWith('.kmz')) {
@@ -6282,10 +6450,17 @@ document.getElementById('arquivoUpload').addEventListener('change', async functi
 
             if (kmlStringPuro) {
                 // Aguarda conclusão dos chunks deste arquivo antes de iniciar o próximo
+                const _qtdAntes = geoJsonGlobal.features.length;
                 await new Promise((resolve) => {
                     processarKML(kmlStringPuro, file.name, file, resolve);
                 });
                 window.arquivosVisiveis[file.name] = true;
+                if (jaExiste && escolha === 'substituir') {
+                    const _qtdDepois = geoJsonGlobal.features.filter(
+                        function(f) { return f && f.properties && f.properties.sourceFile === file.name; }
+                    ).length;
+                    _mostrarToastImportacao('\uD83D\uDD04 ' + file.name + ' substitu\u00EDdo (' + qtdExistente + ' \u2192 ' + _qtdDepois + ' chave(s))', 5000);
+                }
             } else {
                 window._arquivosPendentes--;
                 console.warn('[importação] arquivo vazio ou não legível:', file.name);
@@ -9711,6 +9886,7 @@ window.salvarChave = function() {
             const arquivoAlteracaoEdit = geoJsonGlobal.features[index].properties.sourceFile;
             window.arquivosVisiveis[arquivoAlteracaoEdit] = true;
             featureAtualizada = geoJsonGlobal.features[index];
+            console.log('[salvarChave] EDITAR_CHAVE id:', featureAtualizada.properties.id, 'sourceFile:', featureAtualizada.properties.sourceFile, 'total features após:', geoJsonGlobal.features.length);
             msgChat = `✏️ <b>CHAVE ATUALIZADA</b><br>👤 <b>${autor}</b> | 🔌 Circuito: <b style="color:#9C27B0;">${alimRef}</b><br>Chave <b style="color:#FF9800;">${nomeAntigo}</b> → <b style="color:#4CAF50;">${nome}</b>`;
             acaoMqtt = "EDITAR_CHAVE";
         }
@@ -9740,6 +9916,7 @@ window.salvarChave = function() {
         };
         geoJsonGlobal.features.push(featureAtualizada);
         window.arquivosVisiveis[featureAtualizada.properties.sourceFile] = true;
+        console.log('[salvarChave] NOVA_CHAVE id:', featureAtualizada.properties.id, 'sourceFile:', featureAtualizada.properties.sourceFile, 'total features após:', geoJsonGlobal.features.length);
         const tipoDesc = status === 'TRAFO' ? `TRAFO ${kva}KVA` : status;
         msgChat = `➕ <b>NOVA CHAVE NO MAPA</b><br>👤 <b>${autor}</b> cadastrou <b style="color:#E040FB;">${nome}</b> | Tipo: <b style="color:#FF9800;">${tipoDesc}</b>`;
         acaoMqtt = "NOVA_CHAVE";
@@ -10586,6 +10763,7 @@ function abrirPopupPonto(e) {
     const alimAtivos = Object.keys(circuitosState);
     
     geoJsonGlobal.features.forEach(feat => {
+        if (!feat || !feat.properties) return;
         if (!feat.properties.isPoint && feat.properties.alimRef) {
             let nomeAlim = feat.properties.alimRef;
             if (nomeAlim === "OUTROS" || !alimAtivos.includes(nomeAlim)) return;
@@ -11484,7 +11662,7 @@ map.on('click', 'l-labels', (e) => {
     let menorDistancia = Infinity;
     
     geoJsonGlobal.features.forEach(feat => {
-        if (feat.properties.isPoint && feat.geometry && feat.geometry.coordinates) {
+        if (feat && feat.properties && feat.properties.isPoint && feat.geometry && feat.geometry.coordinates) {
             const coords = feat.geometry.coordinates;
             const dist = Math.sqrt(
                 Math.pow(Number(coords[0]) - clickLng, 2) + 
@@ -11552,7 +11730,7 @@ map.on('click', 'l-linhas', (e) => {
         return;
     }
     
-    const linhasDoCircuito = geoJsonGlobal.features.filter(linha => linha.properties.alimRef === alimNome && !linha.properties.isPoint);
+    const linhasDoCircuito = geoJsonGlobal.features.filter(linha => linha && linha.properties && linha.properties.alimRef === alimNome && !linha.properties.isPoint);
     let distanciaTexto = "Calculando..."; 
     let alertaRural = "";
 
