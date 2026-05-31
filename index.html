@@ -2190,7 +2190,7 @@ document.onkeydown = function(e) {
         </div>
 
         <!-- PAINEL FERRAMENTAS -->
-        <div id="panelFerram" style="display:none; position:absolute; top:58px; left:clamp(58px,8vw,72px); width:min(220px,calc(100vw - 80px)); background:var(--glass); border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.5); flex-direction:column; overflow:hidden; backdrop-filter:blur(20px); z-index:1000; pointer-events:auto;">
+        <div id="panelFerram" style="display:none; position:absolute; top:58px; left:clamp(58px,8vw,72px); width:min(220px,calc(100vw - 80px)); background:var(--glass); border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.5); flex-direction:column; max-height:calc(100vh - 80px); overflow-y:auto; overflow-x:hidden; backdrop-filter:blur(20px); z-index:1000; pointer-events:auto;">
             <div class="panel-header">🔧 Ferramentas <button onclick="togglePanelFerram()" style="border:none; background:none; cursor:pointer; font-size:16px;">×</button></div>
             <div style="padding:10px; display:flex; flex-direction:column; gap:8px;">
                 <button class="btn-ferram-item" style="background:#FF5722;" onclick="togglePanelFerram(); abrirModalPoda();">🌳<span style="margin-left:6px;">PODA</span></button>
@@ -2203,6 +2203,8 @@ document.onkeydown = function(e) {
                 <button class="btn-ferram-item" id="btnTelaFerram" style="background:#FF8F00; display:none;" onclick="togglePanelFerram(); abrirModalTela();">📱<span style="margin-left:6px;">TELA</span></button>
                 <button class="btn-ferram-item" style="background:#6A0DAD;" onclick="togglePanelFerram(); abrirModalInspecaoRamo();">🔍<span style="margin-left:6px;">INSPEÇÃO</span></button>
                 <button class="btn-ferram-item" style="background:#00897B;" onclick="togglePanelFerram(); abrirModalCroqui();">✏️<span style="margin-left:6px;">FAZER/CROQUI/REDE</span></button>
+                <button class="btn-ferram-item" id="btnConfigWpp" style="background:#25D366;" onclick="togglePanelFerram(); window.__wppAbrirConfig();">📲<span style="margin-left:6px;">CONFIG. GRUPO WHATSAPP</span></button>
+                <button class="btn-ferram-item" id="btnResumoDia" style="background:#075E54;" onclick="togglePanelFerram(); window.__wppAbrirResumoDia();">📊<span style="margin-left:6px;">RESUMO DO DIA</span></button>
             </div>
         </div>
 
@@ -4712,6 +4714,20 @@ window.addEventListener('load', () => {
                 mqttPublish(TEMA_PODAS + '/' + podaId, payload, { retain: true });
             }
             document.getElementById('podaModalOverlay').style.display = 'none';
+            if (typeof __wppCompartilharAcao === 'function') {
+                __wppCompartilharAcao({
+                    titulo: '🌳 Nova Pendência de Poda',
+                    detalhes: [
+                        'Trecho: ' + trechoIdentificado,
+                        'Alimentador: ' + (alimentadorPoda || ''),
+                        'Nível: ' + (nivelTensaoPoda || ''),
+                        'Cidade: ' + (cidade || ''),
+                        'Por: ' + autorDaAcao
+                    ],
+                    coordenada: { lat: coordsPodaLat, lng: coordsPodaLng },
+                    fotoBase64: fotoBase64 || null
+                });
+            }
             alert(`✅ Poda registada com sucesso!`);
             map.flyTo({ center: ptDe.geometry.coordinates, zoom: 18 });
         }
@@ -4764,7 +4780,11 @@ window.addEventListener('load', () => {
             try {
                 const KEY_RETIRADAS = 'inspecao-pro-podas-retiradas';
                 const listaRetiradas = JSON.parse(localStorage.getItem(KEY_RETIRADAS) || '[]');
+                const _trechosJaSalvos = new Set();
                 podasAtivas.filter(p => p && p.properties && idsParaRemover.includes(p.properties.id)).forEach(p => {
+                    const _chaveDedupe = (p.properties.trechoPoda || '') + '|' + (p.properties.cidadePoda || cidadeRetirada || '');
+                    if (_trechosJaSalvos.has(_chaveDedupe)) return;
+                    _trechosJaSalvos.add(_chaveDedupe);
                     listaRetiradas.push({
                         id: 'retirada_' + Date.now() + '_' + Math.floor(Math.random()*10000),
                         idOriginal: p.properties.id,
@@ -4805,6 +4825,20 @@ window.addEventListener('load', () => {
                 });
             }
             document.getElementById('retirarPodaModalOverlay').style.display = 'none';
+            if (typeof __wppCompartilharAcao === 'function') {
+                var _podaRefWpp = podasAtivas.find(function(p){ return p && p.properties && idsParaRemover.includes(p.properties.id); });
+                __wppCompartilharAcao({
+                    titulo: '✅ Poda Retirada',
+                    detalhes: [
+                        'Trecho: ' + trechoReal,
+                        'Cidade: ' + (cidadeRetirada || (_podaRefWpp && _podaRefWpp.properties ? _podaRefWpp.properties.cidadePoda : '') || ''),
+                        'Alimentador: ' + (_podaRefWpp && _podaRefWpp.properties ? _podaRefWpp.properties.alimentadorPoda : '') ,
+                        'Por: ' + (typeof getAutorFormatado === 'function' ? getAutorFormatado() : equipe)
+                    ],
+                    coordenada: (_podaRefWpp && _podaRefWpp.geometry && _podaRefWpp.geometry.coordinates) ? { lat: _podaRefWpp.geometry.coordinates[1], lng: _podaRefWpp.geometry.coordinates[0] } : null,
+                    fotoBase64: fotoBase64 || null
+                });
+            }
             alert(`✅ Pendência retirada com sucesso!\nO trecho ${trechoReal} está limpo e todo o grupo foi avisado no chat.`);
         }
 
@@ -10023,7 +10057,22 @@ window.salvarChave = function() {
             mqttPublish(topicoChave, { acao: acaoMqtt, remetente: meuID, feature: featureAtualizada, msgChat: msgChat }, { retain: true, qos: 1 });
         }
     }
-    
+    if (typeof __wppCompartilharAcao === 'function' && featureAtualizada) {
+        var _p = featureAtualizada.properties;
+        __wppCompartilharAcao({
+            titulo: (acaoMqtt === 'NOVA_CHAVE' ? '🔑 Nova Chave Cadastrada' : '✏️ Chave Editada'),
+            detalhes: [
+                'Nome: ' + (_p.name || _p.nome || ''),
+                'Tipo: ' + (_p.tipoEquip || _p.status || ''),
+                'Status: ' + (_p.statusTxt || _p.status || ''),
+                'Alimentador: ' + (_p.alimRef || ''),
+                'Por: ' + (typeof getAutorFormatado === 'function' ? getAutorFormatado() : '')
+            ],
+            coordenada: (featureAtualizada.geometry && featureAtualizada.geometry.coordinates)
+                ? { lat: featureAtualizada.geometry.coordinates[1], lng: featureAtualizada.geometry.coordinates[0] }
+                : null
+        });
+    }
     alert("✅ Chave salva com sucesso!");
 };
 
@@ -10068,6 +10117,18 @@ window.apagarChaveAtual = function() {
   document.getElementById('chaveModalOverlay').style.display = 'none';
   document.getElementById('btn-apagar-chave').style.display = 'none';
 
+  if (typeof __wppCompartilharAcao === 'function') {
+    __wppCompartilharAcao({
+      titulo: '🗑️ Chave Apagada',
+      detalhes: [
+        'Nome: ' + nomeChave,
+        'Por: ' + (typeof getAutorFormatado === 'function' ? getAutorFormatado() : (window.meuNome || 'Usuário'))
+      ],
+      coordenada: (featureApagada.geometry && featureApagada.geometry.coordinates)
+        ? { lat: featureApagada.geometry.coordinates[1], lng: featureApagada.geometry.coordinates[0] }
+        : null
+    });
+  }
   alert('✅ Chave "' + nomeChave + '" apagada com sucesso!');
 };
 
@@ -11416,6 +11477,17 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_CHAVE', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
         }
+        if (typeof __wppCompartilharAcao === 'function') {
+            __wppCompartilharAcao({
+                titulo: '💬 Comentário em Chave',
+                detalhes: [
+                    'Chave: ' + chaveNome,
+                    'Comentário: ' + texto,
+                    'Por: ' + autor
+                ],
+                coordenada: (posLat2 && posLng2) ? { lat: posLat2, lng: posLng2 } : null
+            });
+        }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
         abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
     }
@@ -11517,6 +11589,17 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
         salvarTudoSeguro();
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_EDITADO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
+        }
+        if (typeof __wppCompartilharAcao === 'function') {
+            __wppCompartilharAcao({
+                titulo: '✏️ Comentário Editado em Chave',
+                detalhes: [
+                    'Chave: ' + chaveNome,
+                    'Comentário: ' + texto,
+                    'Por: ' + autor
+                ],
+                coordenada: (posLat2 && posLng2) ? { lat: posLat2, lng: posLng2 } : null
+            });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
         abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
@@ -11707,6 +11790,17 @@ window.confirmarInterligacao = function() {
             const msgChat = `🔗 <b>NOVA INTERLIGAÇÃO</b><br>👤 <b>${autor}</b> conectou <b style="color:#FF9800;">${_il.nome1}</b> ⇄ <b style="color:#4CAF50;">${_il.nome2}</b>${distLabel ? ' | <b>' + distLabel + '</b>' : ''}`;
             mqttPublish(TEMA_MQTT, { acao: "NOVA_INTERLIGACAO", remetente: window.meuID, autor: autor, feature: novaLinha, featuresPontos: [], msgChat: msgChat });
             if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
+            if (typeof __wppCompartilharAcao === 'function') {
+                __wppCompartilharAcao({
+                    titulo: '🔗 Nova Interligação',
+                    detalhes: [
+                        'De: ' + _il.nome1,
+                        'Para: ' + _il.nome2,
+                        distLabel ? 'Distância: ' + distLabel : null,
+                        'Por: ' + autor
+                    ]
+                });
+            }
         }
     } catch (erroMapa) { console.error("Erro", erroMapa); }
 };
@@ -18898,7 +18992,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
               // Cabeçalho
               doc.setFontSize(15);
               doc.setTextColor(40, 167, 69);
-              doc.text('✅ Poda Retirada — ' + (_titularCidadeR(r.cidadePoda) || r.cidadePoda || 'Sem cidade') + ' (' + (idx+1) + '/' + filtrados.length + ')', pageW/2, y, { align: 'center' });
+              doc.text('Poda Retirada - ' + (_titularCidadeR(r.cidadePoda) || r.cidadePoda || 'Sem cidade') + ' (' + (idx+1) + '/' + filtrados.length + ')', pageW/2, y, { align: 'center' });
               y += 22;
               doc.setDrawColor(40, 167, 69);
               doc.setLineWidth(1);
@@ -18958,8 +19052,8 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
 
               // Fotos lado a lado
               var fotos = [];
-              if (r.fotoMarcar) fotos.push({ base64: r.fotoMarcar, label: '📸 Foto antes (registro)' });
-              if (r.fotoLocalRetirada) fotos.push({ base64: r.fotoLocalRetirada, label: '📸 Foto depois (retirada)' });
+              if (r.fotoMarcar) fotos.push({ base64: r.fotoMarcar, label: 'Foto antes (registro)' });
+              if (r.fotoLocalRetirada) fotos.push({ base64: r.fotoLocalRetirada, label: 'Foto depois (retirada)' });
 
               if (fotos.length > 0) {
                 var fotoW = fotos.length === 2 ? (pageW - margin*2 - 10) / 2 : (pageW - margin*2);
@@ -21284,4 +21378,385 @@ if (document.readyState === 'loading') {
 }
 setTimeout(__mostrarUsoStorage, 7000);
 // ── FIM STORAGE PERSISTENTE ─────────────────────────────────────────────────────
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     WHATSAPP SHARING — Fases 1, 2, 3 e 4
+     ══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+  var KEY_GRUPO = 'inspecao-pro-wpp-grupo';
+  var KEY_AUTOSHARE = 'inspecao-pro-wpp-autoshare';
+
+  // ===== Helpers =====
+  function getGrupoConfig() {
+    try { return JSON.parse(localStorage.getItem(KEY_GRUPO) || 'null'); } catch(e) { return null; }
+  }
+  function setGrupoConfig(obj) {
+    localStorage.setItem(KEY_GRUPO, JSON.stringify(obj));
+  }
+
+  // ===== FASE 4: Registrar ação no histórico diário =====
+  function __wppRegistrarAcaoDia(opts) {
+    try {
+      var hoje = new Date().toISOString().slice(0,10);
+      var KEY_HIST = 'inspecao-pro-wpp-hist-' + hoje;
+      var lista = JSON.parse(localStorage.getItem(KEY_HIST) || '[]');
+      lista.push({
+        hora: new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }),
+        titulo: opts.titulo,
+        detalhes: opts.detalhes || [],
+        coordenada: opts.coordenada || null
+      });
+      localStorage.setItem(KEY_HIST, JSON.stringify(lista));
+      __wppLimparHistAntigo();
+    } catch(e) {}
+  }
+
+  function __wppLimparHistAntigo() {
+    try {
+      var hoje = new Date();
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k && k.startsWith('inspecao-pro-wpp-hist-')) keys.push(k);
+      }
+      keys.forEach(function(k){
+        var dataStr = k.replace('inspecao-pro-wpp-hist-', '');
+        var d = new Date(dataStr);
+        var diffDias = (hoje - d) / (1000 * 60 * 60 * 24);
+        if (diffDias > 7) localStorage.removeItem(k);
+      });
+    } catch(e) {}
+  }
+
+  // ===== FASE 3: Toast para autoshare =====
+  function __wppMostrarToastAuto(titulo) {
+    var toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#25D366;color:#fff;padding:14px 22px;border-radius:10px;box-shadow:0 6px 20px rgba(37,211,102,0.4);z-index:99999;font-size:14px;font-weight:700;max-width:90%;text-align:center;';
+    toast.innerHTML = '📲 ' + (titulo || 'Ação') + '<br><span style="font-size:11px;font-weight:400;opacity:0.9;">Mensagem copiada · grupo abrindo · cole (Ctrl+V) e envie</span>';
+    document.body.appendChild(toast);
+    setTimeout(function(){ toast.style.transition = 'opacity 0.4s'; toast.style.opacity = '0'; }, 3500);
+    setTimeout(function(){ try { toast.remove(); } catch(e){} }, 4000);
+  }
+
+  // ===== Modal de instrução para desktop com foto =====
+  function __wppMostrarModalInstrucaoFoto(texto) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:14px;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:14px;padding:22px;max-width:420px;width:100%;';
+    card.innerHTML =
+      '<div style="text-align:center;font-size:32px;margin-bottom:6px;">📷</div>' +
+      '<div style="text-align:center;font-size:17px;font-weight:900;color:#075E54;margin-bottom:10px;">Foto copiada!</div>' +
+      '<div style="font-size:13px;color:#666;line-height:1.6;background:#f5f9ff;padding:12px;border-radius:8px;border-left:3px solid #25D366;margin-bottom:14px;">' +
+        '<b>1.</b> No grupo aberto, <b>cole a foto (Ctrl+V)</b><br>' +
+        '<b>2.</b> Adicione o texto abaixo como legenda:<br>' +
+        '<textarea readonly style="width:100%;margin-top:6px;padding:8px;font-size:11px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;height:80px;font-family:monospace;">' + texto.replace(/</g,'&lt;') + '</textarea>' +
+        '<button onclick="(navigator.clipboard&&navigator.clipboard.writeText(this.previousElementSibling.value));this.textContent=\'Texto copiado!\';" style="margin-top:6px;padding:6px 12px;background:#25D366;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;">📋 Copiar texto</button>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#888;margin-bottom:12px;">Dica: cole foto primeiro (Ctrl+V), depois cole o texto na legenda da foto.</div>' +
+      '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="width:100%;padding:12px;background:#075E54;color:#fff;border:none;border-radius:8px;font-weight:900;cursor:pointer;">OK</button>';
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  }
+
+  // ===== Compartilhar com foto (mobile Web Share API ou desktop clipboard) =====
+  async function compartilharComFoto(msg, fotoBase64, grupo) {
+    var _isMobileDevice = (typeof _isMobile !== 'undefined' ? _isMobile : /Android|iPhone|iPad|iPod|Mobi/i.test(navigator.userAgent));
+
+    var blob;
+    try {
+      var resp = await fetch(fotoBase64);
+      blob = await resp.blob();
+    } catch(e) {
+      // Fallback: só texto
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(msg);
+      } catch(e2) {}
+      __wppMostrarToastAuto('Ação registada');
+      if (grupo && grupo.linkGrupo) setTimeout(function(){ window.open(grupo.linkGrupo, '_blank'); }, 300);
+      return;
+    }
+
+    if (_isMobileDevice && navigator.canShare) {
+      var file = new File([blob], 'inspecao-pro-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ title: 'Inspeção Pro', text: msg, files: [file] });
+          __wppMostrarToastAuto('Foto + texto compartilhados');
+          return;
+        } catch(e) {
+          // Usuário cancelou ou falhou — fallback pra clipboard
+        }
+      }
+    }
+
+    // Desktop OU fallback: copiar foto pro clipboard + abrir grupo
+    try {
+      if (navigator.clipboard && navigator.clipboard.write && window.ClipboardItem) {
+        var img = new Image();
+        img.src = fotoBase64;
+        await new Promise(function(res, rej){ img.onload = res; img.onerror = rej; });
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        var pngBlob = await new Promise(function(res){ canvas.toBlob(res, 'image/png'); });
+        var item = new ClipboardItem({ 'image/png': pngBlob });
+        await navigator.clipboard.write([item]);
+      }
+    } catch(e) {
+      try { await navigator.clipboard.writeText(msg); } catch(e2) {}
+    }
+
+    if (grupo && grupo.linkGrupo) window.open(grupo.linkGrupo, '_blank');
+    __wppMostrarModalInstrucaoFoto(msg);
+  }
+
+  // ===== Compartilhar mensagem (público) =====
+  window.__wppCompartilharAcao = function(opts) {
+    if (!opts || !opts.titulo) return;
+
+    // FASE 4: registra sempre, mesmo se popup for fechado
+    __wppRegistrarAcaoDia(opts);
+
+    var grupo = getGrupoConfig();
+    var nomeCidade = grupo ? grupo.cidade : '';
+    var msg = '*[Inspeção Pro' + (nomeCidade ? ' - ' + nomeCidade : '') + ']*\n';
+    msg += '*' + opts.titulo + '*\n\n';
+    if (opts.detalhes && opts.detalhes.length) {
+      opts.detalhes.forEach(function(d){ if (d) msg += '• ' + d + '\n'; });
+    }
+    if (opts.coordenada && opts.coordenada.lat && opts.coordenada.lng) {
+      msg += '\n📍 https://www.google.com/maps?q=' + opts.coordenada.lat + ',' + opts.coordenada.lng;
+    }
+    msg += '\n\n👉 Abrir Inspeção Pro: https://leandromarinoc.github.io/visualizadorkmlkmz/';
+    msg += '\n\n_Mensagem enviada via Inspeção Pro_';
+
+    // FASE 3: autoshare
+    var autoshare = true; // sempre ativo (decisão do produto)
+      try { localStorage.setItem(KEY_AUTOSHARE, 'on'); } catch(e){}
+    if (autoshare && grupo && grupo.linkGrupo) {
+      if (opts.fotoBase64) {
+        compartilharComFoto(msg, opts.fotoBase64, grupo);
+      } else {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(msg);
+          }
+        } catch(e) {}
+        __wppMostrarToastAuto(opts.titulo);
+        setTimeout(function(){ window.open(grupo.linkGrupo, '_blank'); }, 300);
+      }
+    } else {
+      __wppMostrarPopupCompartilhar(msg, opts.titulo);
+    }
+  };
+
+  // ===== Popup de confirmação =====
+  function __wppMostrarPopupCompartilhar(mensagem, tituloAcao) {
+    var grupo = getGrupoConfig();
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:99999;padding:14px;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:14px;padding:20px;max-width:360px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.25);text-align:center;';
+    var corHeader = '#25D366';
+    card.innerHTML =
+      '<div style="font-size:32px;margin-bottom:6px;">📲</div>' +
+      '<div style="font-size:16px;font-weight:900;color:#075E54;margin-bottom:4px;">Ação registrada!</div>' +
+      '<div style="font-size:13px;color:#666;margin-bottom:14px;">' + (tituloAcao || 'Ação concluída') + '. Deseja compartilhar com a equipe?</div>' +
+      (grupo && grupo.linkGrupo
+        ? '<div style="background:#f5f5f5;padding:8px;border-radius:6px;font-size:11px;color:#555;margin-bottom:12px;">Grupo: <b>' + (grupo.cidade || '—') + '</b></div>'
+        : '<div style="background:#fff3cd;padding:10px;border-radius:6px;font-size:12px;color:#856404;margin-bottom:12px;border-left:3px solid #ffc107;">⚠️ Configure o grupo da sua cidade primeiro</div>') +
+      '<button id="__wppBtnCompartilhar" style="width:100%;padding:13px;background:' + corHeader + ';color:#fff;border:none;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:8px;box-shadow:0 3px 8px rgba(37,211,102,0.4);">' +
+        (grupo && grupo.linkGrupo ? '📲 Abrir grupo + copiar mensagem' : '⚙️ Configurar grupo') +
+      '</button>' +
+      '<button id="__wppBtnFechar" style="width:100%;padding:10px;background:#888;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Fechar</button>';
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    document.getElementById('__wppBtnFechar').onclick = function(){ overlay.remove(); };
+    document.getElementById('__wppBtnCompartilhar').onclick = function(){
+      if (grupo && grupo.linkGrupo) {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(mensagem);
+          }
+        } catch(e){}
+        window.open(grupo.linkGrupo, '_blank');
+        card.innerHTML =
+          '<div style="font-size:32px;margin-bottom:6px;">✅</div>' +
+          '<div style="font-size:15px;font-weight:900;color:#075E54;margin-bottom:8px;">Mensagem copiada!</div>' +
+          '<div style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.5;">No grupo aberto, <b>cole (Ctrl+V ou pressione e cole)</b> e clique em Enviar.</div>' +
+          '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="width:100%;padding:12px;background:#075E54;color:#fff;border:none;border-radius:8px;font-weight:900;cursor:pointer;">OK</button>';
+      } else {
+        overlay.remove();
+        window.__wppAbrirConfig();
+      }
+    };
+  }
+
+  // ===== Modal de configuração do grupo =====
+  window.__wppAbrirConfig = function() {
+    var grupo = getGrupoConfig() || { cidade: '', linkGrupo: '' };
+    var checkedAttr = localStorage.getItem(KEY_AUTOSHARE) === 'on' ? 'checked' : '';
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:14px;';
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:14px;padding:22px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(0,0,0,0.3);';
+    card.innerHTML =
+      '<div style="text-align:center;font-size:32px;margin-bottom:6px;">📲</div>' +
+      '<div style="text-align:center;font-size:17px;font-weight:900;color:#075E54;margin-bottom:6px;">Configurar grupo do WhatsApp</div>' +
+      '<div style="font-size:12px;color:#666;margin-bottom:14px;line-height:1.5;text-align:center;">Cole o link de convite do grupo da sua cidade. As ações do Inspeção Pro serão compartilhadas nele.</div>' +
+      '<label style="display:block;font-size:12px;font-weight:700;color:#333;margin-bottom:4px;">Nome do grupo (deve conter "Inspeção Pro" + cidade):</label>' +
+      '<input id="__wppInputCidade" type="text" placeholder="Ex: Inspeção Pro Bebedouro" value="' + (grupo.cidade || '') + '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:12px;box-sizing:border-box;">' +
+      '<label style="display:block;font-size:12px;font-weight:700;color:#333;margin-bottom:4px;">Link do grupo (chat.whatsapp.com/...):</label>' +
+      '<input id="__wppInputLink" type="text" placeholder="https://chat.whatsapp.com/..." value="' + (grupo.linkGrupo || '') + '" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;font-size:14px;margin-bottom:14px;box-sizing:border-box;">' +
+      '<div style="background:#fff3cd;padding:10px;border-radius:6px;font-size:11px;color:#856404;margin-bottom:14px;border-left:3px solid #ffc107;line-height:1.5;">' +
+        '<b>Como pegar o link:</b><br>' +
+        '1. No WhatsApp, abra o grupo<br>' +
+        '2. Toque no nome do grupo (info)<br>' +
+        '3. Toque em "Convidar via link"<br>' +
+        '4. Copie e cole acima' +
+      '</div>' +
+      '<label style="display:none;">' +
+        '<input id="__wppInputAutoshare" type="checkbox" checked style="width:18px;height:18px;cursor:pointer;" ' + checkedAttr + '>' +
+        '<span><b>Compartilhar automaticamente?</b><br><span style="font-size:11px;color:#666;">Se ativado, ao concluir uma ação o grupo abre direto sem precisar confirmar</span></span>' +
+      '</label>' +
+      '<button id="__wppBtnSalvar" style="width:100%;padding:12px;background:#25D366;color:#fff;border:none;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:8px;">Salvar</button>' +
+      (grupo.linkGrupo ? '<button id="__wppBtnRemover" style="width:100%;padding:10px;background:#D32F2F;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px;">Remover configuração</button>' : '') +
+      '<button id="__wppBtnCancelar" style="width:100%;padding:10px;background:#888;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Cancelar</button>';
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    document.getElementById('__wppBtnCancelar').onclick = function(){ overlay.remove(); };
+    document.getElementById('__wppBtnSalvar').onclick = function(){
+      var cid = document.getElementById('__wppInputCidade').value.trim();
+      var link = document.getElementById('__wppInputLink').value.trim();
+      if (!cid) { alert('❌ Informe o nome do grupo.'); return; }
+      // Validação A: nome deve conter 'Inspeção Pro' (case+acento insensitive)
+      var cidNorm = cid.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (cidNorm.indexOf('inspecao pro') < 0) { alert('❌ Nome inválido!\n\nO nome do grupo deve conter \u0022Inspeção Pro\u0022.\n\nExemplo correto: Inspeção Pro Bebedouro\n\nVocê digitou: ' + cid); return; }
+      // Validação A2: deve ter algo depois de 'Inspeção Pro' (cidade)
+      var depoisInsp = cidNorm.replace(/.*inspecao pro/, '').trim();
+      if (depoisInsp.length < 2) { alert('❌ Falta o nome da cidade!\n\nDigite o nome completo do grupo, incluindo a cidade.\n\nExemplo: Inspeção Pro Bebedouro\n\nVocê digitou: ' + cid); return; }
+      // Validação B: link no formato correto
+      if (!link || !/^https:\/\/chat\.whatsapp\.com\//.test(link)) { alert('❌ Link inválido!\n\nCole um link no formato:\nhttps://chat.whatsapp.com/...\n\nVeja a instrução abaixo do campo de link.'); return; }
+      // Validação B2: link com código válido (mín 18 chars depois de /)
+      var codigo = link.replace(/^https:\/\/chat\.whatsapp\.com\//, '').replace(/\?.*$/, '').replace(/\/.*$/, '');
+      if (codigo.length < 18) { alert('❌ Link incompleto!\n\nO link parece estar cortado. Copie o link completo do grupo no WhatsApp.\n\nVocê colou: ' + link); return; }
+      var autoshare = true; // sempre ativo - decisão do produto
+      localStorage.setItem(KEY_AUTOSHARE, autoshare ? 'on' : 'off');
+      setGrupoConfig({ cidade: cid, linkGrupo: link });
+      alert('✅ Configuração salva!\n\nGrupo: ' + cid + '\n\nAs ações serão compartilhadas neste grupo.');
+      overlay.remove();
+    };
+    var btnRem = document.getElementById('__wppBtnRemover');
+    if (btnRem) {
+      btnRem.onclick = function(){
+        if (confirm('Remover configuração do grupo?')) {
+          localStorage.removeItem(KEY_GRUPO);
+          alert('Configuração removida.');
+          overlay.remove();
+        }
+      };
+    }
+  };
+
+  // ===== FASE 4: Modal de Resumo do Dia =====
+  window.__wppAbrirResumoDia = function() {
+    var hoje = new Date().toISOString().slice(0,10);
+    var KEY_HIST = 'inspecao-pro-wpp-hist-' + hoje;
+    var lista;
+    try { lista = JSON.parse(localStorage.getItem(KEY_HIST) || '[]'); } catch(e) { lista = []; }
+
+    var grupo = getGrupoConfig();
+    var nomeCidade = grupo ? grupo.cidade : '';
+
+    var grupos = {};
+    lista.forEach(function(a){ grupos[a.titulo] = (grupos[a.titulo] || 0) + 1; });
+
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:99999;padding:14px;';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:14px;padding:22px;max-width:440px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,0.3);';
+
+    var dataFormatada = new Date().toLocaleDateString('pt-BR');
+    var contagemHtml = '';
+    Object.keys(grupos).sort(function(a,b){return grupos[b]-grupos[a];}).forEach(function(k){
+      contagemHtml += '<div style="display:flex;justify-content:space-between;padding:6px 10px;background:#f5f5f5;border-radius:6px;margin-bottom:4px;font-size:13px;"><span>' + k + '</span><b style="color:#075E54;">' + grupos[k] + '</b></div>';
+    });
+
+    var timelineHtml = '';
+    lista.slice().reverse().forEach(function(a){
+      var detStr = (a.detalhes || []).slice(0,2).join(' · ');
+      timelineHtml += '<div style="border-left:3px solid #25D366;padding:6px 10px;margin-bottom:6px;background:#fafafa;border-radius:0 6px 6px 0;">' +
+                      '<div style="font-size:11px;color:#888;">' + a.hora + '</div>' +
+                      '<div style="font-size:13px;font-weight:700;color:#333;">' + a.titulo + '</div>' +
+                      (detStr ? '<div style="font-size:11px;color:#555;">' + detStr + '</div>' : '') +
+                      '</div>';
+    });
+
+    card.innerHTML =
+      '<div style="text-align:center;font-size:32px;margin-bottom:6px;">📊</div>' +
+      '<div style="text-align:center;font-size:18px;font-weight:900;color:#075E54;margin-bottom:4px;">Resumo do Dia</div>' +
+      '<div style="text-align:center;font-size:12px;color:#666;margin-bottom:14px;">' + dataFormatada + (nomeCidade ? ' · ' + nomeCidade : '') + '</div>' +
+
+      (lista.length === 0
+        ? '<div style="text-align:center;padding:30px;color:#888;font-size:14px;">Nenhuma ação registrada hoje ainda.</div>'
+        : ('<div style="background:#075E54;color:#fff;padding:10px;border-radius:8px;text-align:center;margin-bottom:14px;font-weight:900;">' + lista.length + ' ' + (lista.length === 1 ? 'ação registrada' : 'ações registradas') + ' hoje</div>' +
+           '<div style="margin-bottom:14px;">' + contagemHtml + '</div>' +
+           '<details style="margin-bottom:14px;"><summary style="cursor:pointer;font-size:13px;font-weight:700;color:#075E54;padding:6px 0;">Ver detalhes (timeline)</summary><div style="margin-top:8px;">' + timelineHtml + '</div></details>')) +
+
+      (lista.length > 0
+        ? '<button id="__wppBtnCompResumo" style="width:100%;padding:13px;background:#25D366;color:#fff;border:none;border-radius:8px;font-weight:900;font-size:14px;cursor:pointer;margin-bottom:8px;">📲 Compartilhar resumo no grupo</button>' +
+          '<button id="__wppBtnLimparHist" style="width:100%;padding:10px;background:#D32F2F;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px;">🗑️ Limpar histórico de hoje</button>'
+        : '') +
+      '<button id="__wppBtnFecharResumo" style="width:100%;padding:10px;background:#888;color:#fff;border:none;border-radius:8px;font-weight:600;font-size:13px;cursor:pointer;">Fechar</button>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    document.getElementById('__wppBtnFecharResumo').onclick = function(){ overlay.remove(); };
+
+    var btnLimpar = document.getElementById('__wppBtnLimparHist');
+    if (btnLimpar) btnLimpar.onclick = function(){
+      if (confirm('Apagar o histórico de ações de hoje?')) {
+        localStorage.removeItem(KEY_HIST);
+        overlay.remove();
+        alert('Histórico de hoje apagado.');
+      }
+    };
+
+    var btnComp = document.getElementById('__wppBtnCompResumo');
+    if (btnComp) btnComp.onclick = function(){
+      if (!grupo || !grupo.linkGrupo) {
+        alert('Configure o grupo do WhatsApp primeiro (Menu Ferram → CONFIG. GRUPO WHATSAPP).');
+        return;
+      }
+      var msg = '*[Inspeção Pro' + (nomeCidade ? ' - ' + nomeCidade : '') + ']*\n';
+      msg += '*📊 RESUMO DO DIA - ' + dataFormatada + '*\n\n';
+      msg += '*Total: ' + lista.length + ' ação(ões)*\n\n';
+      Object.keys(grupos).sort(function(a,b){return grupos[b]-grupos[a];}).forEach(function(k){
+        msg += '• ' + k + ': *' + grupos[k] + '*\n';
+      });
+      msg += '\n👉 Abrir Inspeção Pro: https://leandromarinoc.github.io/visualizadorkmlkmz/\n';
+      msg += '\n_Resumo gerado pelo Inspeção Pro_';
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(msg);
+        }
+      } catch(e){}
+      window.open(grupo.linkGrupo, '_blank');
+
+      card.innerHTML =
+        '<div style="text-align:center;font-size:32px;margin-bottom:6px;">✅</div>' +
+        '<div style="text-align:center;font-size:16px;font-weight:900;color:#075E54;margin-bottom:8px;">Resumo copiado!</div>' +
+        '<div style="text-align:center;font-size:13px;color:#666;margin-bottom:14px;">No grupo aberto, <b>cole (Ctrl+V)</b> e envie.</div>' +
+        '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="width:100%;padding:12px;background:#075E54;color:#fff;border:none;border-radius:8px;font-weight:900;cursor:pointer;">OK</button>';
+    };
+  };
+
+})();
 </script>
