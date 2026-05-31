@@ -200,6 +200,18 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             background-size: contain; background-repeat: no-repeat; background-position: center;
             filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5)); cursor: pointer;
         }
+        .colega-marker-icon.colega-moving {
+            animation: colegaPulse 1.2s infinite ease-in-out;
+            box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
+        }
+        .colega-marker-icon.colega-stopped {
+            opacity: 0.5;
+            filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5)) grayscale(0.5);
+        }
+        @keyframes colegaPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
         .colega-label {
             position: absolute; top: -18px; background: rgba(0,0,0,0.8); color: #00FF00; padding: 2px 8px;
             border-radius: 12px; font-size: 11px; font-weight: 900; white-space: nowrap; border: 1px solid #4CAF50;
@@ -394,7 +406,6 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             body.modo-celular .btn-lista-poda     { background: #558B2F !important; }
             body.modo-celular .btn-chat           { background: #00838F !important; }
             body.modo-celular .btn-ferram         { background: #BF360C !important; }
-            /* btnVisibilidade cor controlada por JS (toggleVisibilidade) */
             body.modo-celular .btn-config         { background: #455A64 !important; }
             body.modo-celular .btn-reset          { background: #B71C1C !important; }
             body.modo-celular .btn-arquivos       { background: #6A1B9A !important; }
@@ -452,7 +463,6 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             .btn-chat           { background: #00838F !important; }
             .btn-ferram         { background: #BF360C !important; }
             .btn-circular[onclick*="mostrarOnline"] { background: #283593 !important; }
-            /* btnVisibilidade cor controlada por JS */
             .btn-sview          { background: #F57F17 !important; }
             .btn-config         { background: #455A64 !important; }
             .btn-reset          { background: #B71C1C !important; }
@@ -464,7 +474,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             #btnToggleUI        { background: #1565C0 !important; }
             #btnMapaMaior       { background: #303F9F !important; }
             #btnStilo           { background: #6A1B9A !important; }
-            #btnTraj            { display: none !important; }
+            #btnTraj            { display: flex !important; }
         }
 
         /* MODO COMPUTADOR EM CELULAR - Simula navegador desktop */
@@ -568,7 +578,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         /* Botões Flutuantes Livres (Fora da barra lateral) */
         #btnMapaMaior { position: absolute; top: 60px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #5C6BC0, 0 4px 12px rgba(0,0,0,0.35); }
         #btnStilo     { position: absolute; top: 110px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #AB47BC, 0 4px 12px rgba(0,0,0,0.35); }
-        #btnTraj      { position: absolute; top: 160px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #D32F2F, 0 4px 12px rgba(0,0,0,0.35); display: none; background: #D32F2F; transition: background 0.2s; }
+        #btnTraj      { position: absolute; top: 160px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #D32F2F, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #D32F2F; transition: background 0.2s; }
         #btnTraj.traj-ativo { background: #00C853 !important; box-shadow: inset 3px 0 0 #00C853, 0 4px 12px rgba(0,0,0,0.35) !important; }
         #btnToggleUI  { position: absolute; top: 12px; right: 10px; z-index: 10001; }
         
@@ -1705,7 +1715,7 @@ document.onkeydown = function(e) {
                     • <b>✏️ MELHORIA</b> — Abre a caneta mágica para desenhar no mapa e registrar problemas ou melhorias necessárias na rede. Permite enviar por WhatsApp ou imprimir.<br>
                     • <b>👥 ONLINE</b> — Mostra quem está usando o sistema agora (nome, equipe e localização no mapa).<br>
                     • <b>💬 CHAT</b> — Conversa com toda a equipe em tempo real. Pode mandar mensagem para todos ou só para uma pessoa.<br>
-                    • <b>👁️ VISÍVEL</b> — Liga ou desliga o radar que mostra sua localização para os colegas. <b style="color:#4CAF50;">Verde = ligado</b> (todos te veem no mapa). <b style="color:#f44336;">Vermelho = desligado</b> (você fica invisível).<br>
+                    • <b>📡 RADAR</b> — Você é visto pela equipe automaticamente. Mostra colegas conectados em tempo real no mapa.<br>
                     • <b>📱 TELA</b> — Troca entre o modo celular e o modo computador. <i>Aparece somente no celular.</i>
                     </span>
                 </div>
@@ -1940,7 +1950,7 @@ document.onkeydown = function(e) {
                 <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">💡 Dicas para usar melhor</h3>
                 <ol style="font-size: 11px; padding-left: 18px;">
                     <li>Deixe o GPS do celular sempre ligado para ter melhor precisão de localização</li>
-                    <li>Ative o radar (botão VISÍVEL) quando estiver trabalhando em equipe, para todos se verem no mapa</li>
+                    <li>Trabalhe em equipe — todos aparecem automaticamente no mapa em tempo real</li>
                     <li>Use os filtros de alimentador para focar somente no circuito que você vai trabalhar</li>
                     <li>Use a caneta (MELHORIA) para registrar problemas encontrados no campo com mais clareza</li>
                     <li>Antes de enviar pelo WhatsApp ou imprimir, confira sempre a prévia para garantir que as informações estão certas</li>
@@ -2159,7 +2169,7 @@ document.onkeydown = function(e) {
 
         <button id="btnStilo" class="btn-circular" onclick="toggleModalStilo()" title="Trocar estilo do mapa">🎨<span>STILO</span></button>
 
-        <button id="btnTraj" class="btn-circular" onclick="__trajToggle()" title="Rastrear trajeto GPS" style="display:none; color:#fff; font-weight:900;"><span style="font-size:8px; font-weight:900;">TRAJ</span></button>
+        <button id="btnTraj" class="btn-circular" onclick="__trajToggle()" title="Rastrear trajeto GPS" style="display:flex; color:#fff; font-weight:900;"><span style="font-size:8px; font-weight:900;">TRAJ</span></button>
 
         <div id="panelAlim">
             <div class="panel-header">Filtros e Circuitos <button onclick="togglePanelAlim()" style="border:none; background:none; cursor:pointer; font-size:16px;">×</button></div>
@@ -2190,7 +2200,6 @@ document.onkeydown = function(e) {
                 <button class="btn-ferram-item" style="background:#607D8B;" onclick="togglePanelFerram(); __melhMostrarHomenagemMaiki(ativarCanetaMagica);">✏️<span style="margin-left:6px;">MELHORIA</span></button>
                 <button class="btn-ferram-item" style="background:#3F51B5;" onclick="togglePanelFerram(); mostrarOnline();">👥<span style="margin-left:6px;">ONLINE</span></button>
                 <button class="btn-ferram-item" style="background:#00838F;" onclick="togglePanelFerram(); toggleChat();">💬<span style="margin-left:6px;">CHAT</span></button>
-                <button class="btn-ferram-item" id="btnVisibilidade" style="background:#4CAF50;" onclick="togglePanelFerram(); toggleVisibilidade();">👁️<span style="margin-left:6px;">VISÍVEL</span></button>
                 <button class="btn-ferram-item" id="btnTelaFerram" style="background:#FF8F00; display:none;" onclick="togglePanelFerram(); abrirModalTela();">📱<span style="margin-left:6px;">TELA</span></button>
                 <button class="btn-ferram-item" style="background:#6A0DAD;" onclick="togglePanelFerram(); abrirModalInspecaoRamo();">🔍<span style="margin-left:6px;">INSPEÇÃO</span></button>
                 <button class="btn-ferram-item" style="background:#00897B;" onclick="togglePanelFerram(); abrirModalCroqui();">✏️<span style="margin-left:6px;">FAZER/CROQUI/REDE</span></button>
@@ -3018,7 +3027,7 @@ function verificarPeriodoTeste() {
                     { emoji: "🏆", titulo: "Crédito de Poda", desc: "Ao retirar uma pendência, todo o time é notificado no CHAT com destaque de quem resolveu." },
                     { emoji: "💬", titulo: "Chat da Equipe", desc: "Comunique-se rapidamente com todos ou envie mensagens privadas em tempo real!" },
                     { emoji: "🔔", titulo: "Alertas em Segundo Plano", desc: "Notificações nativas no celular, mesmo com o mapa minimizado!" },
-                    { emoji: "📡", titulo: "Radar e Modo Visível/Invisível", desc: "Escolha se quer ser visto no mapa pela equipe ou ficar invisível clicando no botão de status (olho)." }
+                    { emoji: "📡", titulo: "Radar em Tempo Real", desc: "Veja onde sua equipe está no mapa. Movimentação suave e indicador de quem está se movendo. Você é visto automaticamente." }
                 ]
             }
         ];
@@ -3391,11 +3400,8 @@ function salvarConfiguracoes() {
     // Configuracoes removidas
 }
 
-let estouVisivel = true;
+let estouVisivel = true; // sempre visível
 function aplicarConfiguracoesVisuais() {
-    // Radar ativo por padrao
-    estouVisivel = true;
-    localStorage.setItem('prefVisibilidade', 'true');
     localStorage.setItem('configSetupDone', 'true');
 }
 
@@ -3418,28 +3424,8 @@ window.addEventListener('load', () => {
     if (_isMobile) { setTimeout(verificarCadastroNecessario, 2000); } else { verificarCadastroNecessario(); }
 });
 
-        function toggleVisibilidade() {
-    estouVisivel = !estouVisivel;
-    const btn = document.getElementById('btnVisibilidade');
-    
-    if (estouVisivel) {
-        if (btn) { btn.innerHTML = '👁️<span style="margin-left:6px;">VISÍVEL</span>'; btn.style.setProperty('background', '#4CAF50', 'important'); }
-        
-        if(typeof ultimoEnvioGPS !== 'undefined') ultimoEnvioGPS = 0;
-        
-        if (userMarker && typeof clienteMQTT !== 'undefined' && clienteMQTT && clienteMQTT.connected) {
-            const lngLat = userMarker.getLngLat();
-            mqttPublish(TEMA_MQTT, { acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(), lng: lngLat.lng, lat: lngLat.lat });
-        }
-        varreduraSistema();
-        mostrarNotificacaoRealTime("👁️ Radar ativado! Você está visível.", "#4CAF50", false);
-    } else {
-        if (btn) { btn.innerHTML = '👻<span style="margin-left:6px;">OCULTO</span>'; btn.style.setProperty('background', '#f44336', 'important'); }
-        
-        if (typeof clienteMQTT !== 'undefined' && clienteMQTT && clienteMQTT.connected) mqttPublish(TEMA_MQTT, { acao: "FICOU_INVISIVEL", remetente: meuID });
-        mostrarNotificacaoRealTime("👻 Modo oculto ativado.", "#9E9E9E", false);
-    }
-}
+        function toggleVisibilidade() { /* removido — sempre visível */ }
+
 
         function varreduraSistema() {
             if (!clienteMQTT || !clienteMQTT.connected) { alert("Sem conexão com a rede. Tente novamente em instantes."); return; }
@@ -3463,8 +3449,6 @@ window.addEventListener('load', () => {
 
         function dispararAtualizacao() {
             document.getElementById('avisoAtualizacaoStatus').style.display = 'none';
-            const querVisibilidade = localStorage.getItem('prefVisibilidade') !== 'false';
-            if (!querVisibilidade) return;
             if(userMarker && clienteMQTT && clienteMQTT.connected) {
                 const lngLat = userMarker.getLngLat();
                 mqttPublish(TEMA_MQTT, {acao: "ATUALIZAR_GPS", remetente: meuID, autor: getAutorFormatado(), lng: lngLat.lng, lat: lngLat.lat});
@@ -4014,7 +3998,7 @@ window.addEventListener('load', () => {
         function _iniciarHeartbeat() {
             if (_heartbeatInterval) clearInterval(_heartbeatInterval);
             _heartbeatInterval = setInterval(() => {
-                if (!clienteMQTT || !clienteMQTT.connected || !estouVisivel) return;
+                if (!clienteMQTT || !clienteMQTT.connected) return;
                 const ll = userMarker ? userMarker.getLngLat() : null;
                 mqttPublish(TEMA_MQTT, {
                     acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
@@ -4031,13 +4015,7 @@ window.addEventListener('load', () => {
                     clean: true,
                     keepalive: 25,
                     reconnectPeriod: 5000,
-                    connectTimeout: 10000,
-                    will: {
-                        topic: TEMA_MQTT,
-                        payload: JSON.stringify({ acao: "FICOU_INVISIVEL", remetente: meuID }),
-                        qos: 1,
-                        retain: false
-                    }
+                    connectTimeout: 10000
                 });
 
                 const TEMA_CHAVES = TEMA_MQTT + '/chave';
@@ -4134,7 +4112,6 @@ window.addEventListener('load', () => {
         }
 
         function processarMensagemRede(msg) {
-            const querVisibilidade = localStorage.getItem('prefVisibilidade') !== 'false';
 
             if (msg.acao === "PRESENCA_APP") {
                 if (msg.remetente !== meuID) {
@@ -4148,8 +4125,6 @@ window.addEventListener('load', () => {
             }
             else if (msg.acao === "PRESENCA_ONLINE") {
                 if (msg.remetente === meuID) return;
-                // So mostra colegas se EU tambem estou com radar ativo (visivel)
-                if (!estouVisivel) return;
                 // Atualiza marcador no mapa quando recebe posicao do colega
                 if (msg.lng != null && msg.lat != null) {
                     atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat);
@@ -4390,40 +4365,109 @@ window.addEventListener('load', () => {
                 }
             }
             else if (msg.acao === "PING_SCAN") {
-                if (msg.remetente !== meuID && estouVisivel && userMarker) {
+                if (msg.remetente !== meuID && userMarker) {
                     const lngLat = userMarker.getLngLat();
                     mqttPublish(TEMA_MQTT, { acao: "PONG_SCAN", remetente: meuID, destinatario: msg.remetente, autor: getAutorFormatado(), lng: lngLat.lng, lat: lngLat.lat });
                 }
             }
             else if (msg.acao === "PONG_SCAN") {
-                if (msg.destinatario === meuID && estouVisivel) {
+                if (msg.destinatario === meuID) {
                     atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat);
                 }
             }
         }
 
         function atualizarMarcadorColega(id, autor, lng, lat) {
-            // Converte para número garantido
             const numLng = parseFloat(lng);
             const numLat = parseFloat(lat);
-            
-            if (isNaN(numLng) || isNaN(numLat)) {
-                return;
-            }
-            
+            if (isNaN(numLng) || isNaN(numLat)) return;
+
             if (colegasNoMapa[id] && colegasNoMapa[id].marker) {
-                colegasNoMapa[id].marker.setLngLat([numLng, numLat]);
-                colegasNoMapa[id].lastUpdate = Date.now();
-                colegasNoMapa[id].nome = autor;
+                const colega = colegasNoMapa[id];
+
+                // Cancelar animação anterior se houver
+                if (colega.animRafId) {
+                    cancelAnimationFrame(colega.animRafId);
+                    colega.animRafId = null;
+                }
+
+                // Posição atual do marker
+                const lngLatAtual = colega.marker.getLngLat();
+                const startLng = lngLatAtual.lng;
+                const startLat = lngLatAtual.lat;
+                const endLng = numLng;
+                const endLat = numLat;
+
+                // Distância aproximada — se >~500m teleporta direto
+                const dist = Math.hypot(endLng - startLng, endLat - startLat);
+                if (dist > 0.005) {
+                    colega.marker.setLngLat([endLng, endLat]);
+                } else {
+                    const startTime = performance.now();
+                    const DURATION = 1000;
+                    function step(now) {
+                        const elapsed = now - startTime;
+                        const t = Math.min(elapsed / DURATION, 1);
+                        const ease = 1 - Math.pow(1 - t, 3); // easeOutCubic
+                        const curLng = startLng + (endLng - startLng) * ease;
+                        const curLat = startLat + (endLat - startLat) * ease;
+                        colega.marker.setLngLat([curLng, curLat]);
+                        if (t < 1) {
+                            colega.animRafId = requestAnimationFrame(step);
+                        } else {
+                            colega.animRafId = null;
+                        }
+                    }
+                    colega.animRafId = requestAnimationFrame(step);
+                }
+
+                // Detectar se REALMENTE se moveu (~>3m)
+                const movimentou = dist > 0.00003;
+                const agora = Date.now();
+                colega.lastUpdate = agora;
+                if (movimentou) colega.lastMove = agora;
+                colega.nome = autor;
+
+                // Atualizar classe CSS: movendo ou parado
+                const el = colega.marker.getElement();
+                if (el) {
+                    const idx = el.querySelector('.colega-marker-icon');
+                    if (idx) {
+                        if (movimentou && (agora - (colega.lastMove || 0) < 5000)) {
+                            idx.classList.add('colega-moving');
+                            idx.classList.remove('colega-stopped');
+                        } else if (agora - (colega.lastMove || 0) > 15000) {
+                            idx.classList.add('colega-stopped');
+                            idx.classList.remove('colega-moving');
+                        }
+                    }
+                }
             } else {
                 const el = document.createElement('div');
                 el.className = 'colega-marker-container';
                 el.innerHTML = `<div class="colega-label">${autor}</div><div class="colega-marker-icon"></div>`;
                 const novoMarker = new maplibregl.Marker({element: el}).setLngLat([numLng, numLat]).addTo(map);
-                colegasNoMapa[id] = { marker: novoMarker, lastUpdate: Date.now(), nome: autor };
+                colegasNoMapa[id] = { marker: novoMarker, lastUpdate: Date.now(), lastMove: Date.now(), nome: autor, animRafId: null };
             }
             atualizarListaChatPrivado();
         }
+
+        // Verificação periódica: marcar colegas parados há >15s
+        setInterval(function() {
+            const agora = Date.now();
+            for (const id in colegasNoMapa) {
+                const colega = colegasNoMapa[id];
+                const el = colega.marker && colega.marker.getElement();
+                if (!el) continue;
+                const idx = el.querySelector('.colega-marker-icon');
+                if (!idx) continue;
+                const tempoSemMover = agora - (colega.lastMove || 0);
+                if (tempoSemMover > 15000) {
+                    idx.classList.add('colega-stopped');
+                    idx.classList.remove('colega-moving');
+                }
+            }
+        }, 5000);
 
         const _limparColegasInterval = setInterval(() => {
             const agora = Date.now();
@@ -5844,6 +5888,8 @@ window.addEventListener('load', () => {
 
         async function salvarTudo() {
             try {
+                if (window.__carregandoTudo) { console.log('[salvarTudo] pulado: app carregando'); return; }
+                var _comOrigem = geoJsonGlobal && geoJsonGlobal.features ? geoJsonGlobal.features.filter(function(_f){ return _f && _f.properties && _f.properties.sourceFile; }).length : 0; if (_comOrigem === 0) { return; }
                 await StorageManager.saveState(circuitosState, filtrosStatus);
 
                 // Garantir que arquivosVisiveis existe e cobre TODOS os sourceFiles presentes
@@ -8705,17 +8751,6 @@ function togglePanelFerram() {
     document.getElementById('panelListaPoda').style.display = 'none';
     const p = document.getElementById('panelFerram');
     p.style.display = (p.style.display === 'flex') ? 'none' : 'flex';
-    // Atualiza visual do botão VISÍVEL conforme estado do radar
-    const btnVis = document.getElementById('btnVisibilidade');
-    if (btnVis) {
-        if (estouVisivel) {
-            btnVis.style.setProperty('background', '#4CAF50', 'important');
-            btnVis.innerHTML = '👁️<span style="margin-left:6px;">VISÍVEL</span>';
-        } else {
-            btnVis.style.setProperty('background', '#f44336', 'important');
-            btnVis.innerHTML = '👻<span style="margin-left:6px;">OCULTO</span>';
-        }
-    }
 }
 
 // Fechar painel FERRAM ao clicar fora dele
@@ -9030,7 +9065,6 @@ function __trajToggleReal() {
 }
 
 function __trajToggle() {
-    if (!_isMobile) return;
     __trajMostrarHomenagem(__trajToggleReal);
 }
 
@@ -10276,9 +10310,8 @@ window.apagarChaveAtual = function() {
                 
                 verificarProximidadePodas(lng, lat);
 
-                const querVisibilidade = localStorage.getItem('prefVisibilidade') !== 'false';
                 const agora = Date.now();
-                if (agora - ultimoEnvioGPS > (_isMobile ? 3000 : 2000) && estouVisivel && querVisibilidade && clienteMQTT && clienteMQTT.connected) {
+                if (agora - ultimoEnvioGPS > (_isMobile ? 1000 : 800) && clienteMQTT && clienteMQTT.connected) {
                     ultimoEnvioGPS = agora;
                     clienteMQTT.publish(TEMA_MQTT, JSON.stringify({acao: "ATUALIZAR_GPS", remetente: meuID, autor: getAutorFormatado(), lng: lng, lat: lat}), { qos: 0 });
                 }
@@ -14227,6 +14260,11 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     try {
       var m = window.__mapPodaManual__ || window.map;
       if (!m) return;
+      // Aguardar style do mapa carregar — evita 'Style is not done loading' em loop
+      if (typeof m.isStyleLoaded === 'function' && !m.isStyleLoaded()) {
+        try { m.once('idle', __melhFixDesenharLayer); } catch(e){}
+        return;
+      }
       var lista = __melhFixLer();
       var gj = __melhFixBuildGeoJSONs(lista);
 
@@ -17422,7 +17460,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       desativar(false);
 
       // Toast de confirmação
-      mostrarToast("✅ Relatório salvo. Use 'Exportar relatório de podas manuais' para acessar.");
+      mostrarToast("✅ Relatório salvo. Use 'Expor. Roçada' para acessar.");
       setTimeout(ocultarToast, 4000);
     };
 
@@ -18546,10 +18584,10 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     btn.id = 'btnPodaManual';
     btn.className = 'btn-ferram-item';
     btn.style.background = '#E65100';
-    btn.innerHTML = '🌳<span style="margin-left:6px;">PODA MANUAL</span>';
+    btn.innerHTML = '🌿<span style="margin-left:6px;">ROÇADA</span>';
     btn.onclick = function(){
       if(typeof togglePanelFerram === 'function') togglePanelFerram();
-      window.podaManual.iniciar();
+      __rocadaMostrarInfo(function(){ window.podaManual.iniciar(); });
     };
     container.appendChild(btn);
 
@@ -18558,12 +18596,57 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     btnExp.id = 'btnExportarPodaManuais';
     btnExp.className = 'btn-ferram-item';
     btnExp.style.background = '#0288D1';
-    btnExp.innerHTML = '📋<span style="margin-left:6px;">EXPORT. PODAS MANUAIS</span>';
+    btnExp.innerHTML = '📋<span style="margin-left:6px;">EXPOR. ROÇADA</span>';
     btnExp.onclick = function(){
       if(typeof togglePanelFerram === 'function') togglePanelFerram();
       abrirModalExportarPorCidade();
     };
     container.appendChild(btnExp);
+  }
+
+  function __rocadaMostrarInfo(callback) {
+    try {
+      if (localStorage.getItem('inspecao-pro-rocada-info-oculto') === '1') {
+        callback();
+        return;
+      }
+    } catch(e) {}
+
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;opacity:0;transition:opacity .2s;';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:18px;padding:26px 22px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.3);text-align:center;border-top:6px solid;border-image:linear-gradient(90deg,#FF8C00,#4CAF50) 1;transform:scale(0.92);transition:transform .25s cubic-bezier(0.16,1,0.3,1);';
+
+    card.innerHTML =
+      '<div style="font-size:40px;margin-bottom:8px;">🌿</div>' +
+      '<div style="font-size:18px;font-weight:900;color:#FF8C00;margin-bottom:12px;">Como usar a Roçada</div>' +
+      '<div style="font-size:14px;line-height:1.55;color:#333;text-align:left;background:#f5f9ff;padding:13px;border-left:4px solid #FF8C00;border-radius:8px;margin-bottom:14px;">' +
+        'Marque um ponto de roçada e <b>envie por WhatsApp</b> ou <b>exporte</b> para depois enviar como quiser. <b>Não esqueça de salvar</b> se quiser gerar um relatório para depois exportar.' +
+      '</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;margin-bottom:14px;cursor:pointer;text-align:left;">' +
+        '<input type="checkbox" id="chkRocadaInfoOcultar" style="width:16px;height:16px;cursor:pointer;">' +
+        '<span>Não mostrar mais esta mensagem</span>' +
+      '</label>' +
+      '<button id="btnRocadaInfoOk" style="width:100%;padding:13px;background:linear-gradient(135deg,#FF8C00,#4CAF50);color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;">OK, vamos lá!</button>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function(){
+      overlay.style.opacity = '1';
+      card.style.transform = 'scale(1)';
+    });
+
+    document.getElementById('btnRocadaInfoOk').onclick = function(){
+      var ocultar = document.getElementById('chkRocadaInfoOcultar').checked;
+      if (ocultar) {
+        try { localStorage.setItem('inspecao-pro-rocada-info-oculto', '1'); } catch(e){}
+      }
+      overlay.style.opacity = '0';
+      card.style.transform = 'scale(0.92)';
+      setTimeout(function(){ try { overlay.remove(); } catch(e){} callback(); }, 200);
+    };
   }
 
   if (document.readyState === 'loading') {
