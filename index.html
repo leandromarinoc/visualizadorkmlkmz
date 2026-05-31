@@ -2074,6 +2074,7 @@ document.onkeydown = function(e) {
             </div>
             
             <button class="btn-salvar" style="background: #E040FB; box-shadow: 0 4px 10px rgba(224, 64, 251, 0.4); margin-bottom: 10px;" onclick="salvarChave()">Salvar e Avisar Equipe</button>
+            <button id="btn-apagar-chave" class="btn-salvar" style="background:#D32F2F; box-shadow:0 4px 10px rgba(211, 47, 47, 0.4); margin-bottom:10px; display:none;" onclick="apagarChaveAtual()">🗑️ Apagar Chave</button>
             <button class="btn-fechar-modal" onclick="document.getElementById('chaveModalOverlay').style.display='none'">Cancelar</button>
         </div>
     </div>
@@ -4280,6 +4281,23 @@ window.addEventListener('load', () => {
                 const textoR = (msg.msgChat || '').replace(/<[^>]*>?/gm, '') || `Chave ${msg.nome||''} removida por colega`;
                 if (!document.hidden) mostrarNotificacaoRealTime(msg.msgChat || `🗑️ Chave ${msg.nome||''} removida`, "#F44336", false);
                 enviarNotificacaoSistemaForcada("🗑️ Chave Removida", textoR, 'chave-remove');
+            }
+            else if (msg.acao === "APAGAR_CHAVE") {
+                if (msg.remetente === meuID) return;
+                if (!msg.feature || !msg.feature.properties || !msg.feature.properties.id) return;
+                const idApagar = msg.feature.properties.id;
+                const idxApagar = geoJsonGlobal.features.findIndex(function(f){
+                    return f && f.properties && f.properties.id === idApagar;
+                });
+                if (idxApagar >= 0) {
+                    geoJsonGlobal.features.splice(idxApagar, 1);
+                    if (typeof renderizarMapa === 'function') renderizarMapa();
+                    if (typeof salvarTudoSeguro === 'function') salvarTudoSeguro();
+                }
+                const nomeApagado = (msg.feature.properties.name || idApagar);
+                const textoApagar = (msg.msgChat || '').replace(/<[^>]*>?/gm, '') || `Chave ${nomeApagado} apagada por colega`;
+                if (!document.hidden) mostrarNotificacaoRealTime(msg.msgChat || `🗑️ Chave ${nomeApagado} apagada`, "#D32F2F", false);
+                enviarNotificacaoSistemaForcada("🗑️ Chave Apagada", textoApagar, 'chave-apagar');
             }
             else if (msg.acao === "FICOU_INVISIVEL") {
                 const idColega = msg.remetente;
@@ -9777,6 +9795,7 @@ function salvarEdicaoChavePorNumero() {
                 }
             }
             
+            document.getElementById('btn-apagar-chave').style.display = 'block';
             document.getElementById('chaveModalOverlay').style.display = 'flex';
         };
 
@@ -9936,6 +9955,50 @@ window.salvarChave = function() {
     }
     
     alert("✅ Chave salva com sucesso!");
+};
+
+window.apagarChaveAtual = function() {
+  var id = document.getElementById('chaveEditId').value;
+  if (!id) { alert('Erro: ID da chave não encontrado.'); return; }
+
+  var idx = geoJsonGlobal.features.findIndex(function(f){
+    return f && f.properties && f.properties.id === id;
+  });
+  if (idx < 0) { alert('Chave não encontrada no mapa.'); return; }
+
+  var feature = geoJsonGlobal.features[idx];
+  var nomeChave = (feature.properties && feature.properties.name) || id;
+
+  var confirmar = confirm('🗑️ Apagar esta chave?\n\nNome: ' + nomeChave + '\n\n⚠️ Esta ação não pode ser desfeita.');
+  if (!confirmar) return;
+
+  var featureApagada = JSON.parse(JSON.stringify(feature));
+
+  geoJsonGlobal.features.splice(idx, 1);
+
+  if (typeof renderizarMapa === 'function') renderizarMapa();
+  if (typeof salvarTudoSeguro === 'function') salvarTudoSeguro();
+
+  try {
+    var autorNome = typeof getAutorFormatado === 'function' ? getAutorFormatado() : (window.meuNome || 'Usuário');
+  var msgChat = '🗑️ <b>CHAVE APAGADA</b><br>👤 <b>' + autorNome + '</b> apagou a chave <b style="color:#FF5252;">' + nomeChave + '</b>';
+    if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
+    if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
+      mqttPublish(TEMA_MQTT, {
+        acao: 'APAGAR_CHAVE',
+        remetente: typeof meuID !== 'undefined' ? meuID : null,
+        feature: featureApagada,
+        msgChat: msgChat
+      });
+      var topicoChave = TEMA_MQTT + '/chave/' + id;
+      mqttPublish(topicoChave, '', { retain: true, qos: 1 });
+    }
+  } catch(e) { console.warn('[apagarChave] erro MQTT:', e); }
+
+  document.getElementById('chaveModalOverlay').style.display = 'none';
+  document.getElementById('btn-apagar-chave').style.display = 'none';
+
+  alert('✅ Chave "' + nomeChave + '" apagada com sucesso!');
 };
 
 
@@ -10372,6 +10435,7 @@ window.salvarChave = function() {
                 document.getElementById('chaveLat').value = e.lngLat.lat;
                 document.getElementById('chaveNome').value = '';
                 document.getElementById('chaveStatus').value = 'Equipamento';
+                document.getElementById('btn-apagar-chave').style.display = 'none';
                 
                 document.getElementById('chaveModalOverlay').style.display = 'flex';
                 return;
@@ -11778,6 +11842,9 @@ map.on('click', 'l-linhas', (e) => {
         <button id="btn-salvar-edicao" style="width:100%; padding:8px; background:#300050; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:12px; margin-top:8px; cursor:pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">">
             💾 Salvar Alterações
         </button>
+        <button id="btn-cadastrar-chave-aqui" style="width:100%; padding:10px; background:#28A745; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px; margin-top:8px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
+            ➕ Cadastrar nova chave neste local
+        </button>
     </div>`;
 
     // Remove balões antigos antes de abrir o novo (evita sobreposição)
@@ -11836,6 +11903,30 @@ map.on('click', 'l-linhas', (e) => {
             // Fecha o balão após salvar
             popup.remove();
         }
+    });
+
+    // ==========================================
+    // AÇÃO DE CADASTRAR NOVA CHAVE NESTE LOCAL
+    // ==========================================
+    var _coordClicada = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+    document.getElementById('btn-cadastrar-chave-aqui').addEventListener('click', () => {
+        // Fechar o popup do alimentador
+        document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
+        // Abrir o modal de cadastro de chave com a coordenada clicada
+        document.getElementById('chaveModalTitulo').innerText = '➕ Cadastrar Nova Chave';
+        document.getElementById('chaveEditId').value = '';
+        document.getElementById('chaveLng').value = _coordClicada.lng;
+        document.getElementById('chaveLat').value = _coordClicada.lat;
+        document.getElementById('chaveNome').value = '';
+        document.getElementById('chaveStatus').value = 'Equipamento';
+        // Pré-preencher o alimentador com o nome atual da linha (UX bônus)
+        var alimInput = document.getElementById('chaveAlimentador') || document.getElementById('chaveAlim');
+        if (alimInput) {
+            var nomeAtual = document.getElementById('edit-alim-nome');
+            if (nomeAtual && nomeAtual.value) alimInput.value = nomeAtual.value.trim();
+        }
+        document.getElementById('btn-apagar-chave').style.display = 'none';
+        document.getElementById('chaveModalOverlay').style.display = 'flex';
     });
 });
 
