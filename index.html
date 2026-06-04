@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+  <!-- Google Analytics 4 (G-SS7428TZX5) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SS7428TZX5"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SS7428TZX5', { 'send_page_view': true });
+    console.log('[GA4] Inicializado: G-SS7428TZX5');
+  </script>
     <meta charset="UTF-8">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>⚡</text></svg>" type="image/svg+xml">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -1562,9 +1571,9 @@ document.onkeydown = function(e) {
                 <button onclick="fecharDocumentacao()" style="background: #f44336; color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer;">✕</button>
             </div>
             
-            <div id="docConteudo" style="text-align: left; font-size: 12px; color: #444; margin-bottom: 20px; overflow-y: auto; max-height: 60vh; padding: 15px; background: #f9f9f9; border-radius: 8px; line-height: 1.5;">
+                        <div id="docConteudo" style="text-align: left; font-size: 12px; color: #444; margin-bottom: 20px; overflow-y: auto; max-height: 60vh; padding: 15px; background: #f9f9f9; border-radius: 8px; line-height: 1.5;">
 
-                <!-- AVISO IMPORTANTE -->
+                <!-- 1. AVISO IMPORTANTE -->
                 <div style="background: #ffebee; border: 3px solid #f44336; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: center;">
                     <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
                     <div style="color: #c62828; font-weight: bold; font-size: 12px; line-height: 1.6;">
@@ -1572,400 +1581,334 @@ document.onkeydown = function(e) {
                     </div>
                 </div>
 
-                <!-- O QUE É O SISTEMA -->
-                <h3 style="color: #1a237e; margin-top: 0; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">📘 O que é o Inspeção Pro?</h3>
-                <p>O <b>Inspeção Pro</b> é um aplicativo que roda no celular ou no computador, sem precisar instalar nada. Ele foi criado para ajudar técnicos e equipes que trabalham em campo na rede elétrica.</p>
-                <p>Com ele você consegue ver o mapa com todos os equipamentos da rede, saber sua localização, conversar com a equipe, registrar problemas e muito mais — tudo na palma da mão.</p>
-
-                <div style="background: #e3f2fd; padding: 10px; border-radius: 6px; margin: 10px 0;">
-                    <b>Para que serve:</b> Ver o mapa • Saber onde você está pelo GPS • Falar com a equipe em tempo real • Cadastrar equipamentos • Fazer cálculos técnicos • Registrar melhorias e podas • Gerar relatórios
+                <!-- 2. O QUE É -->
+                <h3 style="color: #1a237e; margin-top: 15px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">📘 O que é o Inspeção Pro?</h3>
+                <p style="font-size: 11px;">O <b>Inspeção Pro</b> é um aplicativo para celular e computador — sem instalar nada — feito para eletricistas e técnicos que trabalham em campo na rede elétrica.</p>
+                <div style="background: #e3f2fd; padding: 10px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Com ele você pode:</b> Ver o mapa da rede • Se localizar pelo GPS • Cadastrar e editar chaves • Calcular cargas • Registrar podas • Desenhar melhorias • Rastrear trajeto • Falar com a equipe em tempo real • Gerar relatórios e compartilhar no WhatsApp
                 </div>
 
-                <!-- NOVIDADES DA VERSÃO 3.0 -->
-                <h3 style="color: #00897B; margin-top: 20px; border-bottom: 2px solid #00897B; padding-bottom: 8px;">🚀 O que há de novo na versão 3.0</h3>
-
-                <div style="background: #e0f2f1; border: 2px solid #00897B; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <b style="font-size: 13px; color: #00695C;">✏️ Ferramenta MELHORIA — Caneta Mágica</b><br>
-                    <span style="font-size: 11px;">
-                    Agora você pode <b>desenhar diretamente no mapa</b> para marcar problemas na rede. Funciona como uma caneta na tela.<br><br>
-                    <b>O que você pode fazer:</b><br>
-                    • Desenhar sobre o mapa para indicar o trecho com problema<br>
-                    • Escrever uma observação explicando o que encontrou<br>
-                    • Desfazer traços errados com o botão <b>Desfazer</b><br>
-                    • Apagar partes do desenho com a <b>Borracha</b><br>
-                    • Ver a metragem do trecho desenhado em tempo real<br>
-                    • Enviar o registro com o desenho por <b>WhatsApp</b> ou <b>Imprimir</b><br><br>
-                    <b>Como acessar:</b> Clique em <b>FERRAM → MELHORIA</b>
-                    </span>
+                <!-- 3. IMPORTAR KML/KMZ -->
+                <h3 style="color: #1565C0; margin-top: 20px; border-bottom: 2px solid #1565C0; padding-bottom: 8px;">🗺️ Como começar — Importar mapas KML/KMZ</h3>
+                <p style="font-size: 11px;">Para ver a rede no mapa você precisa importar os arquivos KML ou KMZ da sua área.</p>
+                <div style="background: #e3f2fd; border-left: 4px solid #1565C0; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Passo a passo:</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Clique no botão <b>ADD KML/KMZ</b> na barra lateral</li>
+                        <li>Selecione um ou vários arquivos de uma vez (pode marcar vários)</li>
+                        <li>Se o arquivo já existir, aparece uma janela com 3 opções:<br>
+                            &nbsp;&nbsp;• <b>Substituir</b> — apaga o antigo e coloca o novo<br>
+                            &nbsp;&nbsp;• <b>Adicionar</b> — mantém os dois no mapa<br>
+                            &nbsp;&nbsp;• <b>Pular</b> — ignora e não importa
+                        </li>
+                        <li>O mapa carrega automaticamente com a rede elétrica desenhada</li>
+                    </ol>
+                </div>
+                <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>DICA:</b> No painel <b>ARQUIVOS</b> (menu Arquivos) você vê todos os arquivos importados. Clique no olho 👁️ para mostrar ou esconder um arquivo no mapa sem perder os dados.
                 </div>
 
-                <div style="background: #f3e5f5; border: 2px solid #7B1FA2; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <b style="font-size: 13px; color: #6A1B9A;">🎨 Botão STILO — Trocar a aparência do mapa</b><br>
-                    <span style="font-size: 11px;">
-                    Agora você pode trocar o visual do mapa de acordo com o que for mais útil para você no momento.<br><br>
-                    <b>Opções disponíveis:</b><br>
-                    • <b>Mapa Padrão (estilo Google):</b> O mapa de ruas normal, com cores e nomes das vias<br>
-                    • <b>Satélite:</b> Foto de cima (imagem de satélite). Ótimo para ver a vegetação, os postes e o terreno<br>
-                    • <b>Noturno / Escuro:</b> Mapa com fundo escuro, ideal para usar de noite e não cansar os olhos<br><br>
-                    <b>Como acessar:</b> Clique no botão <b>🎨 STILO</b> no canto da tela
-                    </span>
-                </div>
-
-                <div style="background: #fff8e1; border: 2px solid #F9A825; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <b style="font-size: 13px; color: #E65100;">👤 Modo de Trabalho: Sozinho ou em Equipe</b><br>
-                    <span style="font-size: 11px;">
-                    Na primeira vez que você abre o sistema, ele pergunta como você vai trabalhar naquele dia.<br><br>
-                    • <b>Sozinho:</b> Você está trabalhando sem equipe. O sistema registra só o seu nome.<br>
-                    • <b>Em Equipe:</b> Você está com mais colegas. O sistema pede o nome da equipe também, para aparecer certinho no mapa para todos.<br><br>
-                    Isso serve para que, quando outros colegas abrirem o sistema, saibam exatamente quem está onde e com qual equipe.
-                    </span>
-                </div>
-
-                <div style="background: #e8f5e9; border: 2px solid #388E3C; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <b style="font-size: 13px; color: #1B5E20;">📱 Prévia antes de enviar — WhatsApp e Impressão</b><br>
-                    <span style="font-size: 11px;">
-                    Agora, antes de enviar um registro de melhoria pelo WhatsApp ou imprimir, o sistema mostra uma <b>prévia</b> do que vai ser enviado.<br><br>
-                    • Você vê exatamente o que o outro lado vai receber antes de enviar<br>
-                    • Pode conferir se todas as informações estão corretas<br>
-                    • Evita enviar informações erradas ou incompletas<br><br>
-                    <b>Como usar:</b> Após preencher os dados de uma melhoria, clique em <b>WhatsApp</b> ou <b>Imprimir</b> — uma prévia aparecerá primeiro.
-                    </span>
-                </div>
-
-                <div style="background: #e3f2fd; border: 2px solid #1565C0; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <b style="font-size: 13px; color: #0D47A1;">📏 Medição de Vão — medir distâncias no mapa</b><br>
-                    <span style="font-size: 11px;">
-                    A ferramenta de medição foi melhorada. Agora, ao clicar em dois pontos no mapa, um menu aparece perguntando o que você quer fazer:<br><br>
-                    • <b>Continuar Medindo:</b> Adiciona mais pontos para medir trechos maiores<br>
-                    • <b>Salvar Medida:</b> Guarda o resultado da medição<br>
-                    • <b>Cancelar:</b> Encerra a medição sem salvar<br><br>
-                    A distância aparece em metros ou quilômetros direto no mapa.<br><br>
-                    <b>Como acessar:</b> Clique em <b>FERRAM → VÃO</b>
-                    </span>
-                </div>
-
-                <div style="background: #fce4ec; border: 2px solid #C62828; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
-                    <b style="font-size: 13px; color: #B71C1C;">🔄 Atualização automática obrigatória</b><br>
-                    <span style="font-size: 11px;">
-                    Quando o sistema é atualizado, todos os usuários precisam instalar a nova versão para continuar usando. O sistema avisa automaticamente e bloqueia o uso até a atualização ser feita.<br><br>
-                    • Quando aparecer o aviso de atualização, clique em <b>"INSTALAR ATUALIZAÇÃO"</b><br>
-                    • O sistema recarrega sozinho com a versão mais recente<br>
-                    • Seus dados não são apagados durante a atualização
-                    </span>
-                </div>
-
-                <!-- INSTALACAO NO COMPUTADOR -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">💻 Usando no Computador (Importante!)</h3>
-                
-                <div style="background: #fff3e0; border: 2px solid #ff9800; border-radius: 8px; padding: 15px; margin: 15px 0;">
-                    <b style="font-size: 14px; color: #e65100;">📁 Pasta de arquivos obrigatória</b><br><br>
-                    <span style="font-size: 11px;">
-                    Quando você usa o sistema no computador ou notebook, precisa criar uma pasta para guardar os arquivos. O sistema pede isso na primeira vez.<br><br>
-                    <b>Por que preciso criar uma pasta?</b><br>
-                    • Os arquivos de mapa (KML/KMZ) ficam salvos na pasta que você criou<br>
-                    • Você pode fazer cópias de segurança copiando essa pasta<br>
-                    • Os arquivos ficam no seu computador, não presos no navegador<br><br>
-                    <b>Como funciona:</b><br>
-                    1. Na primeira vez, o sistema pede para você criar ou escolher uma pasta<br>
-                    2. Quando importar arquivos de mapa, eles vão automaticamente para essa pasta<br>
-                    3. Para ver os arquivos, clique em <b>ARQUIVOS → Acessar</b><br>
-                    4. Se apagar a pasta por engano, o sistema fica bloqueado até você criar outra<br><br>
-                    <b style="color: #d84315;">Cuidado:</b> Não apague a pasta criada! Se apagar, os arquivos somem do sistema.
-                    </span>
-                </div>
-
-                <!-- INSTALACAO NO CELULAR -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">📱 Instalando no Celular</h3>
-                <p style="font-size: 11px;">Você pode colocar o ícone do Inspeção Pro direto na tela do seu celular, como se fosse um aplicativo normal. Siga os passos abaixo:</p>
-                
-                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #4caf50;">
-                    <b>Android (celulares Samsung, Motorola, etc.):</b><br>
-                    <span style="font-size: 11px;">
-                    1. Abra o sistema pelo navegador <b>Chrome</b><br>
-                    2. Toque nos 3 pontinhos (⋮) no canto superior direito<br>
-                    3. Toque em <b>"Adicionar à tela inicial"</b><br>
-                    4. Pronto! O ícone aparece na tela do seu celular
-                    </span>
-                </div>
-                
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #2196f3;">
-                    <b>iPhone / iPad:</b><br>
-                    <span style="font-size: 11px;">
-                    1. Abra o sistema pelo navegador <b>Safari</b><br>
-                    2. Toque no ícone de compartilhar (o quadradinho com uma seta para cima)<br>
-                    3. Role a lista para baixo e toque em <b>"Adicionar à Tela Inicial"</b><br>
-                    4. Toque em <b>"Adicionar"</b> no canto superior direito<br>
-                    5. Pronto! O ícone aparece na tela do seu iPhone
-                    </span>
-                </div>
-
-                <!-- BOTOES DO SISTEMA -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">🔘 O que faz cada botão</h3>
-
-                <p style="font-size: 11px; color: #555; margin-bottom: 8px;">Os botões ficam na barra lateral da tela. Veja o que cada um faz:</p>
-
-                <div style="background: #e8eaf6; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3f51b5;">
-                    <b style="font-size: 13px;">🔧 FERRAM — Painel de Ferramentas</b><br>
-                    <span style="font-size: 11px;">
-                    Abre um painel com todas as ferramentas de trabalho. Dentro do FERRAM você encontra:<br><br>
-                    • <b>🌳 PODA</b> — Marca um ponto no mapa onde tem uma árvore que precisa ser podada. Registra o local, cidade e observação.<br>
-                    • <b>🔑 CHAVE</b> — Cadastra, edita ou remove equipamentos (chaves, transformadores, postes, etc.) no sistema.<br>
-                    • <b>📋 LISTA</b> — Mostra todas as podas registradas. Dá para filtrar por cidade e exportar o relatório em arquivo KML.<br>
-                    • <b>📏 VÃO</b> — Mede distâncias no mapa. Clique em dois ou mais pontos e veja a distância em metros ou quilômetros.<br>
-                    • <b>✏️ MELHORIA</b> — Abre a caneta mágica para desenhar no mapa e registrar problemas ou melhorias necessárias na rede. Permite enviar por WhatsApp ou imprimir.<br>
-                    • <b>👥 ONLINE</b> — Mostra quem está usando o sistema agora (nome, equipe e localização no mapa).<br>
-                    • <b>💬 CHAT</b> — Conversa com toda a equipe em tempo real. Pode mandar mensagem para todos ou só para uma pessoa.<br>
-                    • <b>📡 RADAR</b> — Você é visto pela equipe automaticamente. Mostra colegas conectados em tempo real no mapa.<br>
-                    • <b>📱 TELA</b> — Troca entre o modo celular e o modo computador. <i>Aparece somente no celular.</i>
-                    </span>
-                </div>
-
-                <p style="font-size: 11px; color: #555; margin: 10px 0 6px 0;"><b>Outros botões na barra principal:</b></p>
-
-                <table style="width: 100%; font-size: 11px; border-collapse: collapse;">
-                    <tr style="background: #f5f5f5;"><td style="padding: 6px; border: 1px solid #ddd;"><b>⚡ ALIM</b></td><td style="padding: 6px; border: 1px solid #ddd;">Filtros de alimentadores — mostra ou esconde os circuitos elétricos no mapa. Útil para focar em um circuito de cada vez.</td></tr>
-                    <tr><td style="padding: 6px; border: 1px solid #ddd;"><b>📍 LOC</b></td><td style="padding: 6px; border: 1px solid #ddd;">Centraliza o mapa na sua posição atual pelo GPS. Clique aqui quando quiser se localizar rapidamente.</td></tr>
-                    <tr style="background: #f5f5f5;"><td style="padding: 6px; border: 1px solid #ddd;"><b>📂 ADD KML/KMZ</b></td><td style="padding: 6px; border: 1px solid #ddd;">Importa arquivos de mapa (KML ou KMZ) para mostrar no mapa. É assim que os arquivos da rede elétrica são carregados no sistema.</td></tr>
-                    <tr><td style="padding: 6px; border: 1px solid #ddd;"><b>📄 ARQUIVOS</b></td><td style="padding: 6px; border: 1px solid #ddd;">Lista todos os arquivos importados. Clique no olho 👁️ para mostrar ou esconder do mapa. No computador tem também os botões "Acessar" e "Trocar" para gerenciar a pasta de arquivos.</td></tr>
-                    <tr style="background: #f5f5f5;"><td style="padding: 6px; border: 1px solid #ddd;"><b>🔖 VERSAO</b></td><td style="padding: 6px; border: 1px solid #ddd;">Mostra qual versão do sistema está instalada no seu dispositivo.</td></tr>
-                    <tr><td style="padding: 6px; border: 1px solid #ddd;"><b>🚶 S.VIEW</b></td><td style="padding: 6px; border: 1px solid #ddd;">Abre o Google Street View na localização do centro do mapa. Você consegue ver como é a rua por fotos reais.</td></tr>
-                    <tr style="background: #f5f5f5;"><td style="padding: 6px; border: 1px solid #ddd;"><b>🎨 STILO</b></td><td style="padding: 6px; border: 1px solid #ddd;">Troca a aparência do mapa: ruas (padrão), satélite (foto de cima) ou noturno (fundo escuro para uso à noite).</td></tr>
-                    <tr><td style="padding: 6px; border: 1px solid #ddd;"><b>🔄 ATUALIZAR</b></td><td style="padding: 6px; border: 1px solid #ddd;">Recarrega o sistema para buscar a versão mais recente.</td></tr>
-                </table>
-
-                <!-- ARQUIVOS -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">📂 Como usar o botão ARQUIVOS</h3>
-                
-                <div style="background: #f3e5f5; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #9c27b0;">
-                    <b>No Computador:</b><br>
-                    <span style="font-size: 11px;">
-                    • Uma barra verde no topo mostra o nome da pasta onde os arquivos estão sendo salvos<br>
-                    • Botão <b>"Acessar"</b> abre a pasta e mostra todos os arquivos KML/KMZ salvos<br>
-                    • Botão <b>"Trocar"</b> permite escolher uma pasta diferente<br>
-                    • Cada arquivo tem um olho 👁️ — verde quer dizer que está visível no mapa, cinza quer dizer que está escondido<br>
-                    • Clique no olho para mostrar ou esconder o arquivo no mapa<br>
-                    • Clique na lixeira 🗑️ para apagar o arquivo da lista
-                    </span>
-                </div>
-                
-                <div style="background: #e0f2f1; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #009688;">
-                    <b>No Celular:</b><br>
-                    <span style="font-size: 11px;">
-                    • Lista todos os arquivos que foram importados<br>
-                    • Clique no olho 👁️ para mostrar ou esconder cada arquivo no mapa<br>
-                    • Os arquivos ficam guardados no próprio aplicativo
-                    </span>
-                </div>
-
-                <!-- LINHAS DE REDE -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">⚡ Clicando nas linhas da rede elétrica</h3>
-                <p style="font-size: 11px;">Além dos equipamentos, você também pode clicar diretamente nas linhas que representam os cabos da rede elétrica no mapa.</p>
-
-                <div style="background-color: #fff3cd; color: #856404; padding: 10px; border-left: 5px solid #ffeeba; margin-bottom: 15px; border-radius: 4px;">
-                    <strong>Dica importante:</strong> Para abrir as informações de uma linha, você precisa clicar ou tocar <b>exatamente em cima do cabo</b> no mapa, e não sobre o ícone de um equipamento que está próximo.
-                </div>
-
-                <p style="font-size: 11px;">Ao clicar em cima de uma linha, um balão aparece com as seguintes informações:</p>
-                <ul style="font-size: 11px; margin-bottom: 20px;">
-                    <li><b>EDITAR COR:</b> Muda a cor do cabo no mapa para facilitar identificação visual.</li>
-                    <li><b>EDITAR NOME/NÚMERO:</b> Permite mudar o nome do alimentador (por exemplo, de AL01 para AL05).</li>
-                    <li><b>EXTENSÃO DA REDE:</b> O sistema calcula e mostra automaticamente o tamanho total daquele trecho em quilômetros (KM).</li>
-                    <li><b>CLASSIFICAÇÃO DA ÁREA:</b> Mostra se o trecho passa por área RURAL, URBANA ou misturada.</li>
+                <!-- 4. STILO -->
+                <h3 style="color: #6A1B9A; margin-top: 20px; border-bottom: 2px solid #6A1B9A; padding-bottom: 8px;">🎨 STILO — Mudar o tipo de mapa</h3>
+                <p style="font-size: 11px;">Clique no botão <b>STILO</b> para trocar a aparência do mapa. São 4 opções:</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li><b>Google Ruas</b> — mapa de ruas normal, com nomes das vias</li>
+                    <li><b>Google Satélite</b> — foto de cima. Ótimo para ver vegetação e terreno</li>
+                    <li><b>Híbrido</b> — satélite com nomes das ruas por cima</li>
+                    <li><b>MapTiler</b> — mapa alternativo, boa resolução em áreas rurais</li>
                 </ul>
-                
-                <!-- EQUIPAMENTOS NO MAPA -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">🗺️ O que significa cada símbolo no mapa</h3>
-                
-                <p style="font-size: 11px; color: #666; margin-bottom: 15px;">No mapa aparecem diferentes formas e cores. Cada uma representa um tipo de equipamento. Veja o que cada uma significa:</p>
-                
-                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #4caf50;">
-                    <b style="font-size: 13px;">🟩 Quadrados verdes — Chaves normalmente abertas (NA)</b><br>
-                    <span style="font-size: 11px;">
-                    São chaves de manobra que normalmente ficam abertas (desligadas). Quando você clica em uma, o balão mostra:<br>
-                    • Se é uma manobra tipo <b>paralelo</b> ou tipo <b>anel</b><br>
-                    • A qual circuito pertence (ex: AL01, AL02)<br>
-                    • Se está aberta ou fechada no momento<br>
-                    • O código de identificação da chave
-                    </span>
-                </div>
-                
-                <div style="background: #ffebee; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #f44336;">
-                    <b style="font-size: 13px;">🟥 Quadrados vermelhos — Chaves normalmente fechadas (NF) e fusíveis</b><br>
-                    <span style="font-size: 11px;">
-                    São chaves que normalmente ficam fechadas (ligadas) ou chaves fusíveis. O balão mostra:<br>
-                    • Se está aberta ou fechada<br>
-                    • A qual circuito pertence<br>
-                    • O tipo (fusível, seccionadora, etc.)
-                    </span>
-                </div>
-                
-                <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #ff9800;">
-                    <b style="font-size: 13px;">🔺 Triângulos — Transformadores</b><br>
-                    <span style="font-size: 11px;">
-                    São os transformadores de energia elétrica. O balão mostra:<br>
-                    • A capacidade em <b>KVA</b> (ex: 150 KVA, 300 KVA — quanto maior, mais energia ele suporta)<br>
-                    • A situação atual (operando, desligado, etc.)<br>
-                    • O circuito ao qual pertence<br>
-                    • O código de identificação
-                    </span>
+
+                <!-- 5. CHAVES -->
+                <h3 style="color: #b71c1c; margin-top: 20px; border-bottom: 2px solid #b71c1c; padding-bottom: 8px;">🔑 Chaves — Cadastrar, Editar, Comentar e Apagar</h3>
+
+                <div style="background: #fce4ec; border-left: 4px solid #e91e63; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Como cadastrar uma chave nova:</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Clique no botão <b>Add Chave</b> no menu de chaves, <b>OU</b> clique em qualquer lugar do mapa e escolha <b>"Cadastrar nova chave neste local"</b></li>
+                        <li>Preencha o tipo (NA, NF, Fusível, Faca, Trafo, Poste...), código, alimentador e endereço</li>
+                        <li>O GPS pega a localização automaticamente</li>
+                        <li>Clique <b>Salvar</b> — a chave aparece no mapa para toda a equipe na hora</li>
+                    </ol>
                 </div>
 
-                <!-- BALOES BRANCOS -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">💬 O que fazer quando o balão branco abre</h3>
-                
-                <p style="font-size: 11px; color: #666; margin-bottom: 15px;">Quando você toca em qualquer equipamento no mapa, um <b>balão branco</b> aparece com várias opções e informações. Veja o que você pode fazer por lá:</p>
-                
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #2196f3;">
-                    <b style="font-size: 13px;">📍 Navegação</b><br>
-                    <span style="font-size: 11px;">
-                    • <b>ROTA:</b> Abre o Google Maps e traça o caminho até o equipamento. Útil para quem precisa chegar até o local.<br>
-                    • <b>S.VIEW:</b> Abre o Street View para ver como é o local por fotos reais da rua.
-                    </span>
-                </div>
-                
-                <div style="background: #f3e5f5; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #9c27b0;">
-                    <b style="font-size: 13px;">🧮 Calculadoras</b><br>
-                    <span style="font-size: 11px;">
-                    Cada equipamento tem uma calculadora própria. Você informa os dados e o sistema calcula automaticamente a corrente, a potência e o carregamento. (Detalhes logo abaixo.)
-                    </span>
-                </div>
-                
-                <div style="background: #fff8e1; padding: 15px; border-radius: 8px; margin: 15px 0; border: 2px solid #ffc107;">
-                    <b style="font-size: 14px; color: #f57f17;">🔗 Interligação de Rede</b><br>
-                    <span style="font-size: 11px;">
-                    Ferramenta para desenhar no mapa como a energia passa de um equipamento para outro, mostrando o caminho da energia.<br><br>
-                    
-                    <b>Para que serve:</b><br>
-                    • Mostrar visualmente de onde vem e para onde vai a energia<br>
-                    • Ajudar a planejar manobras e desligamentos<br>
-                    • Documentar ligações encontradas no campo<br><br>
-                    
-                    <b>Como usar — exemplo prático:</b><br>
-                    Imagine um transformador na Rua A que alimenta 3 chaves nas Ruas B, C e D:<br>
-                    1. Clique no <b>transformador</b> (triângulo) no mapa<br>
-                    2. No balão branco, clique em <b>"INTERLIGAR"</b><br>
-                    3. Clique na <b>chave da Rua B</b> — uma linha azul aparece conectando os dois<br>
-                    4. Repita o processo para as Ruas C e D<br><br>
-                    Resultado: o mapa mostra com linhas azuis exatamente como a energia sai do transformador e chega em cada chave.
-                    </span>
+                <div style="background: #e8f5e9; border-left: 4px solid #388e3c; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Como editar uma chave:</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Clique na chave no mapa para abrir o balão</li>
+                        <li>Clique em <b>Editar</b></li>
+                        <li>Altere os campos desejados e salve</li>
+                    </ol>
                 </div>
 
-                <!-- CHAVE -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">🔑 Cadastrando e editando equipamentos</h3>
-                
-                <div style="background: #fce4ec; padding: 15px; border-radius: 8px; margin: 15px 0; border: 2px solid #e91e63;">
-                    <span style="font-size: 11px;">
-                    O botão <b>CHAVE</b> (🔑) serve para cadastrar equipamentos novos, editar os existentes ou remover os que foram desativados.<br><br>
-                    
-                    <b>Tipos de equipamento que você pode cadastrar:</b><br>
-                    • Chaves: NA, NF, Fusível, Faca, Lâmina<br>
-                    • Transformadores (de qualquer potência em KVA)<br>
-                    • Postes: de concreto, madeira ou metal<br>
-                    • Reguladores de tensão<br>
-                    • Outros: muflas, caixas de passagem, etc.<br><br>
-                    
-                    <b>Exemplo — Cadastrando uma chave nova que você encontrou no campo:</b><br>
-                    1. Clique no botão <b>FERRAM → CHAVE</b><br>
-                    2. Selecione <b>"Nova Chave"</b><br>
-                    3. Preencha: tipo (NA), código (ex: NA-AL03-025), alimentador (AL03), status (aberta), endereço e referência<br>
-                    4. O sistema pega sua localização GPS automaticamente<br>
-                    5. Clique em <b>Salvar</b><br>
-                    6. Pronto! A chave aparece no mapa para toda a equipe ver<br><br>
-                    
-                    <b>Importante:</b> Tudo que você cadastra ou edita é sincronizado automaticamente com os outros dispositivos da equipe, quando há internet.
-                    </span>
+                <div style="background: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 12px; margin: 8px 0; font-size: 11px;">
+                    <b style="color: #b71c1c;">🗑️ Como APAGAR uma chave (nova funcionalidade):</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Clique na chave no mapa → <b>Editar</b></li>
+                        <li>No modal de edição, clique no <b>botão vermelho 🗑️</b></li>
+                        <li>Confirme a exclusão na janela que aparece</li>
+                        <li>A chave some do mapa para todos em tempo real</li>
+                    </ol>
+                    <div style="margin-top: 6px; color: #c62828;"><b>ATENÇÃO:</b> Não tem como desfazer. Confirme só se tiver certeza.</div>
                 </div>
 
-                <!-- CALCULADORAS -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">⚡ Calculadoras dos equipamentos</h3>
-                <p style="font-size: 11px; color: #666; margin-bottom: 15px;">Clicando em um equipamento no mapa, você pode calcular como ele está trabalhando. Veja o que cada calculadora faz:</p>
-                
-                <div style="background: #fff3e0; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #ff9800;">
-                    <b style="font-size: 13px;">🔧 Transformador (TRAFO)</b><br>
-                    <span style="font-size: 11px;">
-                    Você informa a potência em KVA (ex: 75, 150, 300) e o sistema calcula:<br>
-                    • Quanto de corrente (amperes) o transformador aguenta normalmente<br>
-                    • Quanto de corrente passa durante o dia e durante a noite<br>
-                    • Quanto o transformador está carregado agora (em porcentagem)<br><br>
-                    <b>Serve para:</b> Saber se o transformador está sobrecarregado ou se tem capacidade para ligar mais clientes.
-                    </span>
-                </div>
-                
-                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #4caf50;">
-                    <b style="font-size: 13px;">🔪 Chave Faca (FA)</b><br>
-                    <span style="font-size: 11px;">
-                    Você informa a capacidade da chave (amperes) e quantos clientes estão ligados nela. O sistema calcula:<br>
-                    • Quanto de corrente ela aguenta no máximo<br>
-                    • Quanto de potência (em KVA) está passando por ela agora<br>
-                    • O carregamento em porcentagem<br><br>
-                    <b>Serve para:</b> Verificar se a chave está dentro da capacidade ou sobrecarregada.
-                    </span>
-                </div>
-                
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #2196f3;">
-                    <b style="font-size: 13px;">⚡ Chave Lâmina (FD)</b><br>
-                    <span style="font-size: 11px;">
-                    Funciona igual à chave faca. Você informa a capacidade e o número de clientes, e o sistema mostra a corrente, a potência passante e o carregamento.
-                    </span>
-                </div>
-                
-                <div style="background: #ffebee; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #f44336;">
-                    <b style="font-size: 13px;">🔴 Chave Fusível (FU)</b><br>
-                    <span style="font-size: 11px;">
-                    Você informa a quantidade de clientes e o tamanho do elo fusível (ex: 10A, 15A, 25A). O sistema calcula:<br>
-                    • Quanto de corrente o fusível aguenta antes de queimar<br>
-                    • Quanto de potência está passando por ele<br>
-                    • O carregamento em porcentagem<br><br>
-                    <b>Serve para:</b> Descobrir se o fusível está no tamanho certo — um fusível pequeno demais queima toda hora; um grande demais não protege quando precisa.
-                    </span>
-                </div>
-                
-                <div style="background: #f3e5f5; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #9c27b0;">
-                    <b style="font-size: 13px;">⚡ Disjuntor (DI)</b><br>
-                    <span style="font-size: 11px;">
-                    Se você souber, pode informar a corrente que o disjuntor suporta. Se não souber, o sistema calcula sozinho. Ele mostra a potência passante, a corrente estimada e o carregamento para o dia e a noite.<br><br>
-                    O disjuntor também é controlado à distância pelo Centro de Operações — as informações reais podem ser vistas em tempo real no sistema da concessionária.
-                    </span>
-                </div>
-                
-                <div style="background: #fce4ec; padding: 12px; border-radius: 6px; margin: 10px 0; border-left: 4px solid #e91e63;">
-                    <b style="font-size: 13px;">🟢 Religador NA (aberto) e 🔴 Religador NF (fechado)</b><br>
-                    <span style="font-size: 11px;">
-                    O religador é controlado à distância pelo Centro de Operações — você não precisa calcular nada manualmente. O balão mostra as informações reais (corrente, tensão, estado ligado/desligado) diretamente do sistema de controle da concessionária, em tempo real.
-                    </span>
+                <div style="background: #e3f2fd; border-left: 4px solid #1565C0; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Outros recursos do balão de chave:</b><br>
+                    • <b>Comentar</b> — escreva uma observação. Todos da equipe veem em tempo real<br>
+                    • <b>Cálculo de carga</b> — calcule FU, FA, FD ou DI diretamente pelo balão<br>
+                    • <b>Rota</b> — abre o Google Maps com o caminho até a chave<br>
+                    • <b>Street View</b> — veja o local por fotos reais da rua
                 </div>
 
-                <!-- FUNCIONALIDADES PRINCIPAIS -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">🎯 Principais recursos do sistema</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
-                    <div style="background: #e8f5e9; padding: 10px; border-radius: 4px;"><b>📡 Radar de Equipes</b><br>Veja onde seus colegas estão no mapa em tempo real. Ideal para coordenar trabalhos e evitar deslocamentos desnecessários.</div>
-                    <div style="background: #e3f2fd; padding: 10px; border-radius: 4px;"><b>💬 Chat em Tempo Real</b><br>Mande mensagem para toda a equipe ou só para uma pessoa. Tudo aparece na hora, sem precisar sair do mapa.</div>
-                    <div style="background: #fff3e0; padding: 10px; border-radius: 4px;"><b>📴 Funciona sem internet</b><br>Após o primeiro carregamento, o mapa continua funcionando mesmo sem sinal. Os dados ficam salvos no celular.</div>
-                    <div style="background: #f3e5f5; padding: 10px; border-radius: 4px;"><b>🔄 Sincronização automática</b><br>Quando a internet voltar, tudo que foi feito offline é sincronizado automaticamente com os outros dispositivos da equipe.</div>
-                    <div style="background: #e0f2f1; padding: 10px; border-radius: 4px;"><b>✏️ Caneta Mágica</b><br>Desenhe sobre o mapa para registrar problemas e melhorias na rede. Envie por WhatsApp ou imprima direto pelo sistema.</div>
-                    <div style="background: #fce4ec; padding: 10px; border-radius: 4px;"><b>🎨 Estilos de mapa</b><br>Escolha entre mapa de ruas, satélite ou noturno conforme a necessidade do momento.</div>
+                <!-- 6. ALIM -->
+                <h3 style="color: #e65100; margin-top: 20px; border-bottom: 2px solid #e65100; padding-bottom: 8px;">⚡ Filtros ALIM — Alimentadores</h3>
+                <p style="font-size: 11px;">Clique em <b>ALIM</b> para filtrar os circuitos elétricos exibidos no mapa. Útil para focar em só um alimentador por vez. As cores dos circuitos podem ser personalizadas clicando na linha da rede.</p>
+
+                <!-- 7. ROÇADA -->
+                <h3 style="color: #2e7d32; margin-top: 20px; border-bottom: 2px solid #2e7d32; padding-bottom: 8px;">🌳 ROÇADA — Marcar pendência de poda</h3>
+                <p style="font-size: 11px;">A <b>ROÇADA</b> serve para registrar no mapa os locais onde há vegetação que precisa ser podada.</p>
+
+                <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Como marcar uma poda pendente:</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Clique em <b>FERRAM → ROÇADA</b></li>
+                        <li>Na primeira vez aparece um aviso explicativo (pode marcar "não mostrar mais")</li>
+                        <li>Toque no local no mapa onde está a árvore/vegetação</li>
+                        <li>Tire uma <b>foto obrigatória</b> do local</li>
+                        <li>Preencha cidade e observação</li>
+                        <li>Ao salvar, a foto + texto são compartilhados automaticamente no grupo do WhatsApp</li>
+                    </ol>
                 </div>
-                
-                <!-- DICAS -->
-                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">💡 Dicas para usar melhor</h3>
-                <ol style="font-size: 11px; padding-left: 18px;">
-                    <li>Deixe o GPS do celular sempre ligado para ter melhor precisão de localização</li>
-                    <li>Trabalhe em equipe — todos aparecem automaticamente no mapa em tempo real</li>
-                    <li>Use os filtros de alimentador para focar somente no circuito que você vai trabalhar</li>
-                    <li>Use a caneta (MELHORIA) para registrar problemas encontrados no campo com mais clareza</li>
-                    <li>Antes de enviar pelo WhatsApp ou imprimir, confira sempre a prévia para garantir que as informações estão certas</li>
-                    <li>Em locais sem sinal, o sistema continua funcionando normalmente — tudo é sincronizado quando a internet voltar</li>
-                    <li>Verifique a versão do sistema de tempos em tempos para garantir que está atualizado</li>
-                </ol>
+
+                <div style="background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>DICA:</b> Após marcar a poda, ela aparece no mapa como um pin. Todos da equipe veem na hora.
+                </div>
+
+                <!-- 8. LISTA -->
+                <h3 style="color: #1565C0; margin-top: 20px; border-bottom: 2px solid #1565C0; padding-bottom: 8px;">📋 LISTA — Podas pendentes</h3>
+                <p style="font-size: 11px;">Clique em <b>LISTA</b> para ver todas as pendências de poda registradas no mapa.</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li>Filtre por cidade para ver só a sua área</li>
+                    <li>Cada item mostra endereço, observação e data</li>
+                    <li>Botão <b>"Ir até"</b> em cada item abre o Google Maps com a rota até o local</li>
+                    <li>Botão <b>Apagar todos relatórios</b> limpa tudo (use com cuidado)</li>
+                </ul>
+
+                <!-- 9. CONCLUIR PODA -->
+                <h3 style="color: #388e3c; margin-top: 20px; border-bottom: 2px solid #388e3c; padding-bottom: 8px;">✅ Concluir poda — "Concluir e Avisar Todos"</h3>
+                <p style="font-size: 11px;">Quando a poda for realizada:</p>
+                <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <ol style="padding-left: 16px; margin: 0;">
+                        <li>Clique na poda pendente no mapa</li>
+                        <li>Clique no <b>botão verde "Concluir e Avisar Todos"</b></li>
+                        <li>Tire a foto do local depois da poda</li>
+                        <li>O registro é salvo como "retirada" e o grupo do WhatsApp é notificado automaticamente</li>
+                        <li>A poda sai da lista de pendentes e vai para o <b>relatório de podas retiradas</b></li>
+                    </ol>
+                </div>
+
+                <!-- 10. PODAS RETIRADAS -->
+                <h3 style="color: #1b5e20; margin-top: 20px; border-bottom: 2px solid #1b5e20; padding-bottom: 8px;">📗 Relatório de Podas Retiradas</h3>
+                <p style="font-size: 11px;">Quando há podas concluídas, aparece no menu <b>Arquivos</b> o botão verde <b>"Podas Retiradas (X)"</b>.</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li>Filtre por cidade</li>
+                    <li>Cada registro tem <b>foto antes + foto depois</b></li>
+                    <li>4 opções de exportação: <b>PDF</b> / <b>ZIP de imagens</b> / <b>Excel</b> / <b>Apagar tudo</b></li>
+                </ul>
+
+                <!-- 11. MELHORIA -->
+                <h3 style="color: #00695c; margin-top: 20px; border-bottom: 2px solid #00695c; padding-bottom: 8px;">✏️ MELHORIA — Caneta mágica + Traçados Fixos</h3>
+                <p style="font-size: 11px;">A ferramenta <b>MELHORIA</b> (FERRAM → MELHORIA) permite desenhar trechos diretamente no mapa para registrar problemas e necessidades de melhoria na rede.</p>
+
+                <div style="background: #e0f2f1; border-left: 4px solid #00897b; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Como usar:</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Abra FERRAM → MELHORIA (na primeira vez aparece um modal informativo do Maiki)</li>
+                        <li>Toque no mapa para colocar pontos ao longo do trecho</li>
+                        <li>A metragem total aparece em tempo real (cálculo Haversine)</li>
+                        <li>Ao terminar, aparecem 4 opções:<br>
+                            &nbsp;&nbsp;• <b>Encerrar e Visualizar</b> — mostra o traçado com metragem<br>
+                            &nbsp;&nbsp;• <b>Só imagem</b> — salva como imagem para compartilhar<br>
+                            &nbsp;&nbsp;• <b>Fixar e salvar traçado</b> — salva permanentemente no mapa
+                        </li>
+                    </ol>
+                </div>
+
+                <div style="background: #fff8e1; border: 2px solid #f57f17; border-radius: 8px; padding: 12px; margin: 8px 0; font-size: 11px;">
+                    <b style="color: #e65100;">📌 Traçados Fixos de Melhorias</b><br>
+                    Quando você escolhe <b>"Fixar e salvar traçado"</b> (aparece modal do Lucas com dicas):<br>
+                    • O traçado fica permanente no mapa em <b>laranja</b> — com linha, bolinhas e metragem<br>
+                    • Clique no traçado fixo para ver detalhes ou <b>apagá-lo</b><br>
+                    • No menu <b>Arquivos</b>, botão <b>"Exportar melhorias com traçados fixos"</b> exporta em PDF ou WhatsApp, agrupado por cidade
+                </div>
+
+                <!-- 12. TRAJ -->
+                <h3 style="color: #1565C0; margin-top: 20px; border-bottom: 2px solid #1565C0; padding-bottom: 8px;">📍 TRAJ — Rastreador de trajeto</h3>
+                <p style="font-size: 11px;">O botão <b>TRAJ</b> fica flutuante na tela, abaixo do STILO. Quando desligado fica vermelho; quando ligado fica verde.</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li>Toque para <b>ligar</b> — o GPS começa a rastrear automaticamente</li>
+                    <li>Uma <b>linha azul-real</b> vai sendo desenhada no mapa conforme você anda</li>
+                    <li><b>Wake Lock</b> ativo: a tela não apaga durante o rastreamento</li>
+                    <li>Continua rastreando mesmo com o app em segundo plano</li>
+                    <li>Na primeira vez aparece um modal de homenagem ao <b>Anizio</b></li>
+                    <li>Ao desligar aparece um modal de exportação com 3 opções:<br>
+                        &nbsp;&nbsp;• <b>KML</b> — abre no Google Earth<br>
+                        &nbsp;&nbsp;• <b>GPX</b> — compatível com Garmin e outros GPS<br>
+                        &nbsp;&nbsp;• <b>Link Google Maps</b> — compartilhe o percurso
+                    </li>
+                </ul>
+
+                <!-- 13. WHATSAPP -->
+                <h3 style="color: #1b5e20; margin-top: 20px; border-bottom: 2px solid #1b5e20; padding-bottom: 8px;">📲 WhatsApp — Compartilhamento automático</h3>
+                <p style="font-size: 11px;">O sistema compartilha automaticamente as ações no seu grupo do WhatsApp.</p>
+
+                <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>Configurar o grupo:</b>
+                    <ol style="padding-left: 16px; margin: 6px 0 0 0;">
+                        <li>Acesse o menu <b>Ferram → CONFIG. GRUPO WHATSAPP</b></li>
+                        <li>Informe o <b>nome do grupo</b> (ex: "Inspeção Pro Bebedouro") — deve conter "Inspeção Pro" + nome da cidade</li>
+                        <li>Cole o <b>link de convite</b> do grupo (formato: https://chat.whatsapp.com/...)</li>
+                        <li>Salve — a partir daí todas as ações são compartilhadas automaticamente</li>
+                    </ol>
+                </div>
+
+                <div style="background: #f1f8e9; border-left: 4px solid #8bc34a; padding: 10px; border-radius: 6px; margin: 8px 0; font-size: 11px;">
+                    <b>O que é compartilhado automaticamente:</b><br>
+                    • Foto + texto ao marcar nova poda<br>
+                    • Foto + texto ao concluir/retirar poda<br>
+                    • Cada mensagem inclui o link <b>"👉 Abrir Inspeção Pro"</b> para acesso rápido
+                </div>
+
+                <!-- 14. NOTIF -->
+                <h3 style="color: #5d4037; margin-top: 20px; border-bottom: 2px solid #5d4037; padding-bottom: 8px;">🔔 NOTIF — Notificações e atualizações</h3>
+                <p style="font-size: 11px;">Clique em <b>NOTIF</b> para controlar as atualizações automáticas do sistema:</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li><b>Pausar 1h</b> — desativa as notificações por 1 hora</li>
+                    <li><b>Pausar 2h</b> — desativa por 2 horas</li>
+                    <li><b>Desativar atualizações automáticas</b> — deixa o sistema quieto até você reativar</li>
+                </ul>
+
+                <!-- 15. RESUMO DO DIA -->
+                <h3 style="color: #4a148c; margin-top: 20px; border-bottom: 2px solid #4a148c; padding-bottom: 8px;">📊 RESUMO DO DIA</h3>
+                <p style="font-size: 11px;">Clique em <b>Ferram → RESUMO DO DIA</b> para ver um resumo de tudo que aconteceu hoje.</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li>Lista todas as ações do dia: cidade, hora e tipo</li>
+                    <li>Agrupado por tipo (ex: "🌳 Nova Poda: 3", "🗑️ Apagada: 2", "✅ Concluída: 1")</li>
+                    <li>Botão <b>"Compartilhar resumo no grupo"</b> manda tudo formatado para o WhatsApp</li>
+                    <li>Histórico mantido por 7 dias (depois apaga automaticamente)</li>
+                </ul>
+
+                <!-- 16. SINCRONIZAÇÃO EM TEMPO REAL -->
+                <h3 style="color: #0277bd; margin-top: 20px; border-bottom: 2px solid #0277bd; padding-bottom: 8px;">🤝 Sincronização em tempo real</h3>
+                <p style="font-size: 11px;">O Inspeção Pro sincroniza tudo entre os usuários automaticamente, sem precisar apertar nada.</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li>Colegas aparecem no mapa como <b>pontos azuis com o nome</b></li>
+                    <li>Indicador <b>verde pulsante</b> = movendo / <b>cinza translúcido</b> = parado há mais de 15s</li>
+                    <li>Movimentação animada suave (atualiza a cada 1 segundo)</li>
+                    <li>Todos os usuários são sempre visíveis — não existe mais botão Ocultar</li>
+                    <li>As seguintes ações são sincronizadas em tempo real para todos:<br>
+                        &nbsp;&nbsp;• Comentários em chaves<br>
+                        &nbsp;&nbsp;• Novas chaves cadastradas<br>
+                        &nbsp;&nbsp;• Podas marcadas e concluídas<br>
+                        &nbsp;&nbsp;• Interligações desenhadas<br>
+                        &nbsp;&nbsp;• Chaves apagadas
+                    </li>
+                </ul>
+
+                <!-- 17. INSTALAÇÃO COMO APP -->
+                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">📱 Instalação como aplicativo (PWA)</h3>
+                <p style="font-size: 11px;">Você pode instalar o Inspeção Pro no celular ou PC como se fosse um app normal — sem precisar da Play Store ou App Store.</p>
+
+                <div style="background: #e8f5e9; padding: 12px; border-radius: 6px; margin: 8px 0; border-left: 4px solid #4caf50; font-size: 11px;">
+                    <b>Android (Samsung, Motorola, etc.):</b>
+                    <ol style="padding-left: 16px; margin: 4px 0 0 0;">
+                        <li>Abra pelo <b>Chrome</b></li>
+                        <li>Toque nos 3 pontinhos (⋮) → <b>"Adicionar à tela inicial"</b></li>
+                        <li>Pronto! O ícone aparece na tela do celular</li>
+                    </ol>
+                    <i>No Android, um modal animado de instalação aparece automaticamente quando disponível.</i>
+                </div>
+
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin: 8px 0; border-left: 4px solid #2196f3; font-size: 11px;">
+                    <b>iPhone / iPad:</b>
+                    <ol style="padding-left: 16px; margin: 4px 0 0 0;">
+                        <li>Abra pelo <b>Safari</b></li>
+                        <li>Toque no ícone de compartilhar (quadradinho com seta ↑)</li>
+                        <li>Role e toque em <b>"Adicionar à Tela Inicial"</b> → <b>Adicionar</b></li>
+                    </ol>
+                </div>
+
+                <div style="background: #fff3e0; padding: 10px; border-radius: 6px; margin: 8px 0; border-left: 4px solid #ff9800; font-size: 11px;">
+                    <b>Vantagens de instalar:</b><br>
+                    • Funciona <b>offline</b> depois de instalado<br>
+                    • Abre sem precisar do navegador<br>
+                    • <b>Service Worker</b> garante atualização automática (verifica a cada 60s)<br>
+                    • <b>Storage persistente</b> — seus dados não somem mesmo que o celular fique sem bateria
+                </div>
+
+                <!-- 18. CALCULADORAS -->
+                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">⚡ Calculadoras de equipamentos</h3>
+                <p style="font-size: 11px;">Ao clicar em qualquer equipamento no mapa, você pode calcular como ele está trabalhando:</p>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li><b>FU (Fusível)</b> — informa clientes e tamanho do elo. Calcula corrente, potência e carregamento</li>
+                    <li><b>FA (Chave Faca)</b> — informa capacidade e clientes. Mostra se está sobrecarregada</li>
+                    <li><b>FD (Chave Lâmina)</b> — igual ao FA</li>
+                    <li><b>DI (Disjuntor)</b> — calcula corrente e potência passante. Controlado pelo Centro de Operações</li>
+                    <li><b>TRAFO (Transformador)</b> — informa o KVA. Calcula corrente máxima e porcentagem de carga</li>
+                </ul>
+                <div style="background-color: #fff3cd; color: #856404; padding: 10px; border-left: 5px solid #ffc107; margin: 8px 0; border-radius: 4px; font-size: 11px;">
+                    <b>Lembrete:</b> Esses cálculos são somente referência. Qualquer dúvida ou decisão em campo, comunique o Centro de Operações antes de agir.
+                </div>
+
+                <!-- 19. DICAS FINAIS -->
+                <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">💡 Dicas finais</h3>
+                <ul style="font-size: 11px; padding-left: 18px; margin: 6px 0;">
+                    <li>Deixe o GPS sempre ligado para precisão máxima</li>
+                    <li>Configure o grupo do WhatsApp antes de começar o dia</li>
+                    <li>Use o TRAJ para registrar todo o seu percurso e exportar no fim</li>
+                    <li>Use os filtros ALIM para focar num circuito por vez</li>
+                    <li>Fixe traçados de melhoria para não perder o que você encontrou no campo</li>
+                    <li>Consulte o RESUMO DO DIA antes de ir embora — compartilhe com a equipe</li>
+                    <li>Em locais sem sinal, o sistema continua funcionando — sincroniza quando a internet voltar</li>
+                </ul>
 
                 <!-- ADVERTENCIA FINAL -->
                 <div style="background: #ffebee; border: 3px solid #f44336; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
                     <div style="font-size: 32px; margin-bottom: 10px;">⚠️</div>
                     <div style="color: #c62828; font-weight: bold; font-size: 12px; line-height: 1.6;">
-                        LEMBRE-SE: Todos os cálculos são somente uma referência para ajudar o eletricista a entender melhor os equipamentos. Qualquer dúvida ou decisão técnica em campo deve ser comunicada ao Centro de Operações. Segurança é inegociável!
+                        LEMBRE-SE: Todos os cálculos são somente uma referência. Qualquer dúvida ou decisão técnica em campo DEVE ser comunicada ao Centro de Operações. Segurança é inegociável!
                     </div>
                 </div>
-                
+
+                <!-- 20. CRÉDITOS -->
+                <h3 style="color:#1a237e; border-bottom:2px solid #1a237e; padding-bottom:8px; margin-top:24px;">🙏 Agradecimentos especiais</h3>
+
+                <div style="background:#fffbe6; border-left:4px solid #FFC107; padding:14px; border-radius:8px; margin:12px 0;">
+                  <p style="margin:0 0 10px 0;"><b>🤜 Um Agradecimento Especial a Deus</b></p>
+                  <p style="margin:0 0 10px 0;">Sou profundamente grato ao nosso Criador, que sempre derramou o Seu Espírito Santo sobre mim, me dando ânimo, força, vontade e sabedoria para fazer o meu melhor em cada detalhe. Graças a Deus por tudo, pois Ele ama a cada um de nós. Em nome de Jesus, amém.</p>
+                </div>
+
+                <div style="background:#fde2e7; border-left:4px solid #E91E63; padding:14px; border-radius:8px; margin:12px 0;">
+                  <p style="margin:0 0 10px 0;"><b>❤️ À Minha Família, Minha Base</b></p>
+                  <p style="margin:0;">Agradeço do fundo do coração à minha <b>mãe</b>, que sempre quis o melhor para mim; à minha amada esposa, <b>Karina</b>, que me incentivou e me apoiou com ideias valiosas; e à minha filha, <b>Ester</b>, que com seu sorriso e suas brincadeiras renovava minhas forças nos momentos mais difíceis, quando eu achava que o projeto não sairia do papel. Obrigado a elas por estarem sempre ao meu lado!</p>
+                </div>
+
+                <div style="background:#e3f2fd; border-left:4px solid #1565C0; padding:14px; border-radius:8px; margin:12px 0;">
+                  <p style="margin:0 0 10px 0;"><b>⚡️ Aos Companheiros de Campo (Os Pilares do Inspeção-Pro)</b></p>
+                  <p style="margin:0 0 10px 0;">O Inspeção-Pro hoje é uma realidade que facilita o nosso dia a dia por causa das ótimas ideias e inovações que vocês trouxeram. Quero expressar meu sincero agradecimento a:</p>
+                  <ul style="margin:0 0 10px 18px; padding:0;">
+                    <li><b>Anizio (Sertãozinho)</b> — Inspiração do rastreador de trajeto <b>TRAJ</b>, da rotação automática na navegação <b>NAV</b> e dos cadastros e edições de chave.</li>
+                    <li><b>Maiki (Bebedouro)</b> — Inspiração da ferramenta <b>MELHORIA</b> (caneta mágica). Visão apurada nas inspeções.</li>
+                    <li><b>Lucas (Campinas)</b> — Colaboração no recurso de <b>Traçados Fixos</b>. Precisão e comprometimento.</li>
+                    <li><b>Danilo (Avaré)</b> — Pela excelente sugestão de incluir a visualização de <b>podas concluídas com relatórios</b>.</li>
+                    <li><b>Julio (Bebedouro)</b> — Quem me inspirou com a grande ideia de <b>integrar o aplicativo aos grupos de WhatsApp</b> com comunicações automáticas.</li>
+                    <li><b>Eder (Bebedouro)</b> e <b>Leonardo (Pirangi)</b> — Pelos feedbacks de visualização, sugerindo o <b>aumento do tamanho dos números das chaves</b> para melhor leitura em campo.</li>
+                    <li><b>Julio (Pitangueiras)</b> — Pelas sugestões na criação do botão <b>'Lista'</b>, que organiza todas as podas pendentes.</li>
+                    <li><b>Denis (Monte Alto)</b> e <b>Leonardo (Pirangi)</b> — Pela excelente ideia de criar o campo dedicado aos <b>'Comentários de Chaves'</b>.</li>
+                  </ul>
+                  <p style="margin:0 0 8px 0;"><i>Peço mil perdões se caso esqueci o nome de alguém, mas saibam que sou extremamente grato a cada um que estendeu a mão. Sem vocês, o Inspeção-Pro não seria o que é hoje.</i></p>
+                  <p style="margin:0;">Obrigado pelo apoio, pela inspiração, pelas ideias e pela força na divulgação deste trabalho que hoje ajuda a proteger e otimizar as nossas atividades em campo. <b>Tamo junto!</b> 🤝⚙️</p>
+                </div>
+
                 <!-- CONTATO -->
                 <h3 style="color: #1a237e; margin-top: 20px; border-bottom: 2px solid #1a237e; padding-bottom: 8px;">📞 Dúvidas? Entre em contato</h3>
                 <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; text-align: center; border: 2px solid #4caf50;">
@@ -1983,7 +1926,7 @@ document.onkeydown = function(e) {
                 <div style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%); color: white; border-radius: 8px; text-align: center;">
                     <div style="font-size: 14px; margin-bottom: 10px;">Responsável Técnico pelo Sistema</div>
                     <div style="font-size: 22px; font-weight: bold; letter-spacing: 2px; margin-bottom: 5px;">LEANDRO CORDEIRO MARINO</div>
-                    <div style="font-size: 12px; opacity: 0.9;">Inspeção Pro 3.0.0</div>
+                    <div style="font-size: 12px; opacity: 0.9;">Inspeção Pro</div>
                     <div style="font-size: 10px; opacity: 0.7; margin-top: 10px;">
                         Versão: ${VERSAO_LOCAL} | ${new Date().toLocaleDateString('pt-BR')}
                     </div>
@@ -4534,16 +4477,7 @@ window.addEventListener('load', () => {
         }
 
         function buscarChaveExata(numero) {
-            const n = numero.toUpperCase().trim();
-            const nNumerico = n.split('-')[0];
-            return geoJsonGlobal.features.find(f => {
-                if (!f.properties.isPoint) return false;
-                const nome = (f.properties.name || "").toUpperCase().trim();
-                const nomeNumerico = nome.split('-')[0];
-                return nome === n || nomeNumerico === n || nomeNumerico === nNumerico ||
-                       nome.split(/[\s,;/\-]+/).includes(n) ||
-                       nome.split(/[\s,;/\-]+/).includes(nNumerico);
-            });
+            return __buscaChaveRobusta(numero);
         }
 
         window.validarChavePoda = function(input, campo) {
@@ -5980,6 +5914,11 @@ window.addEventListener('load', () => {
                 // Salvar cada grupo de sourceFile SEQUENCIALMENTE
                 // (paralelo causa race condition no _metadata.json — InvalidStateError)
                 for (const sf in grupos) {
+                    // NUNCA sobrescrever arquivo invisível com features atuais — preserva o conteúdo no storage para quando o usuário voltar a marcar
+                    if (window.arquivosVisiveis && window.arquivosVisiveis[sf] === false) {
+                        console.log('[salvarTudo] pulando save de', sf, '(invisível — preservando storage)');
+                        continue;
+                    }
                     try {
                         await StorageManager.saveFile(sf, grupos[sf]);
                     } catch (eSf) {
@@ -7115,6 +7054,8 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
             // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
             StorageManager.saveFile(fileName, featuresDoArquivo)
                 .catch(e => console.error('[processarKML] Erro ao salvar arquivo:', fileName, e));
+            // Renderizar mapa IMEDIATAMENTE pra todas as chaves aparecerem (não esperar comentários)
+            try { renderizarMapa(); if (typeof aplicarFiltros === 'function') aplicarFiltros(); } catch(e) { console.warn('[processarKML] erro ao renderizar:', e); }
             // Reaplicar comentários salvos anteriormente (permite reimportar KML sem perder comentários)
             StorageManager.loadFile('comentarios-' + fileName).then(function(comentariosSalvos) {
                 if (!comentariosSalvos || comentariosSalvos.length === 0) return;
@@ -12101,17 +12042,117 @@ map.on('click', 'l-linhas', (e) => {
 _registrarListenersMapa();
 
         // ==========================================
+        // BUSCA ROBUSTA — helpers globais
+        // ==========================================
+        function __buscaChaveRobusta(valor) {
+            if (!valor || !geoJsonGlobal || !geoJsonGlobal.features) return null;
+            var v = String(valor).toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (!v) return null;
+            var vSemPrefSufixo = v.split(/[\s,;/\-_.\\(\\)]+/).filter(Boolean);
+            var vNumericoOnly = v.replace(/[^0-9]/g, '');
+            var pontos = geoJsonGlobal.features.filter(function(f) {
+                return f && f.properties && f.properties.isPoint;
+            });
+
+            // ESTRATÉGIA 1: Match exato
+            var hit = pontos.find(function(f) {
+                var nome = (f.properties.name || "").toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                return nome === v;
+            });
+            if (hit) return hit;
+
+            // ESTRATÉGIA 2: Split por separadores (qualquer parte do nome bate)
+            hit = pontos.find(function(f) {
+                var nome = (f.properties.name || "").toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                var partes = nome.split(/[\s,;/\-_.\\(\\)]+/).filter(Boolean);
+                return partes.includes(v) || vSemPrefSufixo.some(function(p) { return p && partes.includes(p); });
+            });
+            if (hit) return hit;
+
+            // ESTRATÉGIA 3: Match só pelos números
+            if (vNumericoOnly && vNumericoOnly.length >= 4) {
+                hit = pontos.find(function(f) {
+                    var nome = (f.properties.name || "").toUpperCase();
+                    var nomeNum = nome.replace(/[^0-9]/g, '');
+                    return nomeNum === vNumericoOnly;
+                });
+                if (hit) return hit;
+            }
+
+            // ESTRATÉGIA 4: Substring (contém o valor)
+            hit = pontos.find(function(f) {
+                var nome = (f.properties.name || "").toUpperCase().trim();
+                return nome.indexOf(v) >= 0;
+            });
+            if (hit) return hit;
+
+            // ESTRATÉGIA 5: Fallback em propriedades comuns
+            hit = pontos.find(function(f) {
+                if (!f.properties) return false;
+                var p = f.properties;
+                var campos = [p.name, p.description, p.id, p.codigo, p.cod, p.descricao].filter(Boolean);
+                return campos.some(function(c) {
+                    var s = String(c).toUpperCase();
+                    return s === v || s.indexOf(v) >= 0 || (vNumericoOnly && s.replace(/[^0-9]/g, '') === vNumericoOnly);
+                });
+            });
+            if (hit) return hit;
+
+            return null;
+        }
+        window.__buscaChaveRobusta = __buscaChaveRobusta;
+
+        function __diagnosticarBuscaFalha(valor) {
+            console.warn('=== DIAGNÓSTICO: chave não encontrada ===');
+            console.warn('Buscado:', valor);
+            if (!geoJsonGlobal || !geoJsonGlobal.features) { console.warn('geoJsonGlobal vazio.'); return; }
+            var v = String(valor).toUpperCase().trim();
+            var vNum = v.replace(/[^0-9]/g, '');
+            var pontos = geoJsonGlobal.features.filter(function(f) { return f && f.properties && f.properties.isPoint; });
+            console.warn('Total de pontos:', pontos.length);
+            // Contadores por tipo (chaves vs siglas)
+            var contNumLong = 0, contChavesFA = 0, contChavesFU = 0, contChavesFD = 0, contChavesRE = 0, contChavesDI = 0, contKVA = 0, contSiglas = 0;
+            var amostraChaves = []; var amostraTudo = [];
+            pontos.forEach(function(f){
+                var n = (f.properties.name || '').toUpperCase();
+                if (/\d{5,}/.test(n)) contNumLong++;
+                if (/-FA(\W|$)/.test(n)) contChavesFA++;
+                if (/-FU(\W|$)/.test(n)) contChavesFU++;
+                if (/-FD(\W|$)/.test(n)) contChavesFD++;
+                if (/-RE(\W|$)/.test(n)) contChavesRE++;
+                if (/-DI(\W|$)/.test(n)) contChavesDI++;
+                if (n.indexOf('KVA') >= 0) contKVA++;
+                if (/^[A-Z]{2,5}\$/.test(n)) contSiglas++;
+                if (amostraChaves.length < 10 && /\d{5,}/.test(n)) amostraChaves.push(f.properties.name);
+                if (amostraTudo.length < 10) amostraTudo.push(f.properties.name);
+            });
+            console.warn('Contagem por tipo:', { 'numeros longos (chaves)': contNumLong, '-FA': contChavesFA, '-FU': contChavesFU, '-FD': contChavesFD, '-RE': contChavesRE, '-DI': contChavesDI, 'KVA (trafos)': contKVA, 'siglas curtas': contSiglas });
+            console.warn('Amostra de CHAVES (números longos) no banco:', amostraChaves);
+            console.warn('Amostra geral (primeiros 10):', amostraTudo);
+            // Match parcial mais permissivo
+            var parciais = pontos.filter(function(f) {
+                var n = (f.properties.name || '').toUpperCase();
+                var nNum = n.replace(/[^0-9]/g, '');
+                return n.indexOf(v) >= 0 || (vNum && nNum.length >= 4 && nNum.indexOf(vNum.substring(0, Math.min(vNum.length, 5))) >= 0);
+            }).slice(0, 15);
+            console.warn('Possíveis matches parciais (top 15):', parciais.map(function(f) { return f.properties.name; }));
+            console.warn('Por sourceFile:', pontos.reduce(function(acc, f){ var sf = f.properties.sourceFile || '?'; acc[sf] = (acc[sf]||0)+1; return acc; }, {}));
+        }
+        window.__diagnosticarBuscaFalha = __diagnosticarBuscaFalha;
+
+        // ==========================================
         // BUSCA E OUTROS UTILITÁRIOS
         // ==========================================
         function atualizarSugestoes() {
             const input = document.getElementById('inputBusca');
             const list = document.getElementById('listaSugestoes');
-            const valor = input.value.trim().toUpperCase(); list.innerHTML = ''; if (valor.length < 1) return;
+            const valor = input.value.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            list.innerHTML = ''; if (valor.length < 1) return;
             const sugestoes = geoJsonGlobal.features.filter(f => {
                 if (!f || !f.properties) return false;
                 if (!f.properties.isPoint) return false;
-                const nome = (f.properties.name || "").toUpperCase().trim();
-                return nome === valor || nome.split(/[\s,;/\-]+/).includes(valor);
+                const nome = (f.properties.name || "").toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                return nome.indexOf(valor) >= 0;
             }).slice(0, 15);
             sugestoes.forEach(s => { const option = document.createElement('option'); option.value = s.properties.name; list.appendChild(option); });
         }
@@ -12121,12 +12162,13 @@ _registrarListenersMapa();
         function atualizarSugestoesDiv() {
             const div = document.getElementById('inputBuscaDiv');
             const list = document.getElementById('listaSugestoes');
-            const valor = div.innerText.trim().toUpperCase(); list.innerHTML = ''; if (valor.length < 1) return;
+            const valor = div.innerText.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            list.innerHTML = ''; if (valor.length < 1) return;
             const sugestoes = geoJsonGlobal.features.filter(f => {
                 if (!f || !f.properties) return false;
                 if (!f.properties.isPoint) return false;
-                const nome = (f.properties.name || "").toUpperCase().trim();
-                return nome === valor || nome.split(/[\s,;/\-]+/).includes(valor);
+                const nome = (f.properties.name || "").toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                return nome.indexOf(valor) >= 0;
             }).slice(0, 15);
             sugestoes.forEach(s => { const option = document.createElement('option'); option.value = s.properties.name; list.appendChild(option); });
         }
@@ -12139,12 +12181,7 @@ _registrarListenersMapa();
                 : document.getElementById('inputBusca').value.trim().toUpperCase(); 
             if(!val) return;
             
-            const alvo = geoJsonGlobal.features.find(f => {
-                if (!f || !f.properties) return false;
-                if (!f.properties.isPoint) return false;
-                const nome = (f.properties.name || "").toUpperCase().trim();
-                return nome === val || nome.split(/[\s,;/\-]+/).includes(val);
-            });
+            const alvo = __buscaChaveRobusta(val);
             
             if (alvo) { 
                 const lng = alvo.geometry.coordinates[0]; 
@@ -12178,8 +12215,9 @@ _registrarListenersMapa();
                 if (isAreaRuralOriginal(lng, lat)) { 
                     document.getElementById('ruralModalOverlay').style.display = 'flex'; 
                 }
-            } else { 
-                alert("ID não encontrado!"); 
+            } else {
+                __diagnosticarBuscaFalha(val);
+                alert("ID não encontrado!\n\nVerifique o console (F12 → Console) para ver chaves parecidas com '" + val + "'.");
             }
         });
 
@@ -21219,6 +21257,7 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
   var __avisoAtualizacaoMostrado = false;
 
   window.__avisoAtualizacaoMostrar = function() {
+    return; // Modal removido a pedido do usuário
     try {
       if (__avisoAtualizacaoMostrado) return;
       if (localStorage.getItem('inspecao-pro-aviso-atualizacao-oculto') === '1') return;
@@ -21758,5 +21797,88 @@ setTimeout(__mostrarUsoStorage, 7000);
     };
   };
 
+})();
+</script>
+<script>
+(function(){
+  var KEY_OCULTAR = 'inspecao-pro-agradecimento-oculto';
+
+  function isPWAInstalado() {
+    return window.matchMedia && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function jaOcultou() {
+    try { return localStorage.getItem(KEY_OCULTAR) === '1'; } catch(e){ return false; }
+  }
+
+  function mostrarModalAgradecimento() {
+    if (jaOcultou()) return;
+    if (!isPWAInstalado()) return;
+
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;z-index:99999;padding:14px;backdrop-filter:blur(3px);';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:18px;padding:26px 22px;max-width:420px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 12px 50px rgba(0,0,0,0.5);border-top:8px solid;border-image:linear-gradient(90deg,#FFC107,#E91E63,#1565C0) 1;';
+
+    card.innerHTML =
+      '<div style="text-align:center;font-size:48px;margin-bottom:8px;">🙏</div>' +
+      '<div style="text-align:center;font-size:20px;font-weight:900;color:#1565C0;margin-bottom:16px;">Agradecimentos Especiais</div>' +
+
+      '<div style="background:#fffbe6;border-left:4px solid #FFC107;padding:12px;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.6;color:#333;">' +
+        '<b>🤜 Especial a Deus</b><br>' +
+        'Sou profundamente grato ao nosso Criador, que sempre derramou o Seu Espírito Santo sobre mim, me dando ânimo, força, vontade e sabedoria para fazer o meu melhor em cada detalhe. Graças a Deus por tudo, pois Ele ama a cada um de nós. Em nome de Jesus, amém.' +
+      '</div>' +
+
+      '<div style="background:#fde2e7;border-left:4px solid #E91E63;padding:12px;border-radius:8px;margin-bottom:12px;font-size:13px;line-height:1.6;color:#333;">' +
+        '<b>❤️ À Minha Família</b><br>' +
+        'Agradeço do fundo do coração à minha <b>mãe</b>, que sempre quis o melhor para mim; à minha amada esposa, <b>Karina</b>, pelo apoio e ideias valiosas; e à minha filha, <b>Ester</b>, que com seu sorriso renovava minhas forças nos momentos mais difíceis. Obrigado por estarem sempre ao meu lado!' +
+      '</div>' +
+
+      '<div style="background:#e3f2fd;border-left:4px solid #1565C0;padding:12px;border-radius:8px;margin-bottom:14px;font-size:13px;line-height:1.55;color:#333;">' +
+        '<b>⚡️ Aos Companheiros de Campo</b><br>' +
+        'O Inspeção-Pro hoje é uma realidade graças às ótimas ideias de vocês:' +
+        '<ul style="margin:6px 0 6px 18px;padding:0;">' +
+          '<li><b>Anizio</b> (Sertãozinho) — TRAJ rastreador, rotação automática na navegação NAV e cadastros/edições de chave</li>' +
+          '<li><b>Maiki</b> (Bebedouro) — MELHORIA caneta mágica</li>' +
+          '<li><b>Lucas</b> (Campinas) — Traçados Fixos</li>' +
+          '<li><b>Danilo</b> (Avaré) — Podas concluídas + relatórios</li>' +
+          '<li><b>Julio</b> (Bebedouro) — Integração WhatsApp</li>' +
+          '<li><b>Eder</b> (Bebedouro) e <b>Leonardo</b> (Pirangi) — Tamanho dos números das chaves</li>' +
+          '<li><b>Julio</b> (Pitangueiras) — Botão LISTA</li>' +
+          '<li><b>Denis</b> (Monte Alto) e <b>Leonardo</b> (Pirangi) — Comentários de Chaves</li>' +
+        '</ul>' +
+        '<i style="font-size:11px;color:#666;">Mil perdões se esqueci alguém. Sem vocês o Inspeção-Pro não seria o que é hoje.</i><br>' +
+        '<b>Tamo junto! 🤝⚙️</b>' +
+      '</div>' +
+
+      '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;margin-bottom:14px;cursor:pointer;">' +
+        '<input id="__agrChk" type="checkbox" style="width:18px;height:18px;cursor:pointer;">' +
+        '<span>Não mostrar mais esta mensagem</span>' +
+      '</label>' +
+
+      '<button id="__agrBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#1565C0,#7B1FA2);color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;">Continuar</button>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    document.getElementById('__agrBtn').onclick = function(){
+      var chk = document.getElementById('__agrChk').checked;
+      if (chk) {
+        try { localStorage.setItem(KEY_OCULTAR, '1'); } catch(e){}
+      }
+      overlay.remove();
+    };
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(mostrarModalAgradecimento, 1500); });
+  } else {
+    setTimeout(mostrarModalAgradecimento, 1500);
+  }
 })();
 </script>
