@@ -1904,6 +1904,7 @@ document.onkeydown = function(e) {
                     <li><b>Eder (Bebedouro)</b> e <b>Leonardo (Pirangi)</b> — Pelos feedbacks de visualização, sugerindo o <b>aumento do tamanho dos números das chaves</b> para melhor leitura em campo.</li>
                     <li><b>Julio (Pitangueiras)</b> — Pelas sugestões na criação do botão <b>'Lista'</b>, que organiza todas as podas pendentes.</li>
                     <li><b>Denis (Monte Alto)</b> e <b>Leonardo (Pirangi)</b> — Pela excelente ideia de criar o campo dedicado aos <b>'Comentários de Chaves'</b>.</li>
+                    <li><b>Rodrigo (Bebedouro)</b> e <b>Julio (Pitangueiras)</b> — Pela sugestão do <b>Botão ALIM</b> com o filtro de alimentadores e chaves.</li>
                   </ul>
                   <p style="margin:0 0 8px 0;"><i>Peço mil perdões se caso esqueci o nome de alguém, mas saibam que sou extremamente grato a cada um que estendeu a mão. Sem vocês, o Inspeção-Pro não seria o que é hoje.</i></p>
                   <p style="margin:0;">Obrigado pelo apoio, pela inspiração, pelas ideias e pela força na divulgação deste trabalho que hoje ajuda a proteger e otimizar as nossas atividades em campo. <b>Tamo junto!</b> 🤝⚙️</p>
@@ -3968,11 +3969,13 @@ window.addEventListener('load', () => {
                 });
 
                 const TEMA_CHAVES = TEMA_MQTT + '/chave';
+                const TEMA_COMENTARIOS = TEMA_MQTT + '/comentario';
                 clienteMQTT.on('connect', () => {
                     _setStatusMQTT('conectado');
                     clienteMQTT.subscribe(TEMA_MQTT,          { qos: 1 });
                     clienteMQTT.subscribe(TEMA_PODAS + '/#',  { qos: 1 });
                     clienteMQTT.subscribe(TEMA_CHAVES + '/#', { qos: 1 });
+                    clienteMQTT.subscribe(TEMA_COMENTARIOS + '/+', { qos: 1 });
                     // Anuncia presença ao conectar/reconectar
                     setTimeout(() => {
                         const ll = userMarker ? userMarker.getLngLat() : null;
@@ -4001,9 +4004,64 @@ window.addEventListener('load', () => {
                     _setStatusMQTT('reconectando');
                 });
 
-                clienteMQTT.on('message', (topic, message) => {
+                clienteMQTT.on('message', (topic, message, packet) => {
                     const payload = message.toString();
+                    const _isRetained = !!(packet && packet.retain);
 
+                    // Tópico retido de COMENTÁRIO por chave (sync entre usuários offline/online)
+                    if (topic.startsWith(TEMA_COMENTARIOS + '/')) {
+                        const chaveIdTopico = topic.substring((TEMA_COMENTARIOS + '/').length);
+                        if (!payload) {
+                            const idxR = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.id === chaveIdTopico);
+                            if (idxR !== -1 && geoJsonGlobal.features[idxR].properties.comentario) {
+                                delete geoJsonGlobal.features[idxR].properties.comentario;
+                                delete geoJsonGlobal.features[idxR].properties.comentarioAutor;
+                                delete geoJsonGlobal.features[idxR].properties.comentarioData;
+                                delete geoJsonGlobal.features[idxR].properties.comentarioEditado;
+                                delete geoJsonGlobal.features[idxR].properties.comentarioLat;
+                                delete geoJsonGlobal.features[idxR].properties.comentarioLng;
+                                const sfR = geoJsonGlobal.features[idxR].properties.sourceFile;
+                                if (sfR && sfR !== 'INTERLIGACAO') {
+                                    const featsR = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sfR);
+                                    StorageManager.saveFile(sfR, featsR).catch(()=>{});
+                                    _salvarComentarioArquivo(sfR).catch(()=>{});
+                                }
+                                if (map && map.isStyleLoaded && map.isStyleLoaded()) renderizarMapa();
+                                salvarTudoSeguro();
+                            }
+                            return;
+                        }
+                        let msgC; try { msgC = JSON.parse(payload); } catch(e) { return; }
+                        if (msgC.remetente === meuID) return;
+                        let idxC2 = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.id === (msgC.chaveId || chaveIdTopico));
+                        if (idxC2 === -1 && msgC.chaveNome) {
+                            idxC2 = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === (msgC.chaveNome||'').trim().toUpperCase());
+                        }
+                        if (idxC2 !== -1) {
+                            geoJsonGlobal.features[idxC2].properties.comentario = msgC.comentario || '';
+                            geoJsonGlobal.features[idxC2].properties.comentarioAutor = msgC.autor || '';
+                            geoJsonGlobal.features[idxC2].properties.comentarioData = msgC.data || Date.now();
+                            geoJsonGlobal.features[idxC2].properties.comentarioEditado = !!msgC.editado || (msgC.acao === 'COMENTARIO_EDITADO');
+                            if (msgC.lat) geoJsonGlobal.features[idxC2].properties.comentarioLat = msgC.lat;
+                            if (msgC.lng) geoJsonGlobal.features[idxC2].properties.comentarioLng = msgC.lng;
+                            if (typeof msgC.foto !== 'undefined') {
+                                if (msgC.foto) geoJsonGlobal.features[idxC2].properties.comentarioFoto = msgC.foto;
+                                else delete geoJsonGlobal.features[idxC2].properties.comentarioFoto;
+                            }
+                            const sfC2 = geoJsonGlobal.features[idxC2].properties.sourceFile;
+                            if (sfC2 && sfC2 !== 'INTERLIGACAO') {
+                                const featsC2 = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sfC2);
+                                StorageManager.saveFile(sfC2, featsC2).catch(()=>{});
+                                _salvarComentarioArquivo(sfC2).catch(()=>{});
+                            }
+                            if (map && map.isStyleLoaded && map.isStyleLoaded()) renderizarMapa();
+                            salvarTudoSeguro();
+                        }
+                        if (!_isRetained) {
+                            processarMensagemRede(msgC);
+                        }
+                        return;
+                    }
                     // Tópico de poda retida
                     if (topic.startsWith(TEMA_PODAS + '/')) {
                         if (!payload) return; // payload vazio = poda resolvida
@@ -4269,6 +4327,7 @@ window.addEventListener('load', () => {
                         delete geoJsonGlobal.features[idxC].properties.comentarioEditado;
                         delete geoJsonGlobal.features[idxC].properties.comentarioLat;
                         delete geoJsonGlobal.features[idxC].properties.comentarioLng;
+                        delete geoJsonGlobal.features[idxC].properties.comentarioFoto;
                     } else {
                         geoJsonGlobal.features[idxC].properties.comentario = msg.comentario || '';
                         geoJsonGlobal.features[idxC].properties.comentarioAutor = msg.autor || '';
@@ -4276,6 +4335,10 @@ window.addEventListener('load', () => {
                         geoJsonGlobal.features[idxC].properties.comentarioEditado = (msg.acao === "COMENTARIO_EDITADO");
                         if (msg.lat) geoJsonGlobal.features[idxC].properties.comentarioLat = msg.lat;
                         if (msg.lng) geoJsonGlobal.features[idxC].properties.comentarioLng = msg.lng;
+                        if (typeof msg.foto !== 'undefined') {
+                            if (msg.foto) geoJsonGlobal.features[idxC].properties.comentarioFoto = msg.foto;
+                            else delete geoJsonGlobal.features[idxC].properties.comentarioFoto;
+                        }
                     }
                     // Persistir no arquivo fonte correto (fix: não apenas INTERLIGACAO)
                     const sfC = geoJsonGlobal.features[idxC].properties.sourceFile;
@@ -11072,13 +11135,22 @@ function abrirPopupPonto(e) {
                 ${(featOriginal && featOriginal.properties && featOriginal.properties.comentario)
                     ? `<div style="font-size:11px; color:#888; margin-bottom:4px; font-weight:bold;">💬 Comentário:</div>
                        <div style="font-size:12px; color:${featOriginal.properties.comentarioEditado ? '#E91E63' : '#1565C0'}; background:${featOriginal.properties.comentarioEditado ? '#fce4ec' : '#e3f2fd'}; border-radius:6px; padding:6px; margin-bottom:4px; word-break:break-word;">${_escHtmlPopup(featOriginal.properties.comentario)}</div>
+                       ${featOriginal.properties.comentarioFoto ? `<div style="margin-bottom:6px;"><img src="${featOriginal.properties.comentarioFoto}" onclick="abrirFotoComentarioFullscreen('${(f.id||'').replace(/'/g,"\\'")}','${(f.name||'').replace(/'/g,"\\'")}',${exactLat},${exactLng})" style="max-width:100%; max-height:140px; border-radius:6px; cursor:pointer; border:1px solid #ccc;" alt="Foto do comentário"/></div>` : ''}
                        <div style="font-size:10px; color:#777; margin-bottom:6px;">por <b>${_escHtmlPopup(featOriginal.properties.comentarioAutor||'')}</b> · ${featOriginal.properties.comentarioData ? new Date(featOriginal.properties.comentarioData).toLocaleString('pt-BR') : ''}</div>
                        <div style="display:flex; gap:6px;">
                            <button onclick="editarComentarioChave('${uid}', '${(f.id||'').replace(/'/g,"\\'")}', '${(f.name||'').replace(/'/g,"\\'")}', ${exactLat}, ${exactLng})" style="flex:1; background:#1565C0; color:white; border:none; padding:6px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">✏️ Editar</button>
                            <button onclick="apagarComentarioChave('${(f.id||'').replace(/'/g,"\\'")}', '${(f.name||'').replace(/'/g,"\\'")}', ${exactLat}, ${exactLng})" style="background:#F44336; color:white; border:none; padding:6px 10px; border-radius:6px; font-size:14px; cursor:pointer;" title="Apagar comentário">🗑️</button>
                        </div>`
                     : `<div style="font-size:11px; color:#888; margin-bottom:4px; font-weight:bold;">💬 Adicionar Comentário:</div>
-                       <textarea id="txtComentario_${uid}" placeholder="Adicionar comentário..." style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:6px; font-size:12px; resize:vertical; min-height:52px; font-family:inherit;"></textarea>
+                       <div style="position:relative;">
+                           <textarea id="txtComentario_${uid}" placeholder="Adicionar comentário..." style="width:100%; box-sizing:border-box; border:1px solid #ccc; border-radius:6px; padding:6px 36px 6px 6px; font-size:12px; resize:vertical; min-height:52px; font-family:inherit;"></textarea>
+                           <button type="button" onclick="abrirCameraComentario('${uid}')" title="Tirar foto" style="position:absolute; right:6px; bottom:6px; background:#1565C0; color:#fff; border:none; width:26px; height:26px; border-radius:50%; cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center; padding:0; box-shadow:0 1px 3px rgba(0,0,0,0.25);">📷</button>
+                           <input type="file" id="fileFotoComentario_${uid}" accept="image/*" capture="environment" onchange="_processarFotoComentarioInput('${uid}', this)" style="display:none;">
+                       </div>
+                       <div id="previewFotoComentario_${uid}" style="display:none; margin-top:6px; position:relative;">
+                           <img id="previewFotoComentarioImg_${uid}" style="max-width:100%; max-height:120px; border-radius:6px; border:1px solid #ccc; display:block;" alt="Pré-visualização"/>
+                           <button type="button" onclick="_removerFotoStaging('${uid}')" title="Remover foto" style="position:absolute; top:4px; right:4px; background:rgba(244,67,54,0.95); color:#fff; border:none; width:24px; height:24px; border-radius:50%; cursor:pointer; font-size:13px; line-height:1; padding:0;">✕</button>
+                       </div>
                        <button onclick="salvarComentarioChave('${uid}', '${(f.id||'').replace(/'/g,"\\'")}', '${(f.name||'').replace(/'/g,"\\'")}', ${exactLat}, ${exactLng})" style="width:100%; margin-top:5px; background:#1565C0; color:white; border:none; padding:7px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">✔ OK</button>`
                 }
             </div>
@@ -11383,6 +11455,100 @@ function _escHtmlPopup(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// ===== FOTO no comentário (staging + câmera + fullscreen) =====
+window._fotoStagingComentario = window._fotoStagingComentario || {};
+
+window.abrirCameraComentario = function(uid) {
+    const inp = document.getElementById('fileFotoComentario_' + uid);
+    if (inp) inp.click();
+};
+
+window._processarFotoComentarioInput = function(uid, inputEl) {
+    if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
+    const file = inputEl.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const MAX = 800;
+            let w = img.naturalWidth, h = img.naturalHeight;
+            if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+            else if (h >= w && h > MAX) { w = Math.round(w * MAX / h); h = MAX; }
+            const canvas = document.createElement('canvas');
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+            let final = dataUrl;
+            if (dataUrl.length > 220 * 1024) {
+                final = canvas.toDataURL('image/jpeg', 0.4);
+            }
+            window._fotoStagingComentario[uid] = final;
+            const prev = document.getElementById('previewFotoComentario_' + uid);
+            const prevImg = document.getElementById('previewFotoComentarioImg_' + uid);
+            if (prev && prevImg) {
+                prevImg.src = final;
+                prev.style.display = 'block';
+            }
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    try { inputEl.value = ''; } catch(_){}
+};
+
+window._removerFotoStaging = function(uid) {
+    delete window._fotoStagingComentario[uid];
+    const prev = document.getElementById('previewFotoComentario_' + uid);
+    const prevImg = document.getElementById('previewFotoComentarioImg_' + uid);
+    if (prev) prev.style.display = 'none';
+    if (prevImg) prevImg.src = '';
+};
+
+window.abrirFotoComentarioFullscreen = function(chaveId, chaveNome, lat, lng) {
+    const idx = geoJsonGlobal.features.findIndex(f => f && f.properties && (f.properties.id === chaveId || (f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === (chaveNome||'').trim().toUpperCase())));
+    if (idx === -1) return;
+    const dataUrl = geoJsonGlobal.features[idx].properties.comentarioFoto;
+    if (!dataUrl) return;
+    const overlay = document.createElement('div');
+    overlay.id = '_fotoComentarioOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;display:flex;align-items:center;justify-content:center;padding:14px;';
+    overlay.innerHTML =
+        '<div style="position:relative;max-width:96%;max-height:96%;display:flex;flex-direction:column;align-items:center;gap:10px;">' +
+            '<img src="' + dataUrl + '" style="max-width:96vw;max-height:80vh;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,0.5);" alt="Foto"/>' +
+            '<div style="display:flex;gap:10px;">' +
+                '<button id="_btnApagarFotoCom" style="background:#F44336;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:bold;font-size:13px;cursor:pointer;">🗑️ Apagar foto</button>' +
+                '<button id="_btnFecharFotoCom" style="background:#666;color:#fff;border:none;padding:10px 16px;border-radius:8px;font-weight:bold;font-size:13px;cursor:pointer;">✕ Fechar</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(ev){ if (ev.target === overlay) overlay.remove(); });
+    document.getElementById('_btnFecharFotoCom').onclick = function(){ overlay.remove(); };
+    document.getElementById('_btnApagarFotoCom').onclick = function(){
+        if (!confirm('Apagar somente a foto deste comentário? O texto será mantido.')) return;
+        overlay.remove();
+        window.apagarSomenteFotoComentario(chaveId, chaveNome, lat, lng);
+    };
+};
+
+window.apagarSomenteFotoComentario = function(chaveId, chaveNome, lat, lng) {
+    const idx = geoJsonGlobal.features.findIndex(f => f && f.properties && (f.properties.id === chaveId || (f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === (chaveNome||'').trim().toUpperCase())));
+    if (idx === -1) return;
+    delete geoJsonGlobal.features[idx].properties.comentarioFoto;
+    const sourceFile = geoJsonGlobal.features[idx].properties.sourceFile || 'INTERLIGACAO';
+    const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sourceFile);
+    StorageManager.saveFile(sourceFile, featuresDoArquivo).catch(()=>{});
+    _salvarComentarioArquivo(sourceFile).catch(()=>{});
+    salvarTudoSeguro();
+    const props = geoJsonGlobal.features[idx].properties;
+    if (props.comentario && typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined' && chaveId) {
+        const _payloadSemFoto = { acao: 'COMENTARIO_EDITADO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: props.comentario, autor: props.comentarioAutor || getAutorFormatado(), cidade: _getCidadeUsuario(), lat: lat, lng: lng, data: Date.now(), editado: true, foto: '' };
+        mqttPublish(TEMA_MQTT, _payloadSemFoto);
+        mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, _payloadSemFoto, { retain: true, qos: 1 });
+    }
+    document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
+    if (map) abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
+};
+
 function _getCidadeUsuario() {
     return window.cidadeUsuario || localStorage.getItem('cidadeUsuario') || '';
 }
@@ -11403,12 +11569,14 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
     let posLat = lat, posLng = lng;
 
     function _finalizar(posLat2, posLng2) {
+        const fotoStaged = window._fotoStagingComentario && window._fotoStagingComentario[uid] ? window._fotoStagingComentario[uid] : '';
         geoJsonGlobal.features[idx].properties.comentario = texto;
         geoJsonGlobal.features[idx].properties.comentarioAutor = autor;
         geoJsonGlobal.features[idx].properties.comentarioData = agora;
         geoJsonGlobal.features[idx].properties.comentarioEditado = false;
         geoJsonGlobal.features[idx].properties.comentarioLat = posLat2;
         geoJsonGlobal.features[idx].properties.comentarioLng = posLng2;
+        if (fotoStaged) geoJsonGlobal.features[idx].properties.comentarioFoto = fotoStaged;
         // PROBLEMA 1 FIX: salvar o arquivo fonte da feature, não apenas INTERLIGACAO
         const sourceFile = geoJsonGlobal.features[idx].properties.sourceFile || 'INTERLIGACAO';
         const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sourceFile);
@@ -11416,7 +11584,9 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
         _salvarComentarioArquivo(sourceFile).catch(e => console.error('[salvarComentarioChave] erro ao salvar comentarios:', e));
         salvarTudoSeguro();
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
-            mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_CHAVE', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
+            var _payloadComCriar = { acao: 'COMENTARIO_CHAVE', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: agora, foto: fotoStaged || '' };
+            mqttPublish(TEMA_MQTT, _payloadComCriar);
+            if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, _payloadComCriar, { retain: true, qos: 1 });
         }
         if (typeof __wppCompartilharAcao === 'function') {
             __wppCompartilharAcao({
@@ -11426,9 +11596,11 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
                     'Comentário: ' + texto,
                     'Por: ' + autor
                 ],
-                coordenada: (posLat2 && posLng2) ? { lat: posLat2, lng: posLng2 } : null
+                coordenada: (posLat2 && posLng2) ? { lat: posLat2, lng: posLng2 } : null,
+                fotoBase64: fotoStaged || null
             });
         }
+        if (window._fotoStagingComentario) delete window._fotoStagingComentario[uid];
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
         abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
     }
@@ -11456,6 +11628,7 @@ window.apagarComentarioChave = function(chaveId, chaveNome, lat, lng) {
     delete geoJsonGlobal.features[idx].properties.comentarioEditado;
     delete geoJsonGlobal.features[idx].properties.comentarioLat;
     delete geoJsonGlobal.features[idx].properties.comentarioLng;
+    delete geoJsonGlobal.features[idx].properties.comentarioFoto;
     const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sourceFile);
     StorageManager.saveFile(sourceFile, featuresDoArquivo).catch(e => console.error('[apagarComentarioChave] erro ao salvar:', e));
     _salvarComentarioArquivo(sourceFile).catch(e => console.error('[apagarComentarioChave] erro ao salvar comentarios:', e));
@@ -11464,6 +11637,7 @@ window.apagarComentarioChave = function(chaveId, chaveNome, lat, lng) {
     function _finalizarApagar(posLat2, posLng2) {
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_REMOVIDO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
+            if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, '', { retain: true, qos: 1 });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
         abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
@@ -11529,7 +11703,10 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
         _salvarComentarioArquivo(sourceFile).catch(e => console.error('[confirmarEdicaoComentario] erro ao salvar comentarios:', e));
         salvarTudoSeguro();
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
-            mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_EDITADO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
+            var _fotoExistente = (geoJsonGlobal.features[idx].properties && geoJsonGlobal.features[idx].properties.comentarioFoto) || '';
+            var _payloadComEdit = { acao: 'COMENTARIO_EDITADO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: agora, editado: true, foto: _fotoExistente };
+            mqttPublish(TEMA_MQTT, _payloadComEdit);
+            if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, _payloadComEdit, { retain: true, qos: 1 });
         }
         if (typeof __wppCompartilharAcao === 'function') {
             __wppCompartilharAcao({
@@ -11539,7 +11716,8 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
                     'Comentário: ' + texto,
                     'Por: ' + autor
                 ],
-                coordenada: (posLat2 && posLng2) ? { lat: posLat2, lng: posLng2 } : null
+                coordenada: (posLat2 && posLng2) ? { lat: posLat2, lng: posLng2 } : null,
+                fotoBase64: (geoJsonGlobal.features[idx].properties && geoJsonGlobal.features[idx].properties.comentarioFoto) || null
             });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
@@ -21851,6 +22029,7 @@ setTimeout(__mostrarUsoStorage, 7000);
           '<li><b>Eder</b> (Bebedouro) e <b>Leonardo</b> (Pirangi) — Tamanho dos números das chaves</li>' +
           '<li><b>Julio</b> (Pitangueiras) — Botão LISTA</li>' +
           '<li><b>Denis</b> (Monte Alto) e <b>Leonardo</b> (Pirangi) — Comentários de Chaves</li>' +
+          '<li><b>Rodrigo</b> (Bebedouro) e <b>Julio</b> (Pitangueiras) — Botão ALIM com o filtro de alimentadores e chaves</li>' +
         '</ul>' +
         '<i style="font-size:11px;color:#666;">Mil perdões se esqueci alguém. Sem vocês o Inspeção-Pro não seria o que é hoje.</i><br>' +
         '<b>Tamo junto! 🤝⚙️</b>' +
