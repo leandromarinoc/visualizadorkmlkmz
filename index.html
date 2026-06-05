@@ -4488,7 +4488,15 @@ window.addEventListener('load', () => {
             }
             atualizarListaChatPrivado();
         }, 60000);
-        if (_isMobile) { setTimeout(conectarSincronizacao, 5000); } else { conectarSincronizacao(); }
+        function _aguardarMqttELigar(tentativa) {
+            tentativa = tentativa || 0;
+            if (typeof mqtt === 'undefined') {
+                if (tentativa > 100) { console.error('[MQTT] Biblioteca mqtt.js não carregou após 20s'); return; }
+                return setTimeout(function(){ _aguardarMqttELigar(tentativa + 1); }, 200);
+            }
+            try { conectarSincronizacao(); } catch(e) { console.error('[MQTT] Erro ao conectar:', e); }
+        }
+        if (_isMobile) { setTimeout(_aguardarMqttELigar, 5000); } else { _aguardarMqttELigar(); }
 
         function atualizarListaChatPrivado() {
             const select = document.getElementById('chatDestinatario');
@@ -11602,7 +11610,7 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
         }
         if (window._fotoStagingComentario) delete window._fotoStagingComentario[uid];
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
-        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
+        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
     }
 
     if (navigator.geolocation) {
@@ -11640,7 +11648,7 @@ window.apagarComentarioChave = function(chaveId, chaveNome, lat, lng) {
             if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, '', { retain: true, qos: 1 });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
-        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
+        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
     }
 
     if (navigator.geolocation) {
@@ -11721,7 +11729,7 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
             });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
-        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
+        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
     }
 
     if (navigator.geolocation) {
