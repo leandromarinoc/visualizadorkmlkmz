@@ -4488,7 +4488,15 @@ window.addEventListener('load', () => {
             }
             atualizarListaChatPrivado();
         }, 60000);
-        if (_isMobile) { setTimeout(conectarSincronizacao, 5000); } else { conectarSincronizacao(); }
+        function _aguardarMqttELigar(tentativa) {
+            tentativa = tentativa || 0;
+            if (typeof mqtt === 'undefined') {
+                if (tentativa > 100) { console.error('[MQTT] Biblioteca mqtt.js não carregou após 20s'); return; }
+                return setTimeout(function(){ _aguardarMqttELigar(tentativa + 1); }, 200);
+            }
+            try { conectarSincronizacao(); } catch(e) { console.error('[MQTT] Erro ao conectar:', e); }
+        }
+        if (_isMobile) { setTimeout(_aguardarMqttELigar, 5000); } else { _aguardarMqttELigar(); }
 
         function atualizarListaChatPrivado() {
             const select = document.getElementById('chatDestinatario');
