@@ -10,6 +10,7 @@
     gtag('config', 'G-SS7428TZX5', { 'send_page_view': true });
     console.log('[GA4] Inicializado: G-SS7428TZX5');
   </script>
+
     <meta charset="UTF-8">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>⚡</text></svg>" type="image/svg+xml">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -22,6 +23,7 @@
     <link rel="apple-touch-icon" href="./icon.png">
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <!-- Captura beforeinstallprompt o mais cedo possível para não perder o evento -->
+     
     <script>
       window._pwaPromptEarly = null;
       window.addEventListener('beforeinstallprompt', function(e) {
@@ -2469,66 +2471,66 @@ document.onkeydown = function(e) {
 
 
 
-<style>
-    /* =========================================
-       COMPORTAMENTO RESPONSIVO DA BUSCA (ULTRA-COMPACTA)
-       ========================================= */
-    .caixa-busca-flutuante {
-        position: fixed;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        z-index: 99999;
-        touch-action: none;
-        justify-content: center;
-        transition: bottom 0.3s ease, max-width 0.3s ease;
-    }
-
-    /* 📱 CELULAR (Mais perto da borda inferior) */
-    .caixa-busca-flutuante {
-        bottom: 3px; /* REDUZIDO DE 25px PARA 10px - Mais perto do final da tela */
-        width: 80%;
-        max-width: 200px;
-    }
-    .input-busca-premium {
-        font-size: 16px !important; 
-        padding: 6px 0 !important; 
-    }
-
-    /* 💻 COMPUTADOR (Minimalista) */
-    @media (min-width: 768px) {
+    <style>
+        /* =========================================
+        COMPORTAMENTO RESPONSIVO DA BUSCA (ULTRA-COMPACTA)
+        ========================================= */
         .caixa-busca-flutuante {
-            bottom: 15px; 
-            max-width: 160px; 
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            z-index: 99999;
+            touch-action: none;
+            justify-content: center;
+            transition: bottom 0.3s ease, max-width 0.3s ease;
+        }
+
+        /* 📱 CELULAR (Mais perto da borda inferior) */
+        .caixa-busca-flutuante {
+            bottom: 3px; /* REDUZIDO DE 25px PARA 10px - Mais perto do final da tela */
+            width: 80%;
+            max-width: 200px;
         }
         .input-busca-premium {
-            font-size: 13px !important; 
-            padding: 4px 0 !important; 
+            font-size: 16px !important; 
+            padding: 6px 0 !important; 
         }
-    }
-</style>
 
-<div id="containerBuscaArrastavel" class="caixa-busca-flutuante">
-    
-    <form class="search-container" id="formBusca" style="position: relative; flex: 1; display: flex; align-items: center; background: rgba(20, 20, 25, 0.45); backdrop-filter: saturate(180%) blur(25px); -webkit-backdrop-filter: saturate(180%) blur(25px); border-radius: 50px; border: 1px solid rgba(255, 255, 255, 0.15); padding: 0 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15);">
-        
-        <input type="text" id="inputBusca" class="input-busca-premium" list="listaSugestoes" placeholder="Buscar" 
-               oninput="atualizarSugestoes()" autocomplete="off"
-               style="width: 100%; background: transparent; border: none; color: #FFFFFF; outline: none; font-weight: 500; letter-spacing: 0.3px;" />
-        
-        <div id="inputBuscaDiv" class="input-busca-premium" contenteditable="true" placeholder="Buscar" 
-             style="display: none; flex: 1; border: none; background: transparent; outline: none; font-weight: 500; letter-spacing: 0.3px; color: rgba(255, 255, 255, 0.95); overflow: hidden; white-space: nowrap;"
-             oninput="atualizarSugestoesDiv()"></div>
-        
-        <datalist id="listaSugestoes"></datalist>
-        
-        <button type="submit" class="btn-busca-submit" style="background: transparent; border: none; cursor: pointer; font-size: 14px; padding: 0 0 0 4px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">🔍</button>
-    </form>
-</div>
+        /* 💻 COMPUTADOR (Minimalista) */
+        @media (min-width: 768px) {
+            .caixa-busca-flutuante {
+                bottom: 15px; 
+                max-width: 160px; 
+            }
+            .input-busca-premium {
+                font-size: 13px !important; 
+                padding: 4px 0 !important; 
+            }
+        }
+    </style>
 
-    
-    <div id="map"></div>
-    <div id="toastCidade"></div> 
+    <div id="containerBuscaArrastavel" class="caixa-busca-flutuante">
+        
+        <form class="search-container" id="formBusca" style="position: relative; flex: 1; display: flex; align-items: center; background: rgba(20, 20, 25, 0.45); backdrop-filter: saturate(180%) blur(25px); -webkit-backdrop-filter: saturate(180%) blur(25px); border-radius: 50px; border: 1px solid rgba(255, 255, 255, 0.15); padding: 0 10px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255, 255, 255, 0.15);">
+            
+            <input type="text" id="inputBusca" class="input-busca-premium" list="listaSugestoes" placeholder="Buscar" 
+                oninput="atualizarSugestoes()" autocomplete="off"
+                style="width: 100%; background: transparent; border: none; color: #FFFFFF; outline: none; font-weight: 500; letter-spacing: 0.3px;" />
+            
+            <div id="inputBuscaDiv" class="input-busca-premium" contenteditable="true" placeholder="Buscar" 
+                style="display: none; flex: 1; border: none; background: transparent; outline: none; font-weight: 500; letter-spacing: 0.3px; color: rgba(255, 255, 255, 0.95); overflow: hidden; white-space: nowrap;"
+                oninput="atualizarSugestoesDiv()"></div>
+            
+            <datalist id="listaSugestoes"></datalist>
+            
+            <button type="submit" class="btn-busca-submit" style="background: transparent; border: none; cursor: pointer; font-size: 14px; padding: 0 0 0 4px; opacity: 0.6; transition: opacity 0.3s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">🔍</button>
+        </form>
+    </div>
+
+        
+        <div id="map"></div>
+        <div id="toastCidade"></div> 
     
 
     <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
@@ -3970,6 +3972,9 @@ window.addEventListener('load', () => {
 
                 const TEMA_CHAVES = TEMA_MQTT + '/chave';
                 const TEMA_COMENTARIOS = TEMA_MQTT + '/comentario';
+                // Helper: gera tópico estável baseado no NOME da chave (não no id local, que varia entre clientes)
+                window._topicoNomeChave = window._topicoNomeChave || ((nome) => 'n_' + (nome||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,80));
+                const _topicoNomeChave = window._topicoNomeChave;
                 clienteMQTT.on('connect', () => {
                     _setStatusMQTT('conectado');
                     clienteMQTT.subscribe(TEMA_MQTT,          { qos: 1 });
@@ -4011,6 +4016,7 @@ window.addEventListener('load', () => {
                     // Tópico retido de COMENTÁRIO por chave (sync entre usuários offline/online)
                     if (topic.startsWith(TEMA_COMENTARIOS + '/')) {
                         const chaveIdTopico = topic.substring((TEMA_COMENTARIOS + '/').length);
+                        // payload vazio retido = tombstone legado de comentário apagado (sem data → sempre aplica)
                         if (!payload) {
                             const idxR = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.id === chaveIdTopico);
                             if (idxR !== -1 && geoJsonGlobal.features[idxR].properties.comentario) {
@@ -4020,6 +4026,7 @@ window.addEventListener('load', () => {
                                 delete geoJsonGlobal.features[idxR].properties.comentarioEditado;
                                 delete geoJsonGlobal.features[idxR].properties.comentarioLat;
                                 delete geoJsonGlobal.features[idxR].properties.comentarioLng;
+                                delete geoJsonGlobal.features[idxR].properties.comentarioFoto;
                                 const sfR = geoJsonGlobal.features[idxR].properties.sourceFile;
                                 if (sfR && sfR !== 'INTERLIGACAO') {
                                     const featsR = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sfR);
@@ -4032,32 +4039,55 @@ window.addEventListener('load', () => {
                             return;
                         }
                         let msgC; try { msgC = JSON.parse(payload); } catch(e) { return; }
-                        if (msgC.remetente === meuID) return;
-                        let idxC2 = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.id === (msgC.chaveId || chaveIdTopico));
-                        if (idxC2 === -1 && msgC.chaveNome) {
-                            idxC2 = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === (msgC.chaveNome||'').trim().toUpperCase());
+                        // Localiza feature: PRIORIDADE pelo nome da chave (id local varia entre clientes), fallback pelo id
+                        let idxC2 = -1;
+                        if (msgC.chaveNome) {
+                            const _nomeAlvo = (msgC.chaveNome||'').trim().toUpperCase();
+                            idxC2 = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === _nomeAlvo);
                         }
-                        if (idxC2 !== -1) {
-                            geoJsonGlobal.features[idxC2].properties.comentario = msgC.comentario || '';
-                            geoJsonGlobal.features[idxC2].properties.comentarioAutor = msgC.autor || '';
-                            geoJsonGlobal.features[idxC2].properties.comentarioData = msgC.data || Date.now();
-                            geoJsonGlobal.features[idxC2].properties.comentarioEditado = !!msgC.editado || (msgC.acao === 'COMENTARIO_EDITADO');
-                            if (msgC.lat) geoJsonGlobal.features[idxC2].properties.comentarioLat = msgC.lat;
-                            if (msgC.lng) geoJsonGlobal.features[idxC2].properties.comentarioLng = msgC.lng;
+                        if (idxC2 === -1) {
+                            idxC2 = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.id === (msgC.chaveId || chaveIdTopico));
+                        }
+                        if (idxC2 === -1) return;
+                        const _propsAtual = geoJsonGlobal.features[idxC2].properties;
+                        const _dataMsg = Number(msgC.data) || 0;
+                        const _dataAtual = Number(_propsAtual.comentarioData) || 0;
+                        // REGRA "última escrita vence": ignora mensagens mais antigas que a versão local
+                        if (_dataAtual && _dataMsg && _dataAtual > _dataMsg) {
+                            if (!_isRetained) processarMensagemRede(msgC);
+                            return;
+                        }
+                        // Tombstone: COMENTARIO_REMOVIDO com data → apaga
+                        if (msgC.acao === 'COMENTARIO_REMOVIDO') {
+                            delete _propsAtual.comentario;
+                            delete _propsAtual.comentarioAutor;
+                            delete _propsAtual.comentarioData;
+                            delete _propsAtual.comentarioEditado;
+                            delete _propsAtual.comentarioLat;
+                            delete _propsAtual.comentarioLng;
+                            delete _propsAtual.comentarioFoto;
+                        } else {
+                            _propsAtual.comentario = msgC.comentario || '';
+                            _propsAtual.comentarioAutor = msgC.autor || '';
+                            _propsAtual.comentarioData = _dataMsg || Date.now();
+                            _propsAtual.comentarioEditado = !!msgC.editado || (msgC.acao === 'COMENTARIO_EDITADO');
+                            if (msgC.lat) _propsAtual.comentarioLat = msgC.lat;
+                            if (msgC.lng) _propsAtual.comentarioLng = msgC.lng;
                             if (typeof msgC.foto !== 'undefined') {
-                                if (msgC.foto) geoJsonGlobal.features[idxC2].properties.comentarioFoto = msgC.foto;
-                                else delete geoJsonGlobal.features[idxC2].properties.comentarioFoto;
+                                if (msgC.foto) _propsAtual.comentarioFoto = msgC.foto;
+                                else delete _propsAtual.comentarioFoto;
                             }
-                            const sfC2 = geoJsonGlobal.features[idxC2].properties.sourceFile;
-                            if (sfC2 && sfC2 !== 'INTERLIGACAO') {
-                                const featsC2 = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sfC2);
-                                StorageManager.saveFile(sfC2, featsC2).catch(()=>{});
-                                _salvarComentarioArquivo(sfC2).catch(()=>{});
-                            }
-                            if (map && map.isStyleLoaded && map.isStyleLoaded()) renderizarMapa();
-                            salvarTudoSeguro();
                         }
-                        if (!_isRetained) {
+                        const sfC2 = _propsAtual.sourceFile;
+                        if (sfC2 && sfC2 !== 'INTERLIGACAO') {
+                            const featsC2 = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sfC2);
+                            StorageManager.saveFile(sfC2, featsC2).catch(()=>{});
+                            _salvarComentarioArquivo(sfC2).catch(()=>{});
+                        }
+                        if (map && map.isStyleLoaded && map.isStyleLoaded()) renderizarMapa();
+                        salvarTudoSeguro();
+                        // Se NÃO for retained (mensagem ao vivo), delega ao processamento normal pra mostrar notificação/chat
+                        if (!_isRetained && msgC.remetente !== meuID) {
                             processarMensagemRede(msgC);
                         }
                         return;
@@ -4335,6 +4365,7 @@ window.addEventListener('load', () => {
                         geoJsonGlobal.features[idxC].properties.comentarioEditado = (msg.acao === "COMENTARIO_EDITADO");
                         if (msg.lat) geoJsonGlobal.features[idxC].properties.comentarioLat = msg.lat;
                         if (msg.lng) geoJsonGlobal.features[idxC].properties.comentarioLng = msg.lng;
+                        // Foto: se vier no payload (string vazia significa "remover foto"), aplica; se undefined, preserva
                         if (typeof msg.foto !== 'undefined') {
                             if (msg.foto) geoJsonGlobal.features[idxC].properties.comentarioFoto = msg.foto;
                             else delete geoJsonGlobal.features[idxC].properties.comentarioFoto;
@@ -11481,6 +11512,7 @@ window._processarFotoComentarioInput = function(uid, inputEl) {
     reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
+            // Comprime: máx 800px lado maior, JPEG 0.55 (~80-150KB típico)
             const MAX = 800;
             let w = img.naturalWidth, h = img.naturalHeight;
             if (w > h && w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
@@ -11489,6 +11521,7 @@ window._processarFotoComentarioInput = function(uid, inputEl) {
             canvas.width = w; canvas.height = h;
             canvas.getContext('2d').drawImage(img, 0, 0, w, h);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
+            // Se ainda passou de 220KB, comprime mais agressivo
             let final = dataUrl;
             if (dataUrl.length > 220 * 1024) {
                 final = canvas.toDataURL('image/jpeg', 0.4);
@@ -11504,6 +11537,7 @@ window._processarFotoComentarioInput = function(uid, inputEl) {
         img.src = e.target.result;
     };
     reader.readAsDataURL(file);
+    // Limpa input pra permitir re-tirar foto da mesma sessão
     try { inputEl.value = ''; } catch(_){}
 };
 
@@ -11550,11 +11584,12 @@ window.apagarSomenteFotoComentario = function(chaveId, chaveNome, lat, lng) {
     StorageManager.saveFile(sourceFile, featuresDoArquivo).catch(()=>{});
     _salvarComentarioArquivo(sourceFile).catch(()=>{});
     salvarTudoSeguro();
+    // Republica retained com mesmo texto mas SEM foto, pra propagar a remoção da foto a todos
     const props = geoJsonGlobal.features[idx].properties;
     if (props.comentario && typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined' && chaveId) {
         const _payloadSemFoto = { acao: 'COMENTARIO_EDITADO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: props.comentario, autor: props.comentarioAutor || getAutorFormatado(), cidade: _getCidadeUsuario(), lat: lat, lng: lng, data: Date.now(), editado: true, foto: '' };
         mqttPublish(TEMA_MQTT, _payloadSemFoto);
-        mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, _payloadSemFoto, { retain: true, qos: 1 });
+        mqttPublish(TEMA_MQTT + '/comentario/' + (window._topicoNomeChave ? window._topicoNomeChave(chaveNome) : chaveId), _payloadSemFoto, { retain: true, qos: 1 });
     }
     document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
     if (map) abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
@@ -11597,7 +11632,7 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             var _payloadComCriar = { acao: 'COMENTARIO_CHAVE', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: agora, foto: fotoStaged || '' };
             mqttPublish(TEMA_MQTT, _payloadComCriar);
-            if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, _payloadComCriar, { retain: true, qos: 1 });
+            if (chaveNome) mqttPublish(TEMA_MQTT + '/comentario/' + (window._topicoNomeChave ? window._topicoNomeChave(chaveNome) : chaveId), _payloadComCriar, { retain: true, qos: 1 });
         }
         if (typeof __wppCompartilharAcao === 'function') {
             __wppCompartilharAcao({
@@ -11611,9 +11646,11 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
                 fotoBase64: fotoStaged || null
             });
         }
+        // Limpa staging após uso
         if (window._fotoStagingComentario) delete window._fotoStagingComentario[uid];
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
-        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
+        // Reabre popup SEMPRE nas coords originais da chave (evita popup voar para GPS aproximado em desktop)
+        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
     }
 
     if (navigator.geolocation) {
@@ -11648,10 +11685,12 @@ window.apagarComentarioChave = function(chaveId, chaveNome, lat, lng) {
     function _finalizarApagar(posLat2, posLng2) {
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_REMOVIDO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
-            if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, '', { retain: true, qos: 1 });
+            // Tombstone com data: garante que delete tenha precedência temporal e seja propagado entre clientes
+            const _tombstone = { acao: 'COMENTARIO_REMOVIDO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: Date.now() };
+            if (chaveNome) mqttPublish(TEMA_MQTT + '/comentario/' + (window._topicoNomeChave ? window._topicoNomeChave(chaveNome) : chaveId), _tombstone, { retain: true, qos: 1 });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
-        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
+        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
     }
 
     if (navigator.geolocation) {
@@ -11717,7 +11756,7 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
             var _fotoExistente = (geoJsonGlobal.features[idx].properties && geoJsonGlobal.features[idx].properties.comentarioFoto) || '';
             var _payloadComEdit = { acao: 'COMENTARIO_EDITADO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: agora, editado: true, foto: _fotoExistente };
             mqttPublish(TEMA_MQTT, _payloadComEdit);
-            if (chaveId) mqttPublish(TEMA_MQTT + '/comentario/' + chaveId, _payloadComEdit, { retain: true, qos: 1 });
+            if (chaveNome) mqttPublish(TEMA_MQTT + '/comentario/' + (window._topicoNomeChave ? window._topicoNomeChave(chaveNome) : chaveId), _payloadComEdit, { retain: true, qos: 1 });
         }
         if (typeof __wppCompartilharAcao === 'function') {
             __wppCompartilharAcao({
@@ -11732,7 +11771,7 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
             });
         }
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
-        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: posLng2, lat: posLat2 } });
+        abrirPopupPonto({ features: [geoJsonGlobal.features[idx]], lngLat: { lng: lng, lat: lat } });
     }
 
     if (navigator.geolocation) {
@@ -21288,6 +21327,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
 
 })();
 </script>
+
 <script>
 window.abrirModalCroqui = function() {
     var m = document.getElementById('modalCroquiEscolha');
