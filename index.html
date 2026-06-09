@@ -13136,6 +13136,9 @@ function finalizarRegistro() {
         <input type="text" id="inputChaveRef1"   class="campo-melhoria" placeholder="Chave de Referência 1" />
         <input type="text" id="inputChaveRef2"   class="campo-melhoria" placeholder="Chave de Referência 2" />
         <textarea id="obsCaneta" class="campo-melhoria" placeholder="Observações (descreva o que precisa de melhoria)..."></textarea>
+        <input type="file" id="inputFotosLocal" accept="image/*" capture="environment" multiple style="display:none" onchange="window._adicionarFotosLocal(this.files); this.value='';" />
+        <button type="button" onclick="document.getElementById('inputFotosLocal').click()" style="width:100%; padding:11px; background:#2E7D32; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px;">📷 Tirar foto do local</button>
+        <div id="fotosLocaisPreview" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"></div>
         <button id="btnOkDados" onclick="confirmarDadosMelhoria()">OK — Continuar</button>
         <button id="btnExportarSemRelatorio" onclick="exportarImagemSemRelatorio()" style="width:100%; padding:11px; background:#607D8B; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; margin-top:6px;">⬇️ Exportar só a imagem</button>
     </div>
@@ -13651,6 +13654,74 @@ window.abrirVisualizarMenu = function() {
         return;
     }
     document.getElementById('modalDadosMelhoria').style.display = 'flex';
+    // Reseta fotos do local ao abrir um novo apontamento
+    window._fotosLocaisApontamento = [];
+    if (typeof window._renderFotosLocaisPreview === 'function') window._renderFotosLocaisPreview();
+};
+
+window._fotosLocaisApontamento = window._fotosLocaisApontamento || [];
+
+window._renderFotosLocaisPreview = function() {
+    var cont = document.getElementById('fotosLocaisPreview');
+    if (!cont) return;
+    cont.innerHTML = '';
+    (window._fotosLocaisApontamento || []).forEach(function(dataUrl, idx) {
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative; width:70px; height:70px; border-radius:6px; overflow:hidden; border:2px solid #2E7D32;';
+        var img = document.createElement('img');
+        img.src = dataUrl;
+        img.style.cssText = 'width:100%; height:100%; object-fit:cover; cursor:pointer;';
+        img.onclick = function() { window.open(dataUrl, '_blank'); };
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '×';
+        btn.title = 'Remover foto';
+        btn.style.cssText = 'position:absolute; top:1px; right:1px; width:20px; height:20px; border-radius:50%; border:none; background:rgba(220,38,38,0.95); color:#fff; font-weight:900; font-size:14px; line-height:1; cursor:pointer; padding:0;';
+        btn.onclick = function() {
+            window._fotosLocaisApontamento.splice(idx, 1);
+            window._renderFotosLocaisPreview();
+        };
+        wrap.appendChild(img);
+        wrap.appendChild(btn);
+        cont.appendChild(wrap);
+    });
+};
+
+window._comprimirFotoLocal = function(file) {
+    return new Promise(function(resolve) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var img = new Image();
+            img.onload = function() {
+                var maxDim = 1600;
+                var w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else { w = Math.round(w * maxDim / h); h = maxDim; }
+                }
+                var c = document.createElement('canvas');
+                c.width = w; c.height = h;
+                c.getContext('2d').drawImage(img, 0, 0, w, h);
+                var dataUrl = c.toDataURL('image/jpeg', 0.82);
+                resolve(dataUrl);
+            };
+            img.onerror = function() { resolve(null); };
+            img.src = e.target.result;
+        };
+        reader.onerror = function() { resolve(null); };
+        reader.readAsDataURL(file);
+    });
+};
+
+window._adicionarFotosLocal = async function(fileList) {
+    if (!fileList || !fileList.length) return;
+    for (var i = 0; i < fileList.length; i++) {
+        var f = fileList[i];
+        if (!f.type || f.type.indexOf('image/') !== 0) continue;
+        var dataUrl = await window._comprimirFotoLocal(f);
+        if (dataUrl) window._fotosLocaisApontamento.push(dataUrl);
+    }
+    window._renderFotosLocaisPreview();
 };
 
 window.confirmarDadosMelhoria = function() {
@@ -13766,6 +13837,10 @@ window.executarImpressao = function() {
     janela.document.write('.data-section{flex:1;font-size:15px;line-height:2}');
     janela.document.write('.data-section p{margin:8px 0;padding:8px 12px;background:#f9f9f9;border-radius:6px;border-left:4px solid #300050}');
     janela.document.write('.data-section strong{color:#300050;font-weight:700}');
+    janela.document.write('.fotos-locais{margin-top:25px;padding-top:18px;border-top:2px solid #FFE0B2}');
+    janela.document.write('.fotos-locais h3{color:#E65100;margin:0 0 12px 0;font-size:18px;font-weight:800}');
+    janela.document.write('.fotos-locais .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}');
+    janela.document.write('.fotos-locais img{width:100%;border-radius:8px;border:2px solid #ddd;box-shadow:0 2px 8px rgba(0,0,0,0.1);page-break-inside:avoid}');
     janela.document.write('.footer{margin-top:25px;padding-top:15px;border-top:2px solid #eee;text-align:center;color:#666;font-size:12px}');
     janela.document.write('@media print{body{background:#fff;margin:0}.container{box-shadow:none;padding:20px}@page{margin:15mm}}');
     janela.document.write('</style>');
@@ -13776,6 +13851,15 @@ window.executarImpressao = function() {
     janela.document.write('<div class="image-section"><img src="' + imagemCapturada + '" alt="Marca&ccedil;&atilde;o" /></div>');
     janela.document.write('<div class="data-section">' + montarTextoHTML(dadosPreenchidos) + '</div>');
     janela.document.write('</div>');
+    // Anexa fotos do local tiradas pelo usuário, se houver
+    var _fotosLocais = (window._fotosLocaisApontamento || []);
+    if (_fotosLocais.length > 0) {
+        janela.document.write('<div class="fotos-locais"><h3>📷 Fotos do Local (' + _fotosLocais.length + ')</h3><div class="grid">');
+        for (var _fi = 0; _fi < _fotosLocais.length; _fi++) {
+            janela.document.write('<img src="' + _fotosLocais[_fi] + '" alt="Foto ' + (_fi+1) + '" />');
+        }
+        janela.document.write('</div></div>');
+    }
     janela.document.write('<div class="footer">Documento gerado em ' + new Date().toLocaleString('pt-BR') + '</div>');
     janela.document.write('</div>');
     janela.document.write('</body></html>');
