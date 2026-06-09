@@ -3972,6 +3972,8 @@ window.addEventListener('load', () => {
 
                 const TEMA_CHAVES = TEMA_MQTT + '/chave';
                 const TEMA_COMENTARIOS = TEMA_MQTT + '/comentario';
+                const TEMA_INTERLIGACOES = TEMA_MQTT + '/interligacao';
+                if (!window._interligTombstones) window._interligTombstones = new Set();
                 // Helper: gera tópico estável baseado no NOME da chave (não no id local, que varia entre clientes)
                 window._topicoNomeChave = window._topicoNomeChave || ((nome) => 'n_' + (nome||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,80));
                 const _topicoNomeChave = window._topicoNomeChave;
@@ -3981,6 +3983,7 @@ window.addEventListener('load', () => {
                     clienteMQTT.subscribe(TEMA_PODAS + '/#',  { qos: 1 });
                     clienteMQTT.subscribe(TEMA_CHAVES + '/#', { qos: 1 });
                     clienteMQTT.subscribe(TEMA_COMENTARIOS + '/+', { qos: 1 });
+                    clienteMQTT.subscribe(TEMA_INTERLIGACOES + '/+', { qos: 1 });
                     // Anuncia presença ao conectar/reconectar
                     setTimeout(() => {
                         const ll = userMarker ? userMarker.getLngLat() : null;
@@ -4012,6 +4015,7 @@ window.addEventListener('load', () => {
                 clienteMQTT.on('message', (topic, message, packet) => {
                     const payload = message.toString();
                     const _isRetained = !!(packet && packet.retain);
+                    try { console.log('[MQTT-RX]', topic, '_isRetained:', _isRetained, 'len:', payload && payload.length); } catch(e){}
 
                     // Tópico retido de COMENTÁRIO por chave (sync entre usuários offline/online)
                     if (topic.startsWith(TEMA_COMENTARIOS + '/')) {
@@ -4092,7 +4096,49 @@ window.addEventListener('load', () => {
                         }
                         return;
                     }
-                    // Tópico de poda retida
+                    // Tópico retido de INTERLIGAÇÃO (sync entre todos os usuários, persiste offline)
+                    if (topic.startsWith(TEMA_INTERLIGACOES + '/')) {
+                        const interligIdTopico = topic.substring((TEMA_INTERLIGACOES + '/').length);
+                        // Tombstone vazio OU acao=REMOVER_INTERLIGACAO → apaga
+                        let msgI = null;
+                        if (payload) { try { msgI = JSON.parse(payload); } catch(e) { return; } }
+                        if (!payload || (msgI && msgI.acao === 'REMOVER_INTERLIGACAO')) {
+                            const tinha = geoJsonGlobal.features.some(f => f && f.properties && f.properties.interligId === interligIdTopico);
+                            try { console.log('[MQTT-DEL-retido]', interligIdTopico, 'tinha:', tinha, 'remetente:', msgI && msgI.remetente, 'meuID:', meuID); } catch(e){}
+                            window._interligTombstones.add(interligIdTopico);
+                            setTimeout(() => window._interligTombstones.delete(interligIdTopico), 60000);
+                            if (tinha) {
+                                geoJsonGlobal.features = geoJsonGlobal.features.filter(f => !(f && f.properties && f.properties.interligId === interligIdTopico));
+                                if (map && map.isStyleLoaded && map.isStyleLoaded()) renderizarMapa();
+                                salvarTudoSeguro();
+                                if (!_isRetained && msgI && msgI.remetente !== meuID) {
+                                    processarMensagemRede(msgI);
+                                }
+                            }
+                            return;
+                        }
+                        if (!msgI) return;
+                        // Upsert: NOVA_INTERLIGACAO ou EDITAR_INTERLIGACAO_COR
+                        // Anti-ressurreição: se acabou de ser apagada, ignora upsert (loopback do publish próprio)
+                        if (window._interligTombstones && window._interligTombstones.has(interligIdTopico)) return;
+                        if (msgI.features && Array.isArray(msgI.features)) {
+                            // Remove versão anterior (caso já exista) e adiciona a nova
+                            geoJsonGlobal.features = geoJsonGlobal.features.filter(f => !(f && f.properties && f.properties.interligId === interligIdTopico));
+                            msgI.features.forEach(f => {
+                                if (!f.properties) f.properties = {};
+                                if (!f.properties.interligId) f.properties.interligId = interligIdTopico;
+                                if (!f.properties.sourceFile) f.properties.sourceFile = 'INTERLIGACAO';
+                            });
+                            geoJsonGlobal.features.push(...msgI.features);
+                            if (typeof window.arquivosVisiveis === 'object' && window.arquivosVisiveis) window.arquivosVisiveis['INTERLIGACAO'] = true;
+                            if (map && map.isStyleLoaded && map.isStyleLoaded()) renderizarMapa();
+                            salvarTudoSeguro();
+                            if (!_isRetained && msgI.remetente !== meuID) {
+                                processarMensagemRede(msgI);
+                            }
+                        }
+                        return;
+                    }
                     if (topic.startsWith(TEMA_PODAS + '/')) {
                         if (!payload) return; // payload vazio = poda resolvida
                         let msg; try { msg = JSON.parse(payload); } catch(e) { return; }
@@ -4332,11 +4378,22 @@ window.addEventListener('load', () => {
                 }
             }
             else if (msg.acao === "REMOVER_INTERLIGACAO") {
+                try { console.log('[MQTT-DEL-geral]', msg.featId, 'remetente:', msg.remetente, 'meuID:', meuID); } catch(e){}
                 if (msg.remetente === meuID) return;
                 const antes = geoJsonGlobal.features.length;
                 geoJsonGlobal.features = geoJsonGlobal.features.filter(f => f && f.properties && f.properties.id !== msg.featId);
+                if (window._interligTombstones) { window._interligTombstones.add(msg.featId); setTimeout(() => window._interligTombstones.delete(msg.featId), 60000); }
                 if (geoJsonGlobal.features.length !== antes) { renderizarMapa(); salvarTudoSeguro(); }
                 if (!document.hidden) mostrarNotificacaoRealTime(`🗑️ Interligação removida por ${msg.autor||'colega'}.`, '#F44336', false);
+            }
+            else if (msg.acao === "EDITAR_INTERLIGACAO_COR") {
+                if (msg.remetente === meuID) return;
+                const idxIE = geoJsonGlobal.features.findIndex(f => f && f.properties && f.properties.id === msg.featId);
+                if (idxIE !== -1 && msg.novaCor) {
+                    geoJsonGlobal.features[idxIE].properties.corRede = msg.novaCor;
+                    renderizarMapa(); salvarTudoSeguro();
+                    if (!document.hidden) mostrarNotificacaoRealTime(`🎨 ${msg.autor||'colega'} mudou a cor de uma interligação.`, msg.novaCor || '#3F51B5', false);
+                }
             }
             else if (msg.acao === "COMENTARIO_CHAVE" || msg.acao === "COMENTARIO_EDITADO" || msg.acao === "COMENTARIO_REMOVIDO") {
                 if (msg.remetente === meuID) return;
@@ -11927,6 +11984,7 @@ window.confirmarInterligacao = function() {
         geometry: { type: 'LineString', coordinates: [[lng1, lat1], [lng2, lat2]] },
         properties: { 
             id: novoId, 
+            interligId: novoId,
             name: 'INTERLIG: ' + _il.nome1 + ' ⇄ ' + _il.nome2, 
             isPoint: false, 
             alimRef: _il.circCor, 
@@ -11958,6 +12016,8 @@ window.confirmarInterligacao = function() {
             const autor = typeof getAutorFormatado === 'function' ? getAutorFormatado() : (window.meuNome || 'Usuário');
             const msgChat = `🔗 <b>NOVA INTERLIGAÇÃO</b><br>👤 <b>${autor}</b> conectou <b style="color:#FF9800;">${_il.nome1}</b> ⇄ <b style="color:#4CAF50;">${_il.nome2}</b>${distLabel ? ' | <b>' + distLabel + '</b>' : ''}`;
             mqttPublish(TEMA_MQTT, { acao: "NOVA_INTERLIGACAO", remetente: window.meuID, autor: autor, feature: novaLinha, featuresPontos: [], msgChat: msgChat });
+            // Publica retained pra usuários offline também receberem ao reconectar
+            mqttPublish(TEMA_MQTT + '/interligacao/' + novoId, { acao: "NOVA_INTERLIGACAO", remetente: window.meuID, autor: autor, features: [novaLinha], msgChat: msgChat, data: Date.now() }, { retain: true, qos: 1 });
             if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
             if (typeof __wppCompartilharAcao === 'function') {
                 __wppCompartilharAcao({
@@ -12012,7 +12072,63 @@ window.apagarInterligacao = function(featId) {
     if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
         const autor = typeof getAutorFormatado === 'function' ? getAutorFormatado() : (window.meuNome || 'Usuário');
         const nome = featRemovida ? (featRemovida.properties.name || featId) : featId;
-        mqttPublish(TEMA_MQTT, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: `🗑️ <b>${autor}</b> removeu a interligação: ${nome}` });
+        const msgChat = `🗑️ <b>${autor}</b> removeu a interligação: ${nome}`;
+        mqttPublish(TEMA_MQTT, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat });
+        // Tombstone retained: limpa do broker pra usuários offline não receberem versão antiga
+        mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat, data: Date.now() }, { retain: true, qos: 1 });
+    }
+};
+
+// Mudar cor da interligação (sync entre todos os usuários)
+window.mudarCorInterligacao = function(featId) {
+    const feat = geoJsonGlobal.features.find(f => f && f.properties && f.properties.id === featId);
+    if (!feat) { alert('Interligação não encontrada.'); return; }
+    const corAtual = feat.properties.corRede || '#4285F4';
+    const _ant = document.getElementById('_popupCorInterlig');
+    if (_ant) _ant.remove();
+    const popup = document.createElement('div');
+    popup.id = '_popupCorInterlig';
+    popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.35);padding:20px 24px;min-width:280px;text-align:center;';
+    const CORES = ['#F44336','#E91E63','#9C27B0','#673AB7','#3F51B5','#2196F3','#03A9F4','#00BCD4','#009688','#4CAF50','#8BC34A','#CDDC39','#FFEB3B','#FFC107','#FF9800','#FF5722','#795548','#607D8B','#000000','#FFFFFF'];
+    let html = '<div style="font-weight:700;font-size:15px;margin-bottom:14px;color:#333;">🎨 Escolha a cor da linha</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px;">';
+    CORES.forEach(cor => {
+        const borda = cor === corAtual ? '3px solid #000' : '2px solid #ccc';
+        html += `<div onclick="window._aplicarCorInterlig('${featId}','${cor}')" style="width:40px;height:40px;background:${cor};border-radius:8px;cursor:pointer;border:${borda};box-sizing:border-box;"></div>`;
+    });
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-bottom:12px;">';
+    html += '<label style="font-size:13px;color:#555;">Cor personalizada:</label>';
+    html += `<input type="color" value="${corAtual}" style="width:44px;height:36px;border:none;cursor:pointer;border-radius:6px;" onchange="window._aplicarCorInterlig('${featId}',this.value)" />`;
+    html += '</div>';
+    html += `<button onclick="document.getElementById('_popupCorInterlig').remove()" style="padding:8px 24px;background:#eee;border:none;border-radius:8px;cursor:pointer;font-size:13px;">Cancelar</button>`;
+    popup.innerHTML = html;
+    document.body.appendChild(popup);
+    setTimeout(() => {
+        document.addEventListener('click', function _fora(e) {
+            if (!popup.contains(e.target)) { popup.remove(); document.removeEventListener('click', _fora); }
+        });
+    }, 200);
+};
+
+window._aplicarCorInterlig = function(featId, novaCor) {
+    const popup = document.getElementById('_popupCorInterlig');
+    if (popup) popup.remove();
+    const feat = geoJsonGlobal.features.find(f => f && f.properties && f.properties.id === featId);
+    if (!feat || !novaCor) return;
+    const corAtual = feat.properties.corRede || '#4285F4';
+    if (novaCor === corAtual) return;
+    feat.properties.corRede = novaCor;
+    try { renderizarMapa(); } catch(e){}
+    if (typeof salvarTudo === 'function') salvarTudoSeguro();
+    document.querySelectorAll('.maplibregl-popup').forEach(p=>p.remove());
+    if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
+        const autor = typeof getAutorFormatado === 'function' ? getAutorFormatado() : (window.meuNome || 'Usuário');
+        const nome = feat.properties.name || featId;
+        const msgChat = `🎨 <b>${autor}</b> mudou a cor da interligação <b>${nome}</b> para <span style="color:${novaCor};font-weight:900;">●</span> ${novaCor}`;
+        mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "EDITAR_INTERLIGACAO_COR", remetente: window.meuID, autor: autor, features: [feat], msgChat: msgChat, data: Date.now() }, { retain: true, qos: 1 });
+        mqttPublish(TEMA_MQTT, { acao: "EDITAR_INTERLIGACAO_COR", remetente: window.meuID, autor: autor, featId: featId, novaCor: novaCor, msgChat: msgChat });
+        if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
     }
 };
 
@@ -12112,6 +12228,7 @@ map.on('click', 'l-linhas', (e) => {
             <div style="font-size:11px; margin-bottom:4px;">${f.name || ''}</div>
             <div style="font-size:11px; margin-bottom:4px;">📋 <b>${tipoTexto}</b></div>
             <div style="font-size:10px; color:#888; margin-bottom:10px;">👤 ${f.autor||''} — ${f.dataRegisto||''}</div>
+            <button onclick="mudarCorInterligacao('${f.id}')" style="width:100%; padding:8px; background:#3F51B5; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer; margin-bottom:6px;">🎨 Mudar Cor da Linha</button>
             <button onclick="apagarInterligacao('${f.id}')" style="width:100%; padding:8px; background:#F44336; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">🗑️ Apagar esta Interligação</button>
         </div>`;
         
