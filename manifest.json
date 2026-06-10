@@ -29,7 +29,11 @@
       "action": "./",
       "accept": {
         "application/vnd.google-earth.kml+xml": [".kml"],
-        "application/vnd.google-earth.kmz": [".kmz"]
+        "application/vnd.google-earth.kmz": [".kmz"],
+        "application/zip": [".kmz"],
+        "application/octet-stream": [".kml", ".kmz"],
+        "text/xml": [".kml"],
+        "application/xml": [".kml"]
       }
     }
   ],
