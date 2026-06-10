@@ -2253,6 +2253,24 @@ document.onkeydown = function(e) {
 
                 <input type="text" id="kv15NumOS" class="input-form" placeholder="Número da OS" autocomplete="off">
                 <input type="text" id="kv15Nome" class="input-form" placeholder="Nome" autocomplete="off">
+                <input type="date" id="kv15Data" class="input-form" title="Data">
+                <input type="text" id="kv15SD" class="input-form" placeholder="SD" autocomplete="off">
+                <input type="text" id="kv15Endereco" class="input-form" placeholder="Endereço" autocomplete="off">
+                <input type="text" id="kv15NumTanque" class="input-form" placeholder="Número do tanque" autocomplete="off">
+                <input type="text" id="kv15NumRele" class="input-form" placeholder="Número do relé" autocomplete="off">
+                <input type="text" id="kv15SerieTanque" class="input-form" placeholder="Série tanque" autocomplete="off">
+                <input type="text" id="kv15SerieRele" class="input-form" placeholder="Série relé" autocomplete="off">
+                <input type="text" id="kv15ModeloTanque" class="input-form" placeholder="Modelo equipamento tanque" autocomplete="off">
+                <input type="text" id="kv15ModeloRele" class="input-form" placeholder="Modelo do relé" autocomplete="off">
+                <input type="number" id="kv15NumDesgaste" class="input-form" placeholder="Número desgaste do contato" autocomplete="off">
+                <input type="number" id="kv15NumOperacao" class="input-form" placeholder="Número de operação" autocomplete="off">
+                <input type="number" id="kv15BateriaTensao" class="input-form" placeholder="Bateria tensão CC" step="0.01" autocomplete="off">
+                <input type="date" id="kv15DataFabBateria" class="input-form" title="Data fabricação bateria">
+                <input type="text" id="kv15TombamentoModem" class="input-form" placeholder="Tombamento modem" autocomplete="off">
+                <input type="text" id="kv15SerieModem" class="input-form" placeholder="Série modem" autocomplete="off">
+                <input type="text" id="kv15MarcaBateria" class="input-form" placeholder="Marca bateria" autocomplete="off">
+                <input type="text" id="kv15Firmware" class="input-form" placeholder="Firmware" autocomplete="off">
+                <input type="text" id="kv15MedidaAterramento" class="input-form" placeholder="Medida aterramento" autocomplete="off">
                 <input type="text" id="kv15Equipe" class="input-form" placeholder="Equipe" autocomplete="off">
                 <input type="text" id="kv15Cidade" class="input-form" placeholder="Cidade" autocomplete="off">
                 <input type="text" id="kv15Coordenacao" class="input-form" placeholder="Coordenação" autocomplete="off">
@@ -12083,7 +12101,8 @@ window.apagarInterligacao = function(featId) {
         const msgChat = `🗑️ <b>${autor}</b> removeu a interligação: ${nome}`;
         mqttPublish(TEMA_MQTT, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat });
         // Tombstone retained: limpa do broker pra usuários offline não receberem versão antiga
-        mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat, data: Date.now() }, { retain: true, qos: 1 });
+    mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat, data: Date.now() }, { retain: false, qos: 1 });
+    mqttPublish(TEMA_MQTT + '/interligacao/' + featId, '', { retain: true, qos: 1 });
     }
 };
 
@@ -16773,8 +16792,28 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
         function _coletarDados15kv() {
             var nanf = document.querySelector('input[name="kv15NaNf"]:checked');
             return {
-                numOS:       document.getElementById('kv15NumOS').value.trim(),
-                nome:        document.getElementById('kv15Nome').value.trim(),
+                numOS:              document.getElementById('kv15NumOS').value.trim(),
+                nome:               document.getElementById('kv15Nome').value.trim(),
+                // 18 campos extras (persistência local apenas)
+                data:               document.getElementById('kv15Data').value,
+                sd:                 document.getElementById('kv15SD').value.trim(),
+                endereco:           document.getElementById('kv15Endereco').value.trim(),
+                numTanque:          document.getElementById('kv15NumTanque').value.trim(),
+                numRele:            document.getElementById('kv15NumRele').value.trim(),
+                serieTanque:        document.getElementById('kv15SerieTanque').value.trim(),
+                serieRele:          document.getElementById('kv15SerieRele').value.trim(),
+                modeloTanque:       document.getElementById('kv15ModeloTanque').value.trim(),
+                modeloRele:         document.getElementById('kv15ModeloRele').value.trim(),
+                numDesgaste:        document.getElementById('kv15NumDesgaste').value.trim(),
+                numOperacao:        document.getElementById('kv15NumOperacao').value.trim(),
+                bateriaTensao:      document.getElementById('kv15BateriaTensao').value.trim(),
+                dataFabBateria:     document.getElementById('kv15DataFabBateria').value,
+                tombamentoModem:    document.getElementById('kv15TombamentoModem').value.trim(),
+                serieModem:         document.getElementById('kv15SerieModem').value.trim(),
+                marcaBateria:       document.getElementById('kv15MarcaBateria').value.trim(),
+                firmware:           document.getElementById('kv15Firmware').value.trim(),
+                medidaAterramento:  document.getElementById('kv15MedidaAterramento').value.trim(),
+                // fim campos extras
                 equipe:      document.getElementById('kv15Equipe').value.trim(),
                 cidade:      document.getElementById('kv15Cidade').value.trim(),
                 coordenacao: document.getElementById('kv15Coordenacao').value.trim(),
@@ -16805,6 +16844,24 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
             return '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">' +
                 linha('Nº da OS', d.numOS) +
                 linha('Nome', d.nome) +
+                linha('Data', d.data) +
+                linha('SD', d.sd) +
+                linha('Endereço', d.endereco) +
+                linha('Número do tanque', d.numTanque) +
+                linha('Número do relé', d.numRele) +
+                linha('Série tanque', d.serieTanque) +
+                linha('Série relé', d.serieRele) +
+                linha('Modelo equipamento tanque', d.modeloTanque) +
+                linha('Modelo do relé', d.modeloRele) +
+                linha('Número desgaste do contato', d.numDesgaste) +
+                linha('Número de operação', d.numOperacao) +
+                linha('Bateria tensão CC', d.bateriaTensao) +
+                linha('Data fabricação bateria', d.dataFabBateria) +
+                linha('Tombamento modem', d.tombamentoModem) +
+                linha('Série modem', d.serieModem) +
+                linha('Marca bateria', d.marcaBateria) +
+                linha('Firmware', d.firmware) +
+                linha('Medida aterramento', d.medidaAterramento) +
                 linha('Equipe', d.equipe) +
                 linha('Cidade', d.cidade) +
                 linha('Coordenação', d.coordenacao) +
@@ -16906,6 +16963,24 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                 '<table class="info">' +
                 linha('Nº da OS', d.numOS) +
                 linha('Nome', d.nome) +
+                linha('Data', d.data) +
+                linha('SD', d.sd) +
+                linha('Endereço', d.endereco) +
+                linha('Número do tanque', d.numTanque) +
+                linha('Número do relé', d.numRele) +
+                linha('Série tanque', d.serieTanque) +
+                linha('Série relé', d.serieRele) +
+                linha('Modelo equipamento tanque', d.modeloTanque) +
+                linha('Modelo do relé', d.modeloRele) +
+                linha('Número desgaste do contato', d.numDesgaste) +
+                linha('Número de operação', d.numOperacao) +
+                linha('Bateria tensão CC', d.bateriaTensao) +
+                linha('Data fabricação bateria', d.dataFabBateria) +
+                linha('Tombamento modem', d.tombamentoModem) +
+                linha('Série modem', d.serieModem) +
+                linha('Marca bateria', d.marcaBateria) +
+                linha('Firmware', d.firmware) +
+                linha('Medida aterramento', d.medidaAterramento) +
                 linha('Equipe', d.equipe) +
                 linha('Cidade', d.cidade) +
                 linha('Coordenação', d.coordenacao) +
@@ -22320,4 +22395,37 @@ setTimeout(__mostrarUsoStorage, 7000);
     setTimeout(mostrarModalAgradecimento, 1500);
   }
 })();
+</script>
+
+<script>
+// v8.35 - File Handling API (launchQueue): abre .kml/.kmz via "Abrir com" do SO
+if ('launchQueue' in window) {
+  window.launchQueue.setConsumer(async (launchParams) => {
+    if (!launchParams.files || !launchParams.files.length) return;
+    for (const fileHandle of launchParams.files) {
+      try {
+        const file = await fileHandle.getFile();
+        let kmlStringPuro = '';
+        if (file.name.toLowerCase().endsWith('.kmz')) {
+          kmlStringPuro = await extrairTextoDoKMZ(file);
+        } else {
+          kmlStringPuro = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(ev.target.result);
+            reader.readAsText(file, 'UTF-8');
+          });
+        }
+        if (kmlStringPuro) {
+          await new Promise((resolve) => {
+            processarKML(kmlStringPuro, file.name, file, resolve);
+          });
+          if (window.arquivosVisiveis) window.arquivosVisiveis[file.name] = true;
+        } else {
+          console.warn('[launchQueue] arquivo vazio ou não legível:', file.name);
+        }
+      } catch (err) { console.error('[launchQueue] erro:', err); }
+    }
+  });
+  console.log('[PWA] launchQueue handler registrado');
+}
 </script>
