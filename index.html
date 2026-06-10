@@ -4363,7 +4363,10 @@ window.addEventListener('load', () => {
             }
             else if (msg.acao === "NOVA_INTERLIGACAO") {
                 if (msg.remetente === meuID) return;
-                const jaExiste = geoJsonGlobal.features.some(f => f && f.properties && f.properties.id === msg.feature.properties.id);
+                if (!msg.feature || !msg.feature.properties || !msg.feature.properties.id) return;
+                const _idIL = msg.feature.properties.id;
+                if (window._interligTombstones && window._interligTombstones.has(_idIL)) return;
+                const jaExiste = geoJsonGlobal.features.some(f => f && f.properties && f.properties.id === _idIL);
                 if (!jaExiste) {
                     geoJsonGlobal.features.push(msg.feature);
                     (msg.featuresPontos||[]).forEach(fp => {
@@ -7235,6 +7238,10 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
                         geoJsonGlobal.features[fi].properties.comentarioEditado = c.editado || false;
                         if (c.lat) geoJsonGlobal.features[fi].properties.comentarioLat = c.lat;
                         if (c.lng) geoJsonGlobal.features[fi].properties.comentarioLng = c.lng;
+                        if (typeof c.foto !== 'undefined') {
+                            if (c.foto) geoJsonGlobal.features[fi].properties.comentarioFoto = c.foto;
+                            else delete geoJsonGlobal.features[fi].properties.comentarioFoto;
+                        }
                     }
                 });
                 // Re-salvar arquivo com comentários reaplicados
@@ -11286,7 +11293,8 @@ async function _salvarComentarioArquivo(sourceFile) {
                 editado: f.properties.comentarioEditado || false,
                 lat: f.properties.comentarioLat || (f.geometry && f.geometry.coordinates ? f.geometry.coordinates[1] : 0),
                 lng: f.properties.comentarioLng || (f.geometry && f.geometry.coordinates ? f.geometry.coordinates[0] : 0),
-                cidade: _getCidadeUsuario() || ''
+                cidade: _getCidadeUsuario() || '',
+                foto: f.properties.comentarioFoto || ''
             }));
         await StorageManager.saveFile('comentarios-' + sourceFile, chaves);
     } catch(e) {
