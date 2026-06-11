@@ -2325,6 +2325,7 @@ document.onkeydown = function(e) {
                 <div style="padding:14px 20px; background:#f5f5f5; display:flex; gap:10px; flex-wrap:wrap; border-top:1px solid #e0e0e0;">
                     <button onclick="imprimirPdf15kv()" style="flex:1; min-width:140px; padding:12px; background:#0D6EAD; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer; box-shadow:0 4px 10px rgba(13,110,173,0.4);">🖨️ Baixar / Imprimir PDF</button>
                     <button onclick="salvarImagem15kv()" style="flex:1; min-width:140px; padding:12px; background:#1B5E20; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer; box-shadow:0 4px 10px rgba(27,94,32,0.4);">🖼️ Salvar como Imagem</button>
+                    <button onclick="enviarWhatsApp15kv()" style="flex:1; min-width:140px; padding:12px; background:#25D366; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer; box-shadow:0 4px 10px rgba(37,211,102,0.4);">📲 Enviar pelo WhatsApp</button>
                     <button onclick="fecharPreview15kv()" style="flex:1; min-width:80px; padding:12px; background:#888; color:#fff; border:none; border-radius:10px; font-weight:bold; font-size:14px; cursor:pointer;">Fechar</button>
                 </div>
             </div>
@@ -16906,6 +16907,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                 '<div style="font-size:13px;color:#555;margin-bottom:20px;">Escolha o formato para salvar:</div>' +
                 '<button id="btnSalvarPdf15kv" style="width:100%;padding:13px;background:#0D6EAD;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 10px rgba(13,110,173,0.4);">📄 Salvar como PDF</button>' +
                 '<button id="btnSalvarImg15kv" style="width:100%;padding:13px;background:#1B5E20;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 10px rgba(27,94,32,0.4);">🖼️ Salvar como Imagem</button>' +
+                '<button id="btnWhatsApp15kv" style="width:100%;padding:13px;background:#25D366;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px;box-shadow:0 4px 10px rgba(37,211,102,0.4);">📲 Enviar pelo WhatsApp</button>' +
                 '<button id="btnCancelarSalvar15kv" style="width:100%;padding:11px;background:#888;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;">Cancelar</button>' +
                 '</div>';
             document.body.appendChild(overlay);
@@ -16917,6 +16919,10 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
             document.getElementById('btnSalvarImg15kv').onclick = function() {
                 document.body.removeChild(overlay);
                 salvarImagem15kv();
+            };
+            document.getElementById('btnWhatsApp15kv').onclick = function() {
+                document.body.removeChild(overlay);
+                enviarWhatsApp15kv();
             };
             document.getElementById('btnCancelarSalvar15kv').onclick = function() {
                 document.body.removeChild(overlay);
@@ -17020,6 +17026,45 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                         link.download = 'inspecao-15kv-' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.png';
                         link.href = canvas.toDataURL('image/png');
                         link.click();
+                    })
+                    .catch(function() { alert('Erro ao gerar imagem. Tente salvar como PDF.'); });
+            }, 300);
+        };
+
+        // ---- Enviar pelo WhatsApp ----
+        window.enviarWhatsApp15kv = function() {
+            var d = window._kv15DadosSalvos || _coletarDados15kv();
+            document.getElementById('kv15PreviewCorpo').innerHTML = _montarHtml15kv(d);
+            var previewEl = document.getElementById('inspecao15kvPreviewOverlay');
+            previewEl.style.display = 'block';
+
+            setTimeout(function() {
+                var corpo = document.getElementById('kv15PreviewCorpo');
+                if (!window.html2canvas) {
+                    alert('Função de imagem não disponível. Use o PDF.');
+                    return;
+                }
+                html2canvas(corpo, { scale: 2, useCORS: true, allowTaint: true, logging: false, backgroundColor: '#ffffff' })
+                    .then(function(canvas) {
+                        var nomeArq = 'inspecao-15kv-' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.png';
+                        canvas.toBlob(function(blob) {
+                            var file = new File([blob], nomeArq, { type: 'image/png' });
+                            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                                navigator.share({
+                                    files: [file],
+                                    title: 'Relatório Inspeção 15kV',
+                                    text: 'Relatório gerado pelo Inspeção Pro'
+                                }).catch(function() { /* usuário cancelou — sem erro */ });
+                            } else {
+                                var link = document.createElement('a');
+                                link.download = nomeArq;
+                                link.href = URL.createObjectURL(blob);
+                                link.click();
+                                setTimeout(function() { URL.revokeObjectURL(link.href); }, 10000);
+                                window.open('https://web.whatsapp.com', '_blank');
+                                alert('Imagem baixada. Anexe-a no WhatsApp Web aberto.');
+                            }
+                        }, 'image/png');
                     })
                     .catch(function() { alert('Erro ao gerar imagem. Tente salvar como PDF.'); });
             }, 300);
@@ -17207,6 +17252,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                 <div style="padding:14px 20px;background:#f5f5f5;display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid #e0e0e0;">
                     <button onclick="imprimirPdfOM()" style="flex:1;min-width:140px;padding:12px;background:#37474F;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;">🖨️ Baixar / Imprimir PDF</button>
                     <button onclick="salvarImagemOM()" style="flex:1;min-width:140px;padding:12px;background:#0D4F8C;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;">🖼️ Salvar como Imagem</button>
+                    <button onclick="enviarWhatsAppOM()" style="flex:1;min-width:140px;padding:12px;background:#25D366;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;">📲 Enviar pelo WhatsApp</button>
                     <button onclick="fecharPreviewOM()" style="flex:1;min-width:80px;padding:12px;background:#888;color:#fff;border:none;border-radius:10px;font-weight:bold;font-size:14px;cursor:pointer;">Fechar</button>
                 </div>
             </div>
@@ -20701,10 +20747,12 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
             '<div style="font-size:13px;color:#555;margin-bottom:20px;">Escolha o formato para salvar:</div>'+
             '<button id="btnSalvarPdfOM" style="width:100%;padding:13px;background:#37474F;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px;">📄 Salvar como PDF</button>'+
             '<button id="btnSalvarImgOM" style="width:100%;padding:13px;background:#0D4F8C;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px;">🖼️ Salvar como Imagem</button>'+
+            '<button id="btnWhatsAppOM" style="width:100%;padding:13px;background:#25D366;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;margin-bottom:10px;">📲 Enviar pelo WhatsApp</button>'+
             '<button id="btnCancelarOM" style="width:100%;padding:11px;background:#888;color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;">Cancelar</button></div>';
         document.body.appendChild(ov);
         document.getElementById('btnSalvarPdfOM').onclick  = function(){ document.body.removeChild(ov); imprimirPdfOM(); };
         document.getElementById('btnSalvarImgOM').onclick  = function(){ document.body.removeChild(ov); salvarImagemOM(); };
+        document.getElementById('btnWhatsAppOM').onclick   = function(){ document.body.removeChild(ov); enviarWhatsAppOM(); };
         document.getElementById('btnCancelarOM').onclick   = function(){ document.body.removeChild(ov); };
     };
 
@@ -20735,6 +20783,42 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                     link.download='inspecao-om-'+new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')+'.png';
                     link.href=canvas.toDataURL('image/png'); link.click();
                 }).catch(function(){ alert('Erro ao gerar imagem. Tente salvar como PDF.'); });
+        }, 300);
+    };
+
+    window.enviarWhatsAppOM = function() {
+        var d = window._omDadosSalvos || _coletarDadosOM();
+        var corpo = document.getElementById('omPreviewCorpo');
+        corpo.innerHTML = _montarTabelaOM(d) +
+            (d.obs?'<div style="font-weight:bold;color:#37474F;margin-bottom:6px;">Observações</div><div style="background:#eceff1;border:1px solid #b0bec5;border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;margin-bottom:16px;">'+d.obs.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>':'') +
+            (_montarFotosHtmlOM(d,'') ? '<div style="font-weight:bold;color:#37474F;margin-bottom:8px;">Fotos do local</div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">'+_montarFotosHtmlOM(d,'')+'</div>' : '') +
+            '<div style="font-size:10px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:8px;">Gerado pelo Inspeção Pro — '+d.dataHora+'</div>';
+        document.getElementById('inspecaoOMPreviewOverlay').style.display='block';
+        setTimeout(function(){
+            if (!window.html2canvas){ alert('Função de imagem não disponível. Use o PDF.'); return; }
+            html2canvas(corpo, { scale:2, useCORS:true, allowTaint:true, logging:false, backgroundColor:'#ffffff' })
+                .then(function(canvas){
+                    var nomeArq = 'inspecao-om-' + new Date().toLocaleDateString('pt-BR').replace(/\//g,'-') + '.png';
+                    canvas.toBlob(function(blob) {
+                        var file = new File([blob], nomeArq, { type: 'image/png' });
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            navigator.share({
+                                files: [file],
+                                title: 'Relatório Inspeção O&M',
+                                text: 'Relatório gerado pelo Inspeção Pro'
+                            }).catch(function() { /* usuário cancelou — sem erro */ });
+                        } else {
+                            var link = document.createElement('a');
+                            link.download = nomeArq;
+                            link.href = URL.createObjectURL(blob);
+                            link.click();
+                            setTimeout(function() { URL.revokeObjectURL(link.href); }, 10000);
+                            window.open('https://web.whatsapp.com', '_blank');
+                            alert('Imagem baixada. Anexe-a no WhatsApp Web aberto.');
+                        }
+                    }, 'image/png');
+                })
+                .catch(function() { alert('Erro ao gerar imagem. Tente salvar como PDF.'); });
         }, 300);
     };
 
