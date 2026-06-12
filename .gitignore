@@ -18,3 +18,8 @@ desktop.ini
 
 # Node (se usar)
 node_modules/
+
+# Scripts auxiliares temporarios
+_edit*.ps1
+_edits.py
+_edits.ps1
