@@ -6540,22 +6540,84 @@ window.addEventListener('load', () => {
 async function extrairTextoDoKMZ(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        reader.onerror = () => {
+            console.error('[FileReader][KMZ]', reader.error);
+            alert('Falha ao ler o arquivo KMZ "' + file.name + '": ' + (reader.error && reader.error.message ? reader.error.message : 'erro desconhecido'));
+            reject(reader.error || new Error('FileReader error'));
+        };
         reader.onload = async (ev) => {
             try {
                 let arrayBuffer = ev.target.result;
                 const zip = await JSZip.loadAsync(arrayBuffer);
                 arrayBuffer = null; // Libera o ArrayBuffer original
                 reader.onload = null; // Libera referência do reader
+
+                // Listar TODOS os arquivos do zip e logar lista completa
+                const todosArquivos = Object.keys(zip.files);
+                const N = todosArquivos.length;
+                console.log('[KMZ]', file.name, '- total no zip:', N, '|', todosArquivos);
+
+                // Localizar TODOS os .kml (case-insensitive, qualquer pasta do zip)
                 const kmlFiles = zip.file(/\.kml$/i);
-                if (!kmlFiles.length) throw new Error('KML não encontrado no KMZ.');
-                
-                const kmlFile = kmlFiles.find(f => f.name.toLowerCase() === 'doc.kml') || kmlFiles[0];
-                const buffer = await kmlFile.async("arraybuffer");
-                
-                let texto = new TextDecoder('utf-8').decode(buffer).replace(/^\uFEFF/, '');
-                
-                resolve(texto.trim());
+                const kmlNomes = kmlFiles.map(f => f.name);
+                console.log('[KMZ] .kml encontrados:', kmlFiles.length, '| nomes:', kmlNomes);
+
+                // Listar recursos auxiliares ignorados
+                const auxiliares = todosArquivos.filter(n => !n.match(/\.kml$/i));
+                if (auxiliares.length) {
+                    console.log('[KMZ] recursos auxiliares ignorados (imagens/overlays):', auxiliares);
+                }
+
+                if (!kmlFiles.length) {
+                    alert('O arquivo KMZ "' + file.name + '" não contém nenhum arquivo .kml interno. Verifique se o arquivo está correto.');
+                    resolve('');
+                    return;
+                }
+
+                let kmlFinal;
+                if (kmlFiles.length === 1) {
+                    // Caso simples: apenas um .kml
+                    const kmlFile = kmlFiles[0];
+                    kmlFinal = await kmlFile.async('string');
+                    console.log('[KMZ] único .kml:', kmlFile.name, '| tamanho:', kmlFinal.length, 'chars');
+                } else {
+                    // Múltiplos .kml: concatenar Placemarks de todos em um KML mestre
+                    console.log('[KMZ] múltiplos .kml:', kmlFiles.length, '- concatenando Placemarks de todos.');
+                    let placemarksCombinados = '';
+                    let headerKML = '';
+                    for (const kf of kmlFiles) {
+                        try {
+                            let txt = await kf.async('string');
+                            txt = txt.replace(/^\uFEFF/, '');
+                            const matches = txt.match(/<Placemark[\s\S]*?<\/Placemark>/gi);
+                            const qtd = matches ? matches.length : 0;
+                            console.log('[KMZ]', kf.name, '->', qtd, 'Placemarks');
+                            if (matches && matches.length) {
+                                placemarksCombinados += '\n' + matches.join('\n');
+                            }
+                            // Capturar header XML do primeiro arquivo
+                            if (!headerKML) {
+                                const mHeader = txt.match(/<\?xml[\s\S]*?<Document[^>]*>/);
+                                headerKML = mHeader ? mHeader[0] : '';
+                            }
+                        } catch (eKf) {
+                            console.warn('[KMZ] erro ao ler', kf.name, ':', eKf);
+                        }
+                    }
+                    // Usar header padrao se nao encontrou
+                    if (!headerKML) {
+                        headerKML = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>';
+                    }
+                    kmlFinal = headerKML + '\n' + placemarksCombinados + '\n</Document></kml>';
+                }
+
+                // BOM strip
+                if (kmlFinal.charCodeAt(0) === 0xFEFF) kmlFinal = kmlFinal.slice(1);
+
+                resolve(kmlFinal);
             } catch (e) {
+                console.error('[KMZ] erro ao processar:', e);
+                alert('Erro ao processar o arquivo KMZ "' + file.name + '": ' + (e && e.message ? e.message : String(e)));
                 reject(e);
             }
         };
@@ -6659,6 +6721,11 @@ document.getElementById('arquivoUpload').addEventListener('change', async functi
 
     for (let _idx = 0; _idx < files.length; _idx++) {
         const file = files[_idx];
+        // Dedup: ignorar se mesmo arquivo foi processado recentemente
+        if (typeof _deduplicarArquivo === 'function' && !_deduplicarArquivo(file)) {
+            window._arquivosPendentes--;
+            continue;
+        }
         try {
             // ── PRÉ-CHECK: arquivo duplicado? ──────────────────────────────
             const qtdExistente = geoJsonGlobal.features.filter(
@@ -6699,7 +6766,32 @@ document.getElementById('arquivoUpload').addEventListener('change', async functi
             } else {
                 kmlStringPuro = await new Promise((resolve) => {
                     const reader = new FileReader();
-                    reader.onload = (ev) => resolve(ev.target.result);
+                    reader.onerror = () => {
+                        console.error('[FileReader][KML]', reader.error);
+                        alert('Falha ao ler o arquivo: ' + (reader.error && reader.error.message ? reader.error.message : 'erro desconhecido'));
+                        resolve(null);
+                    };
+                    reader.onload = (ev) => {
+                        let txt = ev.target.result || '';
+                        // BOM strip universal
+                        txt = txt.replace(/^\uFEFF/, '');
+                        // Fallback ISO-8859-1 se UTF-8 produziu caractere de substituição ou vazio
+                        if (!txt || txt.includes('\uFFFD')) {
+                            const reader2 = new FileReader();
+                            reader2.onerror = () => {
+                                console.error('[FileReader][KML-ISO]', reader2.error);
+                                resolve(null);
+                            };
+                            reader2.onload = (ev2) => {
+                                let txt2 = (ev2.target.result || '').replace(/^\uFEFF/, '');
+                                console.log('[KML] fallback ISO-8859-1 aplicado para:', file.name);
+                                resolve(txt2);
+                            };
+                            reader2.readAsText(file, 'ISO-8859-1');
+                        } else {
+                            resolve(txt);
+                        }
+                    };
                     reader.readAsText(file, 'UTF-8');
                 });
             }
@@ -6777,9 +6869,44 @@ function classificarEquipamento(props, statusManual = null) {
     }
 
     // ===========================================================
+    // PRIORIDADE 2b: Regulador por nome descritivo (ANTES dos sufixos)
+    // Detecta: 'REGULADOR DE TENSAO 12345', 'REGULADOR 300', etc.
+    // ===========================================================
+    if (/REGULADOR/i.test(n) || /REGULADOR/i.test(desc)) {
+        // Extrai número identificador do nome para gerar label limpo
+        const numMatch = n.match(/(\d{3,})/);
+        const labelRT = numMatch ? numMatch[1] + '-RT' : (n || desc.substring(0, 20));
+        if (!n.includes('-RT') && !n.includes('-RE')) {
+            // Adiciona sufixo -RT ao name para identificação visual
+            props._labelRT = labelRT;
+        }
+        return { tipoEquip: 'REG', corPonto: '#2196F3', iconName: 'circulo-azul', statusTxt: "Regulador", visivel: true };
+    }
+
+    // ===========================================================
+    // PRIORIDADE 2c: Banco de Capacitor por nome descritivo (ANTES dos sufixos)
+    // Detecta variantes com encoding quebrado: BC FIXO, BANCO DE CAPACITOR,
+    // BC-F POT?NCIA (cobre Potência/Potencia/Pot?ncia/Pot\uFFFDncia)
+    // ===========================================================
+    if (/BC[\s\-]*FIXO/i.test(n) || /BC[\s\-]*FIXO/i.test(desc) ||
+        /BANCO[\s]+DE[\s]+CAPACITOR/i.test(n) || /BANCO[\s]+DE[\s]+CAPACITOR/i.test(desc) ||
+        /BC[\s\-]*F\s*POT.{0,5}NCIA/i.test(n) || /BC[\s\-]*F\s*POT.{0,5}NCIA/i.test(desc)) {
+        const numMatchBC = n.match(/(\d{3,})/);
+        const labelBC = numMatchBC ? numMatchBC[1] + '-BC' : (n || desc.substring(0, 20));
+        if (!n.includes('-BC')) {
+            props._labelBC = labelBC;
+        }
+        return { tipoEquip: 'BC', corPonto: '#000000', iconName: 'circulo-preto-grande', statusTxt: "Banco Capacitor", visivel: true };
+    }
+
+    // ===========================================================
     // PRIORIDADE 3: Banco de Capacitores (BC + kVAr na description)
     // Padrao: BC-Fixo-600-kVAr, BC-Reativo-600-kVAr
     // ===========================================================
+    // Sufixo -BC no nome -> BC direto (independente da description)
+    if (n.includes('-BC')) {
+        return { tipoEquip: 'BC', corPonto: '#000000', iconName: 'circulo-preto-grande', statusTxt: "Banco Capacitor", visivel: true };
+    }
     if ((txtTotal.includes('BC-') || txtTotal.includes(' BC ') || txtTotal.includes('BANCO DE CAPACITOR') || txtTotal.includes('BANCO CAPACITOR') || txtTotal.includes('CAPACITOR')) &&
         (txtTotal.includes('KVAR') || txtTotal.includes('KVAr'))) {
         return { tipoEquip: 'BC', corPonto: '#000000', iconName: 'circulo-preto-grande', statusTxt: "Banco Capacitor", visivel: true };
@@ -6790,10 +6917,10 @@ function classificarEquipamento(props, statusManual = null) {
     }
 
     // ===========================================================
-    // PRIORIDADE 4: Regulador (circulo azul — NOVO)
-    // Padrao: Regulador-300, Regulador-400
+    // PRIORIDADE 4: Regulador (circulo azul)
+    // Padrao: Regulador-300, Regulador-400, sufixo -RT
     // ===========================================================
-    if (txtTotal.includes('REGULADOR')) {
+    if (n.includes('-RT') || txtTotal.includes('REGULADOR DE TENSAO') || txtTotal.includes('REGULADOR TENSAO') || txtTotal.includes('REGULADOR')) {
         return { tipoEquip: 'REG', corPonto: '#2196F3', iconName: 'circulo-azul', statusTxt: "Regulador", visivel: true };
     }
 
@@ -6829,6 +6956,14 @@ function classificarEquipamento(props, statusManual = null) {
 
     if (isNA_FU || isNA_FD || isNA_RE || isNA_FA) {
         return { tipoEquip: 'NA', corPonto: '#00C853', iconName: 'quadrado-verde', statusTxt: "Aberta (NA)", visivel: true };
+    }
+
+    // ===========================================================
+    // PRIORIDADE 7b: Faca Direta (-FD) sem NA/NF detectavel -> NF por padrao
+    // (chave fechada e o estado normal de operacao)
+    // ===========================================================
+    if (n.includes('-FD') || txtTotal.includes('FUS DIRETA') || txtTotal.includes('FUSDIRETA') || txtTotal.includes('CHAVE LAMINA')) {
+        return { tipoEquip: 'NF', corPonto: '#FF1744', iconName: 'quadrado-vermelho', statusTxt: "Fechada (NF)", visivel: true };
     }
 
     // ===========================================================
@@ -7105,6 +7240,67 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
     const parser = new DOMParser();
     let xml = parser.parseFromString(kmlStr, "text/xml");
 
+    // 1. Verificar parsererror (XML malformado) — tenta recuperação em 3 etapas
+    let arquivoMalformado = false;
+    let metodoRecuperacao = null;
+    if (xml.querySelector('parsererror')) {
+        arquivoMalformado = true;
+        console.warn('[KML] parsererror detectado em', originalFile?.name || fileName, '- iniciando recuperacao');
+
+        // Tentativa 1: truncar no ultimo </kml>
+        const idxKml = kmlStr.lastIndexOf('</kml>');
+        if (idxKml > 0) {
+            const t1 = kmlStr.slice(0, idxKml + 6);
+            const d1 = new DOMParser().parseFromString(t1, 'text/xml');
+            if (!d1.querySelector('parsererror')) {
+                xml = d1;
+                metodoRecuperacao = 'truncamento </kml>';
+                console.log('[KML] recuperado por truncamento em </kml>');
+            }
+        }
+
+        // Tentativa 2: truncar no ultimo </Document> e fechar manualmente
+        if (xml.querySelector('parsererror')) {
+            const idxDoc = kmlStr.lastIndexOf('</Document>');
+            if (idxDoc > 0) {
+                const t2 = kmlStr.slice(0, idxDoc + 11) + '</kml>';
+                const d2 = new DOMParser().parseFromString(t2, 'text/xml');
+                if (!d2.querySelector('parsererror')) {
+                    xml = d2;
+                    metodoRecuperacao = 'truncamento </Document>';
+                    console.log('[KML] recuperado por truncamento em </Document>');
+                }
+            }
+        }
+
+        // Tentativa 3 (ULTRA-RESGATE): extrair Placemarks via regex e reconstruir KML mínimo válido
+        if (xml.querySelector('parsererror')) {
+            const placemarkRegex = /<Placemark[\s\S]*?<\/Placemark>/g;
+            const placemarks = kmlStr.match(placemarkRegex) || [];
+            if (placemarks.length > 0) {
+                const kmlReconstruido = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Recuperado</name>' + placemarks.join('\n') + '</Document></kml>';
+                const d3 = new DOMParser().parseFromString(kmlReconstruido, 'text/xml');
+                if (!d3.querySelector('parsererror')) {
+                    xml = d3;
+                    metodoRecuperacao = 'ultra-resgate via regex (' + placemarks.length + ' Placemarks extraídos)';
+                    console.warn('[KML] ultra-resgate: ' + placemarks.length + ' Placemarks reconstruídos de', originalFile?.name || fileName);
+                }
+            }
+        }
+
+        // Se MESMO ASSIM falhou — abortar com aviso PT-BR detalhado
+        if (xml.querySelector('parsererror')) {
+            const nomeArq = originalFile?.name || fileName || 'arquivo desconhecido';
+            console.error('[KML] todas as tentativas de recuperacao falharam para', nomeArq);
+            alert('Atenção: o arquivo "' + nomeArq + '" está completamente corrompido e não foi possível recuperar nenhuma informação.\n\nVerifique o arquivo no Google Earth ou re-exporte do sistema de origem.');
+            if (typeof onConcluido === 'function') onConcluido();
+            return;
+        }
+    }
+
+    // 1b. Enriquecer com nomes de Folder/Document (injeta [PASTA: ...] na description)
+    if (typeof enriquecerKMLcomPastas === 'function') xml = enriquecerKMLcomPastas(xml);
+
     // 2. Lemos as Cores originais do KML
     if (typeof lerCoresOriginaisKML === 'function') xml = lerCoresOriginaisKML(xml);
 
@@ -7126,6 +7322,7 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
 
     // Diagnóstico: comparar Placemarks vs features geradas
     console.log('[processarKML]', fileName, '— placemarks no XML:', numPlacemarks, '| features após togeojson:', gj.features.length);
+    // [AUDITORIA #7] MultiGeometry/LineString/Polygon: suporte JÁ EXISTE em renderizarMapa (camadas line/fill MapLibre). Nenhuma ação necessária.
 
     // Gerencia os Alimentadores
     const novosNomes = [...new Set(
@@ -7148,7 +7345,7 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
             for (; i < fim; i++) {
                 const f = features[i];
                 try {
-                    if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; continue; }
+                    if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; console.warn('[processarKML] feature sem geometria descartada em', fileName, 'índice', i, '- name:', (f.properties && f.properties.name) || '(sem nome)'); continue; }
                     if (!f.properties) f.properties = {};
 
                     let feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
@@ -7208,7 +7405,12 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
                             feat.properties.iconName = classificado.iconName;
                             feat.properties.statusTxt = classificado.statusTxt;
                         } else {
-                            continue;
+                            // Zero feature loss: em vez de descartar, classifica como GENERICO
+                            console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
+                            feat.properties.tipoEquip = 'GENERICO';
+                            feat.properties.corPonto = '#607D8B';
+                            feat.properties.iconName = 'circulo-cinza';
+                            feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
                         }
                     }
                     geoJsonGlobal.features.push(feat);
@@ -7233,7 +7435,20 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
             // Finalizado — salvar arquivo COMPLETO e atualizar mapa
             _ocultarProgressoKML();
             const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === fileName);
-            console.log('[processarKML]', fileName, '— concluído. Features salvas:', featuresDoArquivo.length, '| ignoradas:', featuresIgnoradas);
+            const featuresAdicionadas = featuresDoArquivo.length;
+            console.log('[KML import]', { arquivo: fileName, placemarksLidos: numPlacemarks, featuresProcessadas: featuresAdicionadas, descartados: 0 });
+            console.log('[processarKML]', fileName, '— concluído. Features salvas:', featuresAdicionadas, '| ignoradas:', featuresIgnoradas);
+            // Aviso PT-BR se arquivo foi recuperado (qualquer método)
+            if (arquivoMalformado && featuresAdicionadas > 0) {
+                const metodoMsg = metodoRecuperacao ? ' (método: ' + metodoRecuperacao + ')' : '';
+                alert('Aviso: o arquivo "' + (originalFile?.name || fileName) + '" estava malformado, mas foi recuperado automaticamente' + metodoMsg + '.\n\nForam importadas ' + featuresAdicionadas + ' feições. Recomenda-se verificar o arquivo de origem.');
+            } else if (arquivoMalformado && featuresAdicionadas === 0) {
+                alert('Atenção: o arquivo "' + (originalFile?.name || fileName) + '" foi recuperado, mas nenhuma feição válida foi encontrada. Verifique o arquivo de origem.');
+            }
+            // Toast resumido ao usuário
+            if (typeof _mostrarToastImportacao === 'function') {
+                _mostrarToastImportacao('Importado: ' + featuresAdicionadas + ' equipamentos de ' + fileName, 5000);
+            }
 
             // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
             StorageManager.saveFile(fileName, featuresDoArquivo)
@@ -12546,14 +12761,114 @@ _registrarListenersMapa();
             sugestoes.forEach(s => { const option = document.createElement('option'); option.value = s.properties.name; list.appendChild(option); });
         }
 
+        // Marker temporario para busca por coordenadas
+        var _markerBuscaCoordenadas = null;
+
+        // Abre o modal de cadastro de chave nas coordenadas do pin de busca
+        function _abrirCadastroChaveNasCoordenadas(lng, lat) {
+            document.querySelectorAll('.maplibregl-popup').forEach(function(p) { p.remove(); });
+            document.getElementById('chaveModalTitulo').innerText = '➕ Cadastrar Nova Chave';
+            document.getElementById('chaveEditId').value = '';
+            document.getElementById('chaveLng').value = lng;
+            document.getElementById('chaveLat').value = lat;
+            document.getElementById('chaveNome').value = '';
+            document.getElementById('chaveStatus').value = 'Equipamento';
+            document.getElementById('btn-apagar-chave').style.display = 'none';
+            document.getElementById('chaveModalOverlay').style.display = 'flex';
+        }
+
         document.getElementById('formBusca').addEventListener('submit', function(event) {
             event.preventDefault(); 
             const isModoComputadorCelular = document.body.classList.contains('modo-computador-forcado');
-            const val = isModoComputadorCelular 
-                ? document.getElementById('inputBuscaDiv').innerText.trim().toUpperCase()
-                : document.getElementById('inputBusca').value.trim().toUpperCase(); 
-            if(!val) return;
-            
+            const valRaw = isModoComputadorCelular 
+                ? document.getElementById('inputBuscaDiv').innerText.trim()
+                : document.getElementById('inputBusca').value.trim(); 
+            if(!valRaw) return;
+
+            // --- PARSER 0: Shortlink Google Maps (nao pode ser resolvido por CORS) ---
+            if (/maps\.app\.goo\.gl|goo\.gl\/maps/.test(valRaw)) {
+                alert('Link curto do Google Maps nao pode ser resolvido automaticamente por restricao de seguranca. Abra o link no navegador, pegue a URL completa (que tera as coordenadas) e cole novamente, OU cole as coordenadas direto (ex: -22.031658, -47.910498).');
+                return;
+            }
+
+            // --- PARSER 1: DMS - ex: 22°01'54.8"S 47°54'37.6"W ---
+            var matchDMS = valRaw.match(/(\d+)[°º]\s*(\d+)['\u2032]\s*([\d.]+)["\\u2033\u2033]\s*([NSns])\s+(\d+)[°º]\s*(\d+)['\u2032]\s*([\d.]+)["\\u2033\u2033]\s*([EWew])/);
+            if (matchDMS) {
+                var latDMS = parseInt(matchDMS[1]) + parseInt(matchDMS[2])/60 + parseFloat(matchDMS[3])/3600;
+                var lngDMS = parseInt(matchDMS[5]) + parseInt(matchDMS[6])/60 + parseFloat(matchDMS[7])/3600;
+                if (/[Ss]/.test(matchDMS[4])) latDMS = -latDMS;
+                if (/[Ww]/.test(matchDMS[8])) lngDMS = -lngDMS;
+                if (latDMS < -90 || latDMS > 90 || lngDMS < -180 || lngDMS > 180) { alert('Coordenadas invalidas'); return; }
+                if (_markerBuscaCoordenadas) { _markerBuscaCoordenadas.remove(); }
+                var elDMS = document.createElement('div');
+                elDMS.style.cssText = 'width:22px;height:22px;background:#e53935;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:pointer;';
+                elDMS.title = 'Clique para cadastrar chave neste local';
+                (function(lng, lat) { elDMS.addEventListener('click', function(ev) { ev.stopPropagation(); _abrirCadastroChaveNasCoordenadas(lng, lat); }); })(lngDMS, latDMS);
+                _markerBuscaCoordenadas = new maplibregl.Marker({ element: elDMS, anchor: 'bottom' }).setLngLat([lngDMS, latDMS]).addTo(map);
+                map.flyTo({ center: [lngDMS, latDMS], zoom: 18 });
+                if (isModoComputadorCelular) { document.getElementById('inputBuscaDiv').blur(); } else { document.getElementById('inputBusca').blur(); }
+                return;
+            }
+
+            // --- PARSER 2: URL Google Maps com @LAT,LNG,ZOOM ---
+            var matchAt = valRaw.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (matchAt) {
+                var latAt = parseFloat(matchAt[1]);
+                var lngAt = parseFloat(matchAt[2]);
+                if (latAt < -90 || latAt > 90 || lngAt < -180 || lngAt > 180) { alert('Coordenadas invalidas'); return; }
+                if (_markerBuscaCoordenadas) { _markerBuscaCoordenadas.remove(); }
+                var elAt = document.createElement('div');
+                elAt.style.cssText = 'width:22px;height:22px;background:#e53935;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:pointer;';
+                elAt.title = 'Clique para cadastrar chave neste local';
+                (function(lng, lat) { elAt.addEventListener('click', function(ev) { ev.stopPropagation(); _abrirCadastroChaveNasCoordenadas(lng, lat); }); })(lngAt, latAt);
+                _markerBuscaCoordenadas = new maplibregl.Marker({ element: elAt, anchor: 'bottom' }).setLngLat([lngAt, latAt]).addTo(map);
+                map.flyTo({ center: [lngAt, latAt], zoom: 18 });
+                if (isModoComputadorCelular) { document.getElementById('inputBuscaDiv').blur(); } else { document.getElementById('inputBusca').blur(); }
+                return;
+            }
+
+            // --- PARSER 3: Link do Google Maps com ?q=LAT,LNG ---
+            var matchGmaps = valRaw.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (matchGmaps) {
+                var latG = parseFloat(matchGmaps[1]);
+                var lngG = parseFloat(matchGmaps[2]);
+                if (latG < -90 || latG > 90 || lngG < -180 || lngG > 180) {
+                    alert('Coordenadas invalidas');
+                    return;
+                }
+                if (_markerBuscaCoordenadas) { _markerBuscaCoordenadas.remove(); }
+                var el = document.createElement('div');
+                el.style.cssText = 'width:22px;height:22px;background:#e53935;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:pointer;';
+                el.title = 'Clique para cadastrar chave neste local';
+                (function(lng, lat) { el.addEventListener('click', function(ev) { ev.stopPropagation(); _abrirCadastroChaveNasCoordenadas(lng, lat); }); })(lngG, latG);
+                _markerBuscaCoordenadas = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lngG, latG]).addTo(map);
+                map.flyTo({ center: [lngG, latG], zoom: 18 });
+                if (isModoComputadorCelular) { document.getElementById('inputBuscaDiv').blur(); } else { document.getElementById('inputBusca').blur(); }
+                return;
+            }
+
+            // --- PARSER 4: Coordenadas diretas LAT,LNG ou LAT, LNG ---
+            var matchCoords = valRaw.match(/^\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*$/);
+            if (matchCoords) {
+                var latC = parseFloat(matchCoords[1]);
+                var lngC = parseFloat(matchCoords[2]);
+                if (latC < -90 || latC > 90 || lngC < -180 || lngC > 180) {
+                    alert('Coordenadas invalidas');
+                    return;
+                }
+                if (_markerBuscaCoordenadas) { _markerBuscaCoordenadas.remove(); }
+                var elC = document.createElement('div');
+                elC.style.cssText = 'width:22px;height:22px;background:#e53935;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:pointer;';
+                elC.title = 'Clique para cadastrar chave neste local';
+                (function(lng, lat) { elC.addEventListener('click', function(ev) { ev.stopPropagation(); _abrirCadastroChaveNasCoordenadas(lng, lat); }); })(lngC, latC);
+                _markerBuscaCoordenadas = new maplibregl.Marker({ element: elC, anchor: 'bottom' }).setLngLat([lngC, latC]).addTo(map);
+                map.flyTo({ center: [lngC, latC], zoom: 18 });
+                if (isModoComputadorCelular) { document.getElementById('inputBuscaDiv').blur(); } else { document.getElementById('inputBusca').blur(); }
+                return;
+            }
+
+            // --- BUSCA POR CHAVE (logica original) ---
+            const val = valRaw.toUpperCase();
             const alvo = __buscaChaveRobusta(val);
             
             if (alvo) { 
@@ -12590,7 +12905,7 @@ _registrarListenersMapa();
                 }
             } else {
                 __diagnosticarBuscaFalha(val);
-                alert("ID não encontrado!\n\nVerifique o console (F12 → Console) para ver chaves parecidas com '" + val + "'.");
+                alert('Numero de chave nao encontrado. Provavelmente o arquivo esta corrompido ou apagaram este numero de chave do arquivo. Tente pesquisar pela localizacao - cole um link do Google Maps (ex: https://www.google.com/maps?q=-21.821076,-47.908291) ou as coordenadas (ex: -21.821076,-47.908291) no campo de pesquisa. Depois apague o arquivo e importe novamente.');
             }
         });
 
@@ -22482,6 +22797,87 @@ setTimeout(__mostrarUsoStorage, 7000);
 </script>
 
 <script>
+// ==========================================
+// v8.49 - DEDUP: evita processar o mesmo arquivo 2x em 800ms
+// ==========================================
+const DEDUP_TTL_MS = 800;
+window.arquivosImportadosRecentemente = window.arquivosImportadosRecentemente || new Set();
+function hashArquivo(file) {
+  return file.name + '|' + file.size + '|' + file.lastModified;
+}
+function _deduplicarArquivo(file) {
+  const h = hashArquivo(file);
+  if (window.arquivosImportadosRecentemente.has(h)) {
+    console.log('[dedup] arquivo ignorado (duplicata em <800ms):', file.name, h);
+    return false; // duplicata, ignorar
+  }
+  window.arquivosImportadosRecentemente.add(h);
+  setTimeout(() => window.arquivosImportadosRecentemente.delete(h), DEDUP_TTL_MS);
+  return true; // ok, processar
+}
+
+// ==========================================
+// v8.48 - DRAG-AND-DROP global de KML/KMZ
+// ==========================================
+(function() {
+  // Criar overlay azul translucido
+  const overlay = document.createElement('div');
+  overlay.id = 'kml-drop-overlay';
+  overlay.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(25,118,210,0.55);z-index:999999;align-items:center;justify-content:center;pointer-events:none;';
+  const overlayTxt = document.createElement('div');
+  overlayTxt.style.cssText = 'color:#fff;font-size:28px;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,0.5);background:rgba(0,0,0,0.25);padding:32px 48px;border-radius:18px;border:3px dashed #fff;';
+  overlayTxt.textContent = 'Solte o arquivo KML ou KMZ aqui';
+  overlay.appendChild(overlayTxt);
+  document.body.appendChild(overlay);
+
+  let dragCounter = 0;
+
+  document.body.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    dragCounter++;
+    overlay.style.display = 'flex';
+  }, false);
+
+  document.body.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      overlay.style.display = 'none';
+    }
+  }, false);
+
+  document.body.addEventListener('dragover', function(e) {
+    e.preventDefault();
+  }, false);
+
+  document.body.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dragCounter = 0;
+    overlay.style.display = 'none';
+
+    const allFiles = Array.from(e.dataTransfer.files || []);
+    const kmlFiles = allFiles.filter(f => /\.(kml|kmz)$/i.test(f.name));
+    if (!kmlFiles.length) {
+      alert('Solte apenas arquivos .kml ou .kmz');
+      return;
+    }
+
+    // v8.51: NÃO chamar _deduplicarArquivo aqui — o handler 'change' já faz dedup.
+    // Chamar aqui causava double-fire: drop registrava o hash, depois 'change' bloqueava o próprio arquivo.
+    // Localizar input[type=file] existente e popular via DataTransfer
+    const inputFile = document.querySelector('input[type=file][accept*="kml"]');
+    if (!inputFile) {
+      console.warn('[drag-drop] input[type=file][accept*=kml] não encontrado');
+      return;
+    }
+    const dt = new DataTransfer();
+    kmlFiles.forEach(f => dt.items.add(f));
+    inputFile.files = dt.files;
+    inputFile.dispatchEvent(new Event('change', { bubbles: true }));
+  }, false);
+})();
+
 // v8.35 - File Handling API (launchQueue): abre .kml/.kmz via "Abrir com" do SO
 if ('launchQueue' in window) {
   window.launchQueue.setConsumer(async (launchParams) => {
@@ -22489,13 +22885,34 @@ if ('launchQueue' in window) {
     for (const fileHandle of launchParams.files) {
       try {
         const file = await fileHandle.getFile();
+        // Dedup: ignorar se mesmo arquivo foi processado recentemente
+        if (!_deduplicarArquivo(file)) continue;
         let kmlStringPuro = '';
         if (file.name.toLowerCase().endsWith('.kmz')) {
           kmlStringPuro = await extrairTextoDoKMZ(file);
         } else {
           kmlStringPuro = await new Promise((resolve) => {
             const reader = new FileReader();
-            reader.onload = (ev) => resolve(ev.target.result);
+            reader.onerror = () => {
+              console.error('[FileReader][launchQueue]', reader.error);
+              alert('Falha ao ler o arquivo: ' + (reader.error && reader.error.message ? reader.error.message : 'erro desconhecido'));
+              resolve(null);
+            };
+            reader.onload = (ev) => {
+              let txt = (ev.target.result || '').replace(/^\uFEFF/, '');
+              if (!txt || txt.includes('\uFFFD')) {
+                const reader2 = new FileReader();
+                reader2.onerror = () => { console.error('[FileReader][launchQueue-ISO]', reader2.error); resolve(null); };
+                reader2.onload = (ev2) => {
+                  let txt2 = (ev2.target.result || '').replace(/^\uFEFF/, '');
+                  console.log('[launchQueue] fallback ISO-8859-1 para:', file.name);
+                  resolve(txt2);
+                };
+                reader2.readAsText(file, 'ISO-8859-1');
+              } else {
+                resolve(txt);
+              }
+            };
             reader.readAsText(file, 'UTF-8');
           });
         }
