@@ -461,6 +461,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             #btnMapaMaior { top: 66px !important; right: 10px !important; }
             #btnStilo     { top: 120px !important; right: 10px !important; }
             #btnTraj      { top: 174px !important; right: 10px !important; display: flex !important; }
+            #btn3D        { top: 228px !important; right: 10px !important; }
             /* Cores distintas por botão */
             .btn-kml            { background: #E65100 !important; }
             .btn-circular[onclick*="apagarTudo"]  { background: #C62828 !important; }
@@ -591,6 +592,8 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         #btnStilo     { position: absolute; top: 110px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #AB47BC, 0 4px 12px rgba(0,0,0,0.35); }
         #btnTraj      { position: absolute; top: 160px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #D32F2F, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #D32F2F; transition: background 0.2s; }
         #btnTraj.traj-ativo { background: #00C853 !important; box-shadow: inset 3px 0 0 #00C853, 0 4px 12px rgba(0,0,0,0.35) !important; }
+        #btn3D        { position: absolute; top: 210px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #FFD600, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #FFD600; transition: background 0.2s; color: #000; font-weight: 900; }
+        #btn3D.ativo3d { background: #43A047 !important; box-shadow: inset 3px 0 0 #43A047, 0 4px 12px rgba(0,0,0,0.35) !important; }
         #btnToggleUI  { position: absolute; top: 12px; right: 10px; z-index: 10001; }
         
         /* Modo Computador em Celular - TODOS os botões 120×120px */
@@ -1236,7 +1239,18 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
 #btnFecharImprimir { background: #ccc; color: #333; }
     </style>
 <script>
-document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+// v8.58: contextmenu bloqueado APENAS no canvas do mapa; fora do mapa permite menu nativo
+document.addEventListener('contextmenu', function(e) {
+    var t = e.target;
+    while (t) {
+        if (t.id === 'map' || (t.classList && (t.classList.contains('maplibregl-canvas') || t.classList.contains('mapboxgl-canvas')))) {
+            e.preventDefault();
+            return;
+        }
+        t = t.parentElement;
+    }
+    // fora do mapa: deixa o menu nativo do browser funcionar
+});
 document.onkeydown = function(e) {
     if (e.keyCode === 123 ||
         (e.ctrlKey && e.shiftKey && e.keyCode === 73) ||
@@ -2116,6 +2130,8 @@ document.onkeydown = function(e) {
         <button id="btnStilo" class="btn-circular" onclick="toggleModalStilo()" title="Trocar estilo do mapa">🎨<span>STILO</span></button>
 
         <button id="btnTraj" class="btn-circular" onclick="__trajToggle()" title="Rastrear trajeto GPS" style="display:flex; color:#fff; font-weight:900;"><span style="font-size:8px; font-weight:900;">TRAJ</span></button>
+
+        <button id="btn3D" class="btn-circular" onclick="toggle3D()" title="Alternar vista 2D / 3D"><span style="font-size:8px; font-weight:900;">3D</span></button>
 
         <div id="panelAlim">
             <div class="panel-header">Filtros e Circuitos <button onclick="togglePanelAlim()" style="border:none; background:none; cursor:pointer; font-size:16px;">×</button></div>
@@ -3099,7 +3115,8 @@ function executarAtualizacaoForçada() {
             if (!verificarPeriodoTeste()) return;
             const identificacao = localStorage.getItem("usuarioIdentificacao");
             if (!identificacao) {
-                document.getElementById('cadastroModalOverlay').style.display = 'flex';
+                const _overlay = document.getElementById('cadastroModalOverlay');
+                if (_overlay) _overlay.style.display = 'flex';
             } else {
                 verificarConfiguracoesIniciais();
             }
@@ -6112,7 +6129,7 @@ window.addEventListener('load', () => {
                   });
                   await new Promise(function(resolve) { processarKML(kmlStr, 'bancocap.kmz', file, resolve); });
                   if (window.arquivosVisiveis) window.arquivosVisiveis['bancocap.kmz'] = true;
-                } catch(e) { console.error('[v8.55] re-load bancocap após apagarTudo erro:', e); }
+                } catch(e) { console.error('[v8.57] re-load bancocap após apagarTudo erro:', e); }
               }, 1000);
             }
         }
@@ -9659,6 +9676,23 @@ function __trajToggleReal() {
 
 function __trajToggle() {
     __trajMostrarHomenagem(__trajToggleReal);
+}
+
+// ── Botão 3D: alterna entre vista 2D (pitch=0) e 3D (pitch=60) ──────────────
+var _mapa3dAtivo = false;
+function toggle3D() {
+    _mapa3dAtivo = !_mapa3dAtivo;
+    var btn = document.getElementById('btn3D');
+    var span = btn ? btn.querySelector('span') : null;
+    if (_mapa3dAtivo) {
+        map.easeTo({ pitch: 60, bearing: map.getBearing(), duration: 600 });
+        if (btn)  btn.classList.add('ativo3d');
+        btn && (btn.title = 'Voltar para vista 2D');
+    } else {
+        map.easeTo({ pitch: 0, bearing: map.getBearing(), duration: 600 });
+        if (btn)  btn.classList.remove('ativo3d');
+        btn && (btn.title = 'Alternar para vista 3D');
+    }
 }
 
 function __melhMostrarHomenagemMaiki(callback) {
@@ -13687,12 +13721,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const jaCarregadoCorretamente = featsBC.length > 0 &&
           featsBC.every(function(f){ return f.properties.tipoEquip === 'BC'; });
         if (jaCarregadoCorretamente) {
-          console.log('[v8.55] bancocap.kmz já carregado e classificado como BC, pulando auto-load');
+          console.log('[v8.57] bancocap.kmz já carregado e classificado como BC, pulando auto-load');
           return;
         }
         // v8.55: se existem features mas sem tipoEquip BC, reclassificar in-place
         if (featsBC.length > 0) {
-          console.log('[v8.55] bancocap.kmz: ' + featsBC.length + ' features encontradas sem tipoEquip BC — reclassificando in-place...');
+          console.log('[v8.57] bancocap.kmz: ' + featsBC.length + ' features encontradas sem tipoEquip BC — reclassificando in-place...');
           featsBC.forEach(function(f) {
             var nome = String(f.properties.name || '');
             if (!nome.toUpperCase().includes('-BC')) {
@@ -13706,13 +13740,13 @@ document.addEventListener('DOMContentLoaded', () => {
           // Salvar features corrigidas no storage
           try {
             await StorageManager.saveFile('bancocap.kmz', featsBC);
-          } catch(eSave) { console.warn('[v8.55] erro ao salvar bancocap corrigido:', eSave); }
+          } catch(eSave) { console.warn('[v8.57] erro ao salvar bancocap corrigido:', eSave); }
           if (window.arquivosVisiveis) window.arquivosVisiveis['bancocap.kmz'] = true;
           renderizarMapa();
-          console.log('[v8.55] bancocap.kmz: reclassificação in-place concluída');
+          console.log('[v8.57] bancocap.kmz: reclassificação in-place concluída');
           return;
         }
-        console.log('[v8.55] auto-load bancocap.kmz iniciando...');
+        console.log('[v8.57] auto-load bancocap.kmz iniciando...');
         // Decodificar base64 → Uint8Array → Blob → File
         const b64 = window.BANCOCAP_KMZ_BASE64;
         const binStr = atob(b64);
@@ -13722,17 +13756,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = new File([blob], 'bancocap.kmz', { type: 'application/vnd.google-earth.kmz' });
         // Extrair KML do KMZ
         let kmlStr = await extrairTextoDoKMZ(file);
-        if (!kmlStr) { console.warn('[v8.55] bancocap.kmz: KML vazio'); return; }
+        if (!kmlStr) { console.warn('[v8.57] bancocap.kmz: KML vazio'); return; }
         // Mutar XML: adicionar sufixo -BC em cada <name> de Placemark que ainda não tenha
         kmlStr = kmlStr.replace(/<name>([^<]*?)<\/name>/g, function(match, nome) {
           if (nome.toUpperCase().includes('-BC')) return match;
           return '<name>' + nome.trim() + '-BC</name>';
         });
-        console.log('[v8.55] bancocap.kmz: KML mutado com sufixo -BC, processando...');
+        console.log('[v8.57] bancocap.kmz: KML mutado com sufixo -BC, processando...');
         await new Promise(function(resolve) { processarKML(kmlStr, 'bancocap.kmz', file, resolve); });
         if (window.arquivosVisiveis) window.arquivosVisiveis['bancocap.kmz'] = true;
-        console.log('[v8.55] bancocap.kmz: auto-load concluído com sucesso');
-      } catch(e) { console.error('[v8.55] auto-load bancocap.kmz erro:', e); }
+        console.log('[v8.57] bancocap.kmz: auto-load concluído com sucesso');
+      } catch(e) { console.error('[v8.57] auto-load bancocap.kmz erro:', e); }
     }, 2500);
     if (!_isMobile) {
         // Dá um tempinho de meio segundo para a interface "respirar" antes de jogar o modal na tela
@@ -23167,4 +23201,326 @@ if ('launchQueue' in window) {
   });
   console.log('[PWA] launchQueue handler registrado');
 }
+</script>
+
+<!-- ============================================================
+     v8.58 — MENU DE CONTEXTO DO MAPA (Opção B)
+     B1: clique direito / long-press em cima de um ponto
+     B2: clique direito / long-press em área vazia do mapa
+     ============================================================ -->
+<style>
+#ctxMenu {
+    position: fixed;
+    z-index: 99999;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.18);
+    padding: 4px 0;
+    min-width: 210px;
+    font-size: 14px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: none;
+    user-select: none;
+}
+#ctxMenu .ctx-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #222;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.12s;
+}
+#ctxMenu .ctx-item:hover {
+    background: #f0f0f0;
+}
+#ctxMenu .ctx-sep {
+    height: 1px;
+    background: #eee;
+    margin: 3px 0;
+}
+#ctxToast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30,30,30,0.88);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+</style>
+
+<div id="ctxMenu"></div>
+<div id="ctxToast">Copiado!</div>
+
+<script>
+// v8.58: Menu de contexto customizado do mapa
+(function() {
+    'use strict';
+
+    // ---- Camadas de pontos para hit-test ----
+    var CAMADAS_PONTOS = [
+        'l-pontos', 'l-pontos-quadrados', 'l-pontos-triangulos-kva',
+        'l-pontos-triangulos-verdes', 'l-pontos-circulos-pretos',
+        'l-pontos-circulos-azuis', 'l-clusters', 'l-cluster-count',
+        'l-podas-x', 'l-podas-x-grande', 'l-labels', 'l-labels-bg'
+    ];
+
+    var ctxMenu = document.getElementById('ctxMenu');
+    var ctxToast = document.getElementById('ctxToast');
+    var _toastTimer = null;
+    var _longPressTimer = null;
+    var _longPressStart = null;
+
+    // ---- Utilitários ----
+    function showToast(msg) {
+        ctxToast.textContent = msg || 'Copiado!';
+        ctxToast.style.opacity = '1';
+        if (_toastTimer) clearTimeout(_toastTimer);
+        _toastTimer = setTimeout(function() { ctxToast.style.opacity = '0'; }, 1500);
+    }
+
+    function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() { showToast('Copiado!'); }).catch(function() { _fallbackCopy(text); });
+        } else {
+            _fallbackCopy(text);
+        }
+    }
+
+    function _fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        try { document.execCommand('copy'); showToast('Copiado!'); } catch(e) { showToast('Erro ao copiar'); }
+        document.body.removeChild(ta);
+    }
+
+    function hideMenu() {
+        ctxMenu.style.display = 'none';
+        ctxMenu.innerHTML = '';
+    }
+
+    function clampPos(x, y, w, h) {
+        var vw = window.innerWidth, vh = window.innerHeight;
+        return {
+            x: Math.min(x, vw - w - 8),
+            y: Math.min(y, vh - h - 8)
+        };
+    }
+
+    function showMenu(items, clientX, clientY) {
+        ctxMenu.innerHTML = '';
+        items.forEach(function(item) {
+            if (item === 'sep') {
+                var sep = document.createElement('div');
+                sep.className = 'ctx-sep';
+                ctxMenu.appendChild(sep);
+            } else {
+                var el = document.createElement('div');
+                el.className = 'ctx-item';
+                el.innerHTML = (item.icon ? '<span>' + item.icon + '</span>' : '') + '<span>' + item.label + '</span>';
+                el.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    hideMenu();
+                    item.action();
+                });
+                ctxMenu.appendChild(el);
+            }
+        });
+        ctxMenu.style.display = 'block';
+        var w = ctxMenu.offsetWidth || 220;
+        var h = ctxMenu.offsetHeight || (items.length * 40);
+        var pos = clampPos(clientX, clientY, w, h);
+        ctxMenu.style.left = pos.x + 'px';
+        ctxMenu.style.top = pos.y + 'px';
+    }
+
+    // ---- Hit-test: retorna feature ou null ----
+    function hitTestPonto(map, x, y) {
+        if (!map || typeof map.queryRenderedFeatures !== 'function') return null;
+        var layers = CAMADAS_PONTOS.filter(function(l) {
+            try { return !!map.getLayer(l); } catch(e) { return false; }
+        });
+        if (!layers.length) return null;
+        var feats = map.queryRenderedFeatures([x, y], { layers: layers });
+        return (feats && feats.length) ? feats[0] : null;
+    }
+
+    // ---- Construir menus ----
+    function menuPonto(feature, lngLat, clientX, clientY) {
+        var props = feature.properties || {};
+        var name = props.name || props.Name || props.nome || props.label || props.id || '';
+        var lat = lngLat.lat.toFixed(6);
+        var lng = lngLat.lng.toFixed(6);
+        var coordStr = lat + ', ' + lng;
+        var gmUrl = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+        var allData = 'Nome: ' + name + '\nCoordenadas: ' + coordStr;
+        var extras = ['kva','KVA','tipo','Tipo','sourceFile','source','potencia','tensao','circuito'];
+        extras.forEach(function(k) {
+            if (props[k] !== undefined && props[k] !== null && props[k] !== '') {
+                allData += '\n' + k + ': ' + props[k];
+            }
+        });
+
+        showMenu([
+            { icon: '📋', label: 'Copiar nome', action: function() { copyText(name || coordStr); } },
+            { icon: '📍', label: 'Copiar coordenadas', action: function() { copyText(coordStr); } },
+            { icon: '🔗', label: 'Copiar link do ponto', action: function() { copyText(gmUrl); } },
+            'sep',
+            { icon: '🗺️', label: 'Abrir no Google Maps', action: function() { window.open(gmUrl, '_blank'); } },
+            'sep',
+            { icon: '📄', label: 'Copiar todos os dados', action: function() { copyText(allData); } }
+        ], clientX, clientY);
+    }
+
+    function menuVazio(lngLat, clientX, clientY) {
+        var lat = lngLat.lat.toFixed(6);
+        var lng = lngLat.lng.toFixed(6);
+        var coordStr = lat + ', ' + lng;
+
+        showMenu([
+            { icon: '📍', label: 'Copiar coordenadas daqui', action: function() { copyText(coordStr); } },
+            { icon: '🎯', label: 'Centralizar aqui', action: function() {
+                var map = window.map;
+                if (map) map.flyTo({ center: [lngLat.lng, lngLat.lat], zoom: map.getZoom() });
+            }},
+            'sep',
+            { icon: '🔍', label: 'Colar coordenadas na busca', action: function() {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    navigator.clipboard.readText().then(function(txt) {
+                        _colarNaBusca(txt);
+                    }).catch(function() { showToast('Permissão de leitura negada'); });
+                } else {
+                    showToast('Clipboard read não disponível');
+                }
+            }}
+        ], clientX, clientY);
+    }
+
+    function _colarNaBusca(txt) {
+        if (!txt) return;
+        txt = txt.trim();
+        // aceita "lat,lng" ou "lat lng" ou "lat, lng"
+        var m = txt.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+        if (!m) { showToast('Formato inválido (use lat,lng)'); return; }
+        var lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+        if (isNaN(lat) || isNaN(lng)) { showToast('Coordenadas inválidas'); return; }
+        // tenta preencher campo de busca de endereço
+        var campos = ['#inputBusca','#searchInput','#buscaEndereco','input[placeholder*="busca"]','input[placeholder*="endereço"]','input[placeholder*="Buscar"]'];
+        var campo = null;
+        for (var i = 0; i < campos.length; i++) {
+            campo = document.querySelector(campos[i]);
+            if (campo) break;
+        }
+        if (campo) {
+            campo.value = lat + ', ' + lng;
+            campo.dispatchEvent(new Event('input', { bubbles: true }));
+            campo.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+            showToast('Coordenadas coladas na busca');
+        } else {
+            // fallback: apenas voa para o ponto
+            var map = window.map;
+            if (map) { map.flyTo({ center: [lng, lat], zoom: 16 }); showToast('Voando para ' + lat + ', ' + lng); }
+            else { showToast('Campo de busca não encontrado'); }
+        }
+    }
+
+    // ---- Aguarda o mapa estar pronto ----
+    function attachMapListeners() {
+        var map = window.map;
+        if (!map || typeof map.on !== 'function') {
+            setTimeout(attachMapListeners, 800);
+            return;
+        }
+
+        // Fechar menu ao mover/zoom/scroll
+        map.on('move', hideMenu);
+        map.on('zoom', hideMenu);
+        map.on('drag', hideMenu);
+
+        // ---- Desktop: clique direito no canvas ----
+        var canvas = map.getCanvas();
+        canvas.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var rect = canvas.getBoundingClientRect();
+            var px = e.clientX - rect.left;
+            var py = e.clientY - rect.top;
+            var lngLat = map.unproject([px, py]);
+            var feat = hitTestPonto(map, px, py);
+            if (feat) {
+                menuPonto(feat, lngLat, e.clientX, e.clientY);
+            } else {
+                menuVazio(lngLat, e.clientX, e.clientY);
+            }
+        });
+
+        // ---- Mobile: long-press no canvas ----
+        canvas.addEventListener('touchstart', function(e) {
+            if (e.touches.length !== 1) return;
+            var touch = e.touches[0];
+            _longPressStart = { x: touch.clientX, y: touch.clientY };
+            _longPressTimer = setTimeout(function() {
+                _longPressTimer = null;
+                var rect = canvas.getBoundingClientRect();
+                var px = _longPressStart.x - rect.left;
+                var py = _longPressStart.y - rect.top;
+                var lngLat = map.unproject([px, py]);
+                var feat = hitTestPonto(map, px, py);
+                if (feat) {
+                    menuPonto(feat, lngLat, _longPressStart.x, _longPressStart.y);
+                } else {
+                    menuVazio(lngLat, _longPressStart.x, _longPressStart.y);
+                }
+            }, 500);
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', function(e) {
+            if (!_longPressStart) return;
+            var touch = e.touches[0];
+            var dx = touch.clientX - _longPressStart.x;
+            var dy = touch.clientY - _longPressStart.y;
+            if (Math.sqrt(dx*dx + dy*dy) > 10) {
+                clearTimeout(_longPressTimer);
+                _longPressTimer = null;
+                _longPressStart = null;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', function() {
+            if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+            _longPressStart = null;
+        }, { passive: true });
+
+        canvas.addEventListener('touchcancel', function() {
+            if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+            _longPressStart = null;
+        }, { passive: true });
+    }
+
+    // ---- Fechar menu ao clicar fora ----
+    document.addEventListener('click', function(e) {
+        if (!ctxMenu.contains(e.target)) hideMenu();
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') hideMenu();
+    });
+    document.addEventListener('scroll', hideMenu, true);
+
+    // Inicia quando o mapa estiver disponível
+    attachMapListeners();
+})();
 </script>
