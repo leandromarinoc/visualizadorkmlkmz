@@ -462,6 +462,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             #btnStilo     { top: 120px !important; right: 10px !important; }
             #btnTraj      { top: 174px !important; right: 10px !important; display: flex !important; }
             #btn3D        { top: 228px !important; right: 10px !important; }
+            #btnClima     { top: 290px !important; right: 10px !important; }
             /* Cores distintas por botão */
             .btn-kml            { background: #E65100 !important; }
             .btn-circular[onclick*="apagarTudo"]  { background: #C62828 !important; }
@@ -594,6 +595,50 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         #btnTraj.traj-ativo { background: #00C853 !important; box-shadow: inset 3px 0 0 #00C853, 0 4px 12px rgba(0,0,0,0.35) !important; }
         #btn3D        { position: absolute; top: 210px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #FFD600, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #FFD600; transition: background 0.2s; color: #000; font-weight: 900; }
         #btn3D.ativo3d { background: #43A047 !important; box-shadow: inset 3px 0 0 #43A047, 0 4px 12px rgba(0,0,0,0.35) !important; }
+        /* v8.61 CLIMA */
+        #btnClima     { position: absolute; top: 260px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #0288D1, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #4FC3F7; transition: background 0.2s; color: #000; font-weight: 900; }
+        #btnClima.clima-ativo { background: #1976D2 !important; color: #FFF !important; box-shadow: inset 3px 0 0 #1976D2, 0 4px 12px rgba(0,0,0,0.35) !important; }
+        /* v8.61 CLIMA CARD MODAL */
+        #climaOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9000; align-items:center; justify-content:center; }
+        #climaOverlay.aberto { display:flex; }
+        #climaCard { background:#fff; border-radius:14px; box-shadow:0 6px 28px rgba(0,0,0,0.30); padding:14px 16px; width:320px; max-width:85vw; max-height:75vh; overflow-y:auto; font-family:inherit; position:relative; }
+        .clima-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+        .clima-card-title { font-size:15px; font-weight:800; color:#1565C0; }
+        .clima-card-close { background:none; border:none; font-size:19px; cursor:pointer; color:#555; padding:0 4px; line-height:1; }
+        .clima-card-loc { font-size:12px; color:#555; margin-bottom:8px; }
+        .clima-card-main { display:flex; flex-direction:column; align-items:center; padding:7px 0; border-top:1px solid #f0f0f0; border-bottom:1px solid #f0f0f0; margin-bottom:8px; }
+        .clima-icon-big { font-size:60px; line-height:1; margin-bottom:2px; }
+        .clima-temp-big { font-size:36px; font-weight:900; color:#1565C0; line-height:1; }
+        .clima-feels { font-size:12px; color:#777; margin-top:2px; }
+        .clima-desc { font-size:13px; font-weight:600; color:#333; margin-top:4px; }
+        .clima-info-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; font-size:12px; color:#444; padding:6px 0; border-bottom:1px solid #f0f0f0; }
+        .clima-sun-row { display:flex; gap:12px; justify-content:center; font-size:12px; color:#555; padding:6px 0; border-bottom:1px solid #f0f0f0; }
+        .clima-status { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px solid #f0f0f0; font-size:13px; font-weight:700; }
+        .clima-forecast { display:flex; flex-direction:column; gap:2px; padding:6px 0; border-bottom:1px solid #f0f0f0; }
+        .clima-forecast-row { display:flex; align-items:center; justify-content:space-between; font-size:12px; padding:2px 0; }
+        .clima-forecast-day { width:54px; color:#555; }
+        .clima-forecast-icon { font-size:17px; width:26px; text-align:center; }
+        .clima-forecast-temps { color:#333; font-weight:600; }
+        .clima-forecast-rain { color:#1976D2; font-size:11px; }
+        .clima-search-row { display:flex; gap:6px; padding-top:9px; }
+        #climaSearchInput { flex:1; border:1px solid #ccc; border-radius:7px; padding:6px 9px; font-size:13px; font-family:inherit; }
+        #climaSearchBtn { background:#1976D2; color:#fff; border:none; border-radius:7px; padding:6px 12px; cursor:pointer; font-size:13px; font-weight:700; }
+        .clima-loading { text-align:center; padding:20px; font-size:14px; color:#555; }
+        .clima-error { text-align:center; padding:14px; color:#c62828; }
+        .clima-error button { margin-top:8px; background:#1976D2; color:#fff; border:none; border-radius:7px; padding:6px 14px; cursor:pointer; font-size:13px; }
+        /* Animações ícone clima */
+        @keyframes sunSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes rainDrop { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+        @keyframes cloudFloat { 0%,100%{transform:translateX(0)} 50%{transform:translateX(8px)} }
+        @keyframes stormFlash { 0%,100%{opacity:1} 5%,15%{opacity:0.4} 10%,20%{opacity:1} }
+        @keyframes snowFall { 0%{transform:translateY(0) rotate(0deg)} 100%{transform:translateY(6px) rotate(180deg)} }
+        @keyframes fogPulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+        .anim-sun { display:inline-block; animation:sunSpin 8s linear infinite; }
+        .anim-rain { display:inline-block; animation:rainDrop 1.5s ease-in-out infinite; }
+        .anim-cloud { display:inline-block; animation:cloudFloat 4s ease-in-out infinite; }
+        .anim-storm { display:inline-block; animation:stormFlash 2s ease-in-out infinite; }
+        .anim-snow { display:inline-block; animation:snowFall 3s ease-in-out infinite alternate; }
+        .anim-fog { display:inline-block; animation:fogPulse 3s ease-in-out infinite; }
         #btnToggleUI  { position: absolute; top: 12px; right: 10px; z-index: 10001; }
         
         /* Modo Computador em Celular - TODOS os botões 120×120px */
@@ -1239,6 +1284,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
 #btnFecharImprimir { background: #ccc; color: #333; }
     </style>
 <script>
+// v8.61: Redesenho CLIMA — card modal Open-Meteo (sem chave)
 // v8.58: contextmenu bloqueado APENAS no canvas do mapa; fora do mapa permite menu nativo
 document.addEventListener('contextmenu', function(e) {
     var t = e.target;
@@ -2132,6 +2178,23 @@ document.onkeydown = function(e) {
         <button id="btnTraj" class="btn-circular" onclick="__trajToggle()" title="Rastrear trajeto GPS" style="display:flex; color:#fff; font-weight:900;"><span style="font-size:8px; font-weight:900;">TRAJ</span></button>
 
         <button id="btn3D" class="btn-circular" onclick="toggle3D()" title="Alternar vista 2D / 3D"><span style="font-size:8px; font-weight:900;">3D</span></button>
+
+        <button id="btnClima" class="btn-circular" onclick="toggleClimaCard()" title="Clima">🌦️<span style="font-size:8px; font-weight:900;">CLIMA</span></button>
+
+        <!-- v8.61 CLIMA CARD MODAL -->
+        <div id="climaOverlay" onclick="climaOverlayClick(event)">
+            <div id="climaCard">
+                <div class="clima-card-header">
+                    <span class="clima-card-title">🌦️ CLIMA</span>
+                    <button class="clima-card-close" onclick="fecharClimaCard()" title="Fechar">✕</button>
+                </div>
+                <div id="climaCardBody"><div class="clima-loading">⏳ Carregando...</div></div>
+                <div class="clima-search-row">
+                    <input type="text" id="climaSearchInput" placeholder="Buscar cidade..." autocomplete="off">
+                    <button id="climaSearchBtn" onclick="climaBuscarCidade()">OK</button>
+                </div>
+            </div>
+        </div>
 
         <div id="panelAlim">
             <div class="panel-header">Filtros e Circuitos <button onclick="togglePanelAlim()" style="border:none; background:none; cursor:pointer; font-size:16px;">×</button></div>
@@ -23522,5 +23585,326 @@ if ('launchQueue' in window) {
 
     // Inicia quando o mapa estiver disponível
     attachMapListeners();
+})();
+
+// ============================================================
+// v8.61 CLIMA — Card Modal Open-Meteo (sem chave, grátis)
+// ============================================================
+(function() {
+    'use strict';
+
+    console.log('[v8.61 CLIMA] init');
+
+    // --- Mapeamento WMO weather_code ---
+    var WMO = {
+        0:  { emoji: '☀️',  anim: 'sun',   label: 'Céu limpo' },
+        1:  { emoji: '🌤️', anim: 'sun',   label: 'Principalmente limpo' },
+        2:  { emoji: '⛅',  anim: 'cloud', label: 'Parcialmente nublado' },
+        3:  { emoji: '☁️',  anim: 'cloud', label: 'Nublado' },
+        45: { emoji: '🌫️', anim: 'fog',   label: 'Névoa' },
+        48: { emoji: '🌫️', anim: 'fog',   label: 'Névoa com geada' },
+        51: { emoji: '🌦️', anim: 'rain',  label: 'Garoa leve' },
+        53: { emoji: '🌦️', anim: 'rain',  label: 'Garoa moderada' },
+        55: { emoji: '🌧️', anim: 'rain',  label: 'Garoa intensa' },
+        61: { emoji: '🌧️', anim: 'rain',  label: 'Chuva leve' },
+        63: { emoji: '🌧️', anim: 'rain',  label: 'Chuva moderada' },
+        65: { emoji: '🌧️', anim: 'rain',  label: 'Chuva forte' },
+        71: { emoji: '🌨️', anim: 'snow',  label: 'Neve leve' },
+        73: { emoji: '🌨️', anim: 'snow',  label: 'Neve moderada' },
+        75: { emoji: '❄️',  anim: 'snow',  label: 'Neve intensa' },
+        80: { emoji: '🌦️', anim: 'rain',  label: 'Pancadas leves' },
+        81: { emoji: '🌧️', anim: 'rain',  label: 'Pancadas moderadas' },
+        82: { emoji: '⛈️',  anim: 'storm', label: 'Pancadas fortes' },
+        95: { emoji: '⛈️',  anim: 'storm', label: 'Trovoada' },
+        96: { emoji: '⛈️',  anim: 'storm', label: 'Trovoada com granizo' },
+        99: { emoji: '⛈️',  anim: 'storm', label: 'Trovoada com granizo forte' }
+    };
+
+    function _wmo(code) {
+        return WMO[code] || { emoji: '🌡️', anim: 'cloud', label: 'Condição ' + code };
+    }
+
+    // --- Direção do vento ---
+    function _windDir(deg) {
+        var dirs = ['N','NE','L','SE','S','SO','O','NO'];
+        return dirs[Math.round(deg / 45) % 8];
+    }
+
+    // --- Formatar hora ISO ---
+    function _fmtHora(iso) {
+        if (!iso) return '--:--';
+        var d = new Date(iso);
+        return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    }
+
+    // --- Nomes dos dias ---
+    var DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    function _diaSemana(isoDate, idx) {
+        if (idx === 0) return 'Hoje';
+        if (idx === 1) return 'Amanhã';
+        var d = new Date(isoDate + 'T12:00:00');
+        return DIAS[d.getDay()];
+    }
+
+    // --- Status de trabalho em campo ---
+    function _climaStatus(current, rainProb1h) {
+        var code = current.weather_code;
+        var vento = current.wind_speed_10m;
+        var prob = rainProb1h || 0;
+        if (code === 95 || code === 96 || code === 99) return { cor: '🔴', msg: 'EVITAR poste — trovoada' };
+        if (vento >= 50) return { cor: '🔴', msg: 'EVITAR altura — vento muito forte' };
+        if (code === 65 || code === 82 || prob >= 70) return { cor: '🔴', msg: 'EVITAR — chuva forte' };
+        if (vento >= 30 || prob >= 40) return { cor: '🟡', msg: 'Atenção — condições adversas' };
+        return { cor: '🟢', msg: 'Tempo OK pra subir em poste' };
+    }
+
+    // --- Estado ---
+    var _cardAberto = false;
+    var _lastCity = null; // { lat, lon, name }
+
+    function _loadLastCity() {
+        try {
+            var s = localStorage.getItem('clima_last_city');
+            if (s) _lastCity = JSON.parse(s);
+        } catch(e) {}
+    }
+
+    function _saveLastCity(obj) {
+        _lastCity = obj;
+        try { localStorage.setItem('clima_last_city', JSON.stringify(obj)); } catch(e) {}
+    }
+
+    // --- Abrir / fechar ---
+    window.toggleClimaCard = function() {
+        if (_cardAberto) { fecharClimaCard(); } else { abrirClimaCard(); }
+    };
+
+    window.abrirClimaCard = function() {
+        _cardAberto = true;
+        var overlay = document.getElementById('climaOverlay');
+        var btn = document.getElementById('btnClima');
+        overlay.classList.add('aberto');
+        if (btn) btn.classList.add('clima-ativo');
+        console.log('[v8.61 CLIMA] card aberto');
+        _climaCarregarLocalizacao();
+    };
+
+    window.fecharClimaCard = function() {
+        _cardAberto = false;
+        var overlay = document.getElementById('climaOverlay');
+        var btn = document.getElementById('btnClima');
+        overlay.classList.remove('aberto');
+        if (btn) btn.classList.remove('clima-ativo');
+        console.log('[v8.61 CLIMA] card fechado');
+    };
+
+    window.climaOverlayClick = function(e) {
+        if (e.target === document.getElementById('climaOverlay')) fecharClimaCard();
+    };
+
+    // ESC fecha
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && _cardAberto) fecharClimaCard();
+    });
+
+    // --- Mostrar loading / erro ---
+    function _showLoading() {
+        var body = document.getElementById('climaCardBody');
+        if (body) body.innerHTML = '<div class="clima-loading">⏳ Carregando...</div>';
+    }
+
+    function _showError(msg, retryFn) {
+        var body = document.getElementById('climaCardBody');
+        if (!body) return;
+        body.innerHTML = '<div class="clima-error">❌ ' + msg + '<br><button onclick="(' + retryFn.toString() + ')()">Tentar novamente</button></div>';
+    }
+
+    // --- Obter localização ---
+    function _climaCarregarLocalizacao() {
+        _showLoading();
+        _loadLastCity();
+        if (navigator.geolocation) {
+            var timer = setTimeout(function() {
+                console.log('[v8.61 CLIMA] geolocation timeout, usando centro do mapa');
+                _usarCentroMapa();
+            }, 5000);
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    clearTimeout(timer);
+                    console.log('[v8.61 CLIMA] geolocation ok');
+                    _fetchReverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                },
+                function(err) {
+                    clearTimeout(timer);
+                    console.log('[v8.61 CLIMA] geolocation erro:', err.message);
+                    _usarCentroMapa();
+                },
+                { timeout: 4500, maximumAge: 60000 }
+            );
+        } else {
+            _usarCentroMapa();
+        }
+    }
+
+    function _usarCentroMapa() {
+        var center = (window.map && map.getCenter) ? map.getCenter() : { lat: -15.78, lng: -47.93 };
+        console.log('[v8.61 CLIMA] usando centro do mapa:', center.lat, center.lng);
+        _fetchReverseGeocode(center.lat, center.lng);
+    }
+
+    // --- Reverse geocode ---
+    function _fetchReverseGeocode(lat, lon) {
+        var url = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=pt';
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var city = d.city || d.locality || d.principalSubdivision || 'Local';
+                var state = d.principalSubdivisionCode ? d.principalSubdivisionCode.replace('BR-','') : '';
+                var name = city + (state ? ', ' + state : '');
+                console.log('[v8.61 CLIMA] reverse geocode:', name);
+                _saveLastCity({ lat: lat, lon: lon, name: name });
+                _fetchForecast(lat, lon, name);
+            })
+            .catch(function(e) {
+                console.log('[v8.61 CLIMA] reverse geocode erro:', e);
+                _fetchForecast(lat, lon, 'Local atual');
+            });
+    }
+
+    // --- Fetch forecast Open-Meteo ---
+    function _fetchForecast(lat, lon, cityName) {
+        var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+            '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m' +
+            '&hourly=precipitation_probability' +
+            '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max' +
+            '&timezone=America%2FSao_Paulo&forecast_days=7';
+        console.log('[v8.61 CLIMA] fetch forecast:', cityName);
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                console.log('[v8.61 CLIMA] forecast ok');
+                _renderCard(data, cityName);
+            })
+            .catch(function(e) {
+                console.log('[v8.61 CLIMA] forecast erro:', e);
+                _showError('Não foi possível obter o clima.', _climaCarregarLocalizacao);
+            });
+    }
+
+    // --- Renderizar card ---
+    function _renderCard(data, cityName) {
+        var cur = data.current;
+        var daily = data.daily;
+        var hourly = data.hourly;
+
+        // Probabilidade de chuva na próxima hora
+        var nowHour = new Date().getHours();
+        var rainProb1h = 0;
+        if (hourly && hourly.time) {
+            for (var i = 0; i < hourly.time.length; i++) {
+                var h = new Date(hourly.time[i]).getHours();
+                if (h === nowHour) { rainProb1h = hourly.precipitation_probability[i] || 0; break; }
+            }
+        }
+
+        var wmo = _wmo(cur.weather_code);
+        var status = _climaStatus(cur, rainProb1h);
+
+        // Nascer/pôr do sol de hoje
+        var sunrise = (daily && daily.sunrise) ? _fmtHora(daily.sunrise[0]) : '--:--';
+        var sunset  = (daily && daily.sunset)  ? _fmtHora(daily.sunset[0])  : '--:--';
+
+        var html = '';
+
+        // Localização
+        html += '<div class="clima-card-loc">📍 ' + cityName + '</div>';
+
+        // Ícone + temp principal
+        html += '<div class="clima-card-main">';
+        html += '<div class="clima-icon-big"><span class="anim-' + wmo.anim + '">' + wmo.emoji + '</span></div>';
+        html += '<div class="clima-temp-big">' + Math.round(cur.temperature_2m) + '°C</div>';
+        html += '<div class="clima-feels">Sensação: ' + Math.round(cur.apparent_temperature) + '°C</div>';
+        html += '<div class="clima-desc">' + wmo.label + '</div>';
+        html += '</div>';
+
+        // Info row
+        html += '<div class="clima-info-row">';
+        html += '<span>💧 ' + cur.relative_humidity_2m + '%</span>';
+        html += '<span>💨 ' + Math.round(cur.wind_speed_10m) + ' km/h ' + _windDir(cur.wind_direction_10m) + '</span>';
+        html += '<span>🌧️ ' + rainProb1h + '% chuva/1h</span>';
+        html += '</div>';
+
+        // Sol
+        html += '<div class="clima-sun-row">';
+        html += '<span>🌅 Nascer: ' + sunrise + '</span>';
+        html += '<span>🌇 Pôr: ' + sunset + '</span>';
+        html += '</div>';
+
+        // Status campo
+        html += '<div class="clima-status">' + status.cor + ' ' + status.msg + '</div>';
+
+        // Previsão 7 dias
+        if (daily && daily.time) {
+            html += '<div class="clima-forecast">';
+            for (var d = 0; d < daily.time.length && d < 7; d++) {
+                var dw = _wmo(daily.weather_code[d]);
+                var dayLabel = _diaSemana(daily.time[d], d);
+                var tmax = Math.round(daily.temperature_2m_max[d]);
+                var tmin = Math.round(daily.temperature_2m_min[d]);
+                var pmax = daily.precipitation_probability_max[d] || 0;
+                html += '<div class="clima-forecast-row">';
+                html += '<span class="clima-forecast-day">' + dayLabel + '</span>';
+                html += '<span class="clima-forecast-icon">' + dw.emoji + '</span>';
+                html += '<span class="clima-forecast-temps">' + tmax + '° / ' + tmin + '°</span>';
+                html += '<span class="clima-forecast-rain">🌧️ ' + pmax + '%</span>';
+                html += '</div>';
+            }
+            html += '</div>';
+        }
+
+        var body = document.getElementById('climaCardBody');
+        if (body) body.innerHTML = html;
+    }
+
+    // --- Busca por cidade ---
+    window.climaBuscarCidade = function() {
+        var input = document.getElementById('climaSearchInput');
+        if (!input) return;
+        var nome = input.value.trim();
+        if (!nome) return;
+        _showLoading();
+        var url = 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(nome) + '&count=1&language=pt&format=json';
+        console.log('[v8.61 CLIMA] busca cidade:', nome);
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (!d.results || d.results.length === 0) {
+                    _showError('Cidade não encontrada: ' + nome, function() { window.climaBuscarCidade(); });
+                    return;
+                }
+                var r = d.results[0];
+                var cityName = r.name + (r.admin1 ? ', ' + r.admin1 : '') + (r.country_code ? ' (' + r.country_code + ')' : '');
+                console.log('[v8.61 CLIMA] cidade encontrada:', cityName, r.latitude, r.longitude);
+                _saveLastCity({ lat: r.latitude, lon: r.longitude, name: cityName });
+                _fetchForecast(r.latitude, r.longitude, cityName);
+                input.value = '';
+            })
+            .catch(function(e) {
+                console.log('[v8.61 CLIMA] geocoding erro:', e);
+                _showError('Erro ao buscar cidade.', function() { window.climaBuscarCidade(); });
+            });
+    };
+
+    // Enter no campo de busca
+    document.addEventListener('DOMContentLoaded', function() {
+        var inp = document.getElementById('climaSearchInput');
+        if (inp) {
+            inp.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') window.climaBuscarCidade();
+            });
+        }
+    });
+
+    console.log('[v8.61 CLIMA] init completo');
 })();
 </script>
