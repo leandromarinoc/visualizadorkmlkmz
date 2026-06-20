@@ -24110,7 +24110,12 @@ if ('launchQueue' in window) {
       features: lista.map(function(d) {
         return {
           type: 'Feature',
-          geometry: { type: 'LineString', coordinates: d.tracado },
+          // Compatibilidade: tracado antigo é [[lng,lat],...] (LineString),
+          // tracado novo é [[[lng,lat],[lng,lat]],...] (MultiLineString).
+          // Detecta pelo tipo do primeiro elemento: se for array → MultiLineString.
+          geometry: (d.tracado && d.tracado.length > 0 && Array.isArray(d.tracado[0][0]))
+            ? { type: 'MultiLineString', coordinates: d.tracado }
+            : { type: 'LineString',      coordinates: d.tracado },
           properties: {
             defeitoId: d.defeitoId,
             userId: d.userId,
@@ -24535,22 +24540,17 @@ if ('launchQueue' in window) {
       _fechar();
       // Extrair coordenadas dos segmentos do traço desenhado
       // Estrutura: segmentos = [{ p1:{lng,lat}, p2:{lng,lat}, texto }, ...]
-      var tracado = [];
       var segsRef = (segmentos && segmentos.length) ? segmentos
         : (window.podaManual && window.podaManual.getSegmentos ? window.podaManual.getSegmentos() : []);
-      if (segsRef && segsRef.length) {
-        // Reconstrói a polilinha preservando todos os vértices sem duplicatas.
-        // Verifica continuidade: se p1 do segmento atual difere do último ponto
-        // adicionado (segmentos não-contíguos), insere p1 antes de p2.
-        tracado.push([segsRef[0].p1.lng, segsRef[0].p1.lat]);
-        segsRef.forEach(function(seg) {
-          var last = tracado[tracado.length - 1];
-          if (Math.abs(seg.p1.lng - last[0]) > 1e-9 || Math.abs(seg.p1.lat - last[1]) > 1e-9) {
-            tracado.push([seg.p1.lng, seg.p1.lat]);
-          }
-          tracado.push([seg.p2.lng, seg.p2.lat]);
-        });
-      }
+      // Constrói tracado como MultiLineString: cada segmento é uma linha separada.
+      // Isso evita a "linha fantasma" que aparecia quando segmentos não-contíguos
+      // (ex: uma cruz em X) eram unidos numa única LineString contínua.
+      var tracado = segsRef ? segsRef.map(function(seg) {
+        return [
+          [seg.p1.lng, seg.p1.lat],
+          [seg.p2.lng, seg.p2.lat]
+        ];
+      }) : [];
       // Serializar segmentos com textos de medida para o receptor renderizar marcadores
       var segsSerializado = segsRef ? segsRef.map(function(seg) {
         return { p1: { lng: seg.p1.lng, lat: seg.p1.lat }, p2: { lng: seg.p2.lng, lat: seg.p2.lat }, texto: seg.texto || '' };
