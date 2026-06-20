@@ -24155,12 +24155,61 @@ if ('launchQueue' in window) {
     }
   }
 
+  // ---- Marcadores X e labels de distância para o receptor ----
+  var _defeitoMarkers = {}; // defeitoId → [maplibregl.Marker, ...]
+
+  function _haversineDefeito(a, b) {
+    var R = 6371000;
+    var tr = function(x){ return x * Math.PI / 180; };
+    var dLat = tr(b.lat - a.lat), dLng = tr(b.lng - a.lng);
+    var x = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.sin(dLng/2)*Math.sin(dLng/2)*Math.cos(tr(a.lat))*Math.cos(tr(b.lat));
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+
+  function _fmtDistDefeito(m) {
+    return m >= 1000 ? (m/1000).toFixed(2) + ' km' : Math.round(m) + ' m';
+  }
+
+  function _renderizarMarcadores(defeitoId, segs) {
+    var m = _mapa();
+    if (!m) return;
+    // Remover marcadores anteriores deste defeito
+    if (_defeitoMarkers[defeitoId]) {
+      _defeitoMarkers[defeitoId].forEach(function(mk){ try { mk.remove(); } catch(e){} });
+    }
+    _defeitoMarkers[defeitoId] = [];
+    if (!segs || !segs.length) return;
+
+    function _mkX(lngLat) {
+      var div = document.createElement('div');
+      div.style.cssText = 'width:22px;height:22px;line-height:22px;text-align:center;font-size:15px;font-weight:900;color:#E65100;background:#fff;border:2px solid #E65100;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.4);pointer-events:none;';
+      div.textContent = 'X';
+      var mk = new maplibregl.Marker({element: div}).setLngLat([lngLat.lng, lngLat.lat]).addTo(m);
+      _defeitoMarkers[defeitoId].push(mk);
+    }
+
+    function _mkLabel(p1, p2, texto) {
+      var mid = { lng: (p1.lng + p2.lng) / 2, lat: (p1.lat + p2.lat) / 2 };
+      if (!texto) texto = _fmtDistDefeito(_haversineDefeito(p1, p2));
+      var div = document.createElement('div');
+      div.style.cssText = 'background:#fff;border:2px solid #E65100;padding:2px 7px;border-radius:6px;font-weight:700;color:#222;font-size:12px;white-space:nowrap;pointer-events:none;box-shadow:0 1px 6px rgba(0,0,0,0.25);';
+      div.textContent = texto;
+      var mk = new maplibregl.Marker({element: div}).setLngLat([mid.lng, mid.lat]).addTo(m);
+      _defeitoMarkers[defeitoId].push(mk);
+    }
+
+    // Marcador X no primeiro vértice
+    _mkX(segs[0].p1);
+    segs.forEach(function(seg) {
+      _mkX(seg.p2);
+      _mkLabel(seg.p1, seg.p2, seg.texto || null);
+    });
+  }
+
   // ---- Popup ao clicar no traço ----
   function _abrirPopupDefeito(props, lngLat) {
     var m = _mapa();
     if (!m) return;
-    var meuID = window.meuID || '';
-    var ehCriador = props.userId === meuID;
     var dataStr = props.dataHora ? new Date(props.dataHora).toLocaleString('pt-BR') : '—';
     var html =
       '<div style="font-family:sans-serif;min-width:200px;max-width:280px;">' +
@@ -24169,7 +24218,7 @@ if ('launchQueue' in window) {
         '<div style="font-size:13px;color:#333;margin-bottom:3px;"><b>Data:</b> ' + dataStr + '</div>' +
         (props.cidade ? '<div style="font-size:13px;color:#333;margin-bottom:3px;"><b>Cidade:</b> ' + props.cidade + '</div>' : '') +
         (props.alimentador ? '<div style="font-size:13px;color:#333;margin-bottom:8px;"><b>Alimentador:</b> ' + props.alimentador + '</div>' : '') +
-        (ehCriador ? '<button id="__btnApagarDefeito" data-id="' + props.defeitoId + '" style="width:100%;padding:9px;background:#D32F2F;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">🗑 Apagar defeito</button>' : '') +
+        '<button id="__btnApagarDefeito" data-id="' + props.defeitoId + '" style="width:100%;padding:9px;background:#D32F2F;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">🗑 Apagar defeito</button>' +
       '</div>';
 
     var popup = new maplibregl.Popup({ closeButton: true, maxWidth: '300px' })
@@ -24275,6 +24324,20 @@ if ('launchQueue' in window) {
 
     // Outros usuários: salvar no localStorage e renderizar no mapa.
     _atualizarLayer();
+    // Renderizar marcadores X e labels de distância
+    if (d.segmentos && d.segmentos.length) {
+      _renderizarMarcadores(d.defeitoId, d.segmentos);
+    } else if (d.tracado && d.tracado.length >= 2) {
+      // Fallback: reconstruir segmentos a partir do tracado (sem textos de medida)
+      var segsReconstruidos = [];
+      for (var i = 0; i < d.tracado.length - 1; i++) {
+        segsReconstruidos.push({
+          p1: { lng: d.tracado[i][0], lat: d.tracado[i][1] },
+          p2: { lng: d.tracado[i+1][0], lat: d.tracado[i+1][1] }
+        });
+      }
+      _renderizarMarcadores(d.defeitoId, segsReconstruidos);
+    }
   };
 
   // ---- API pública: remover defeito ----
@@ -24285,19 +24348,29 @@ if ('launchQueue' in window) {
     // Se registro não existe, o defeito já foi removido (echo MQTT ou tombstone duplicado).
     // Retornar imediatamente — não chamar _atualizarLayer para não criar LAYER_ID indesejado.
     if (!registro) return;
-    var eraCriador = registro.userId && registro.userId === window.meuID;
     _salvarDefeitos(lista.filter(function(x){ return x.defeitoId !== defeitoId; }));
-    if (eraCriador) {
-      // Criador: LAYER_ID nunca foi criado — não chamar _atualizarLayer.
-      // podaManualLayer já é removido por desativar(true) em _apagarDefeito.
-      return;
-    }
-    // Outros usuários: atualizar layer no mapa (remove a linha do defeito apagado).
+    // Atualizar layer no mapa para todos (criador e não-criador)
     _atualizarLayer();
+    // Remover click listener do podaManualLayer (registrado para o criador)
+    var m2 = _mapa();
+    if (m2 && window.__defeitoRede_podaClickHandler) {
+      m2.off('click', 'podaManualLayer', window.__defeitoRede_podaClickHandler);
+      window.__defeitoRede_podaClickHandler = null;
+    }
+    // Remover o tracado laranja (podaManualLayer) se o criador local ainda tiver ativo
+    if (window.podaManual && typeof window.podaManual.desativar === 'function') {
+      window.podaManual.desativar(true);
+    }
+    // Remover marcadores X e labels do defeito apagado
+    if (_defeitoMarkers[defeitoId]) {
+      _defeitoMarkers[defeitoId].forEach(function(mk){ try { mk.remove(); } catch(e){} });
+      delete _defeitoMarkers[defeitoId];
+    }
   };
 
   // ---- Publicar defeito via MQTT e salvar localmente ----
-  function _publicarDefeito(tracado, cidade, alimentador) {
+  // segsSerializado: [{p1:{lng,lat}, p2:{lng,lat}, texto},...] — para receptor renderizar marcadores X e labels
+  function _publicarDefeito(tracado, segsSerializado, cidade, alimentador) {
     var meuID = window.meuID || ('anon_' + Math.random().toString(36).substring(2,8));
     var userName = (function(){
       try {
@@ -24316,6 +24389,7 @@ if ('launchQueue' in window) {
       alimentador: alimentador,
       dataHora: Date.now(),
       tracado: tracado,
+      segmentos: segsSerializado || [],
       cor: '#E65100',
       largura: 5
     };
@@ -24409,6 +24483,7 @@ if ('launchQueue' in window) {
       '<div style="display:flex;flex-direction:column;gap:12px;">' +
         '<button id="__btnEscolhaDefeito" style="padding:14px 10px;background:#D32F2F;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🔧 Mostrar defeito na rede</button>' +
         '<button id="__btnEscolhaRocada" style="padding:14px 10px;background:#E65100;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🌿 Marcar roçada</button>' +
+        '<button id="__btnEscolhaCancelar" style="padding:14px 10px;background:#757575;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">❌ Cancelar</button>' +
       '</div>';
 
     overlay.appendChild(card);
@@ -24430,6 +24505,13 @@ if ('launchQueue' in window) {
       setTimeout(onRocada, 220);
     };
 
+    card.querySelector('#__btnEscolhaCancelar').onclick = function(){
+      _fechar();
+      if (window.podaManual && typeof window.podaManual.desativar === 'function') {
+        window.podaManual.desativar(true);
+      }
+    };
+
     card.querySelector('#__btnEscolhaDefeito').onclick = function(){
       _fechar();
       // Extrair coordenadas dos segmentos do traço desenhado
@@ -24438,15 +24520,25 @@ if ('launchQueue' in window) {
       var segsRef = (segmentos && segmentos.length) ? segmentos
         : (window.podaManual && window.podaManual.getSegmentos ? window.podaManual.getSegmentos() : []);
       if (segsRef && segsRef.length) {
-        // Reconstrói a polilinha: p1 do primeiro segmento + p2 de todos
+        // Reconstrói a polilinha preservando todos os vértices sem duplicatas.
+        // Verifica continuidade: se p1 do segmento atual difere do último ponto
+        // adicionado (segmentos não-contíguos), insere p1 antes de p2.
         tracado.push([segsRef[0].p1.lng, segsRef[0].p1.lat]);
         segsRef.forEach(function(seg) {
+          var last = tracado[tracado.length - 1];
+          if (Math.abs(seg.p1.lng - last[0]) > 1e-9 || Math.abs(seg.p1.lat - last[1]) > 1e-9) {
+            tracado.push([seg.p1.lng, seg.p1.lat]);
+          }
           tracado.push([seg.p2.lng, seg.p2.lat]);
         });
       }
+      // Serializar segmentos com textos de medida para o receptor renderizar marcadores
+      var segsSerializado = segsRef ? segsRef.map(function(seg) {
+        return { p1: { lng: seg.p1.lng, lat: seg.p1.lat }, p2: { lng: seg.p2.lng, lat: seg.p2.lat }, texto: seg.texto || '' };
+      }) : [];
       setTimeout(function(){
         _abrirModalConfirmarDefeito(tracado, function(cidade, alimentador){
-          _publicarDefeito(tracado, cidade, alimentador);
+          _publicarDefeito(tracado, segsSerializado, cidade, alimentador);
           // NÃO chamar desativar(true) — o podaManualLayer deve PERMANECER visível
           // para o criador como o tracado laranja do defeito.
           // Apenas desativar o modo de desenho (sem apagar o layer).
@@ -24475,9 +24567,34 @@ if ('launchQueue' in window) {
     if (!lista.length) return; // Nada a renderizar
     if (m && m.isStyleLoaded && m.isStyleLoaded()) {
       _atualizarLayer();
+      // Renderizar marcadores X e labels para defeitos de outros usuários (retained messages)
+      lista.forEach(function(d) {
+        if (d.userId === window.meuID) return; // Criador usa podaManualLayer
+        if (d.segmentos && d.segmentos.length) {
+          _renderizarMarcadores(d.defeitoId, d.segmentos);
+        } else if (d.tracado && d.tracado.length >= 2) {
+          var segsRec = [];
+          for (var i = 0; i < d.tracado.length - 1; i++) {
+            segsRec.push({ p1: { lng: d.tracado[i][0], lat: d.tracado[i][1] }, p2: { lng: d.tracado[i+1][0], lat: d.tracado[i+1][1] } });
+          }
+          _renderizarMarcadores(d.defeitoId, segsRec);
+        }
+      });
     } else if (m) {
       m.once('load', function() {
         _atualizarLayer();
+        lista.forEach(function(d) {
+          if (d.userId === window.meuID) return;
+          if (d.segmentos && d.segmentos.length) {
+            _renderizarMarcadores(d.defeitoId, d.segmentos);
+          } else if (d.tracado && d.tracado.length >= 2) {
+            var segsRec = [];
+            for (var i = 0; i < d.tracado.length - 1; i++) {
+              segsRec.push({ p1: { lng: d.tracado[i][0], lat: d.tracado[i][1] }, p2: { lng: d.tracado[i+1][0], lat: d.tracado[i+1][1] } });
+            }
+            _renderizarMarcadores(d.defeitoId, segsRec);
+          }
+        });
       });
     } else {
       // Mapa ainda não existe — tentar novamente em 2s
@@ -24597,12 +24714,80 @@ if ('launchQueue' in window) {
     console.log('[KML-Firebase] hook de upload registrado');
   }
 
+  // ── Modal informativo (nova função) ──────────────────────────────────────
+  function _mostrarInfoKmlCompartilhados(callback) {
+    var LS_KEY = 'kmlkmz_info_visto';
+    if (localStorage.getItem(LS_KEY) === '1') { callback(); return; }
+
+    // Overlay
+    var infoOverlay = document.createElement('div');
+    infoOverlay.id = 'kmlInfoOverlay';
+    infoOverlay.style.cssText = [
+      'position:fixed','inset:0','background:rgba(0,0,0,0.65)',
+      'z-index:9200','display:flex','align-items:center','justify-content:center'
+    ].join(';');
+
+    // Card
+    var card = document.createElement('div');
+    card.style.cssText = [
+      'background:#fff','border-radius:14px','box-shadow:0 6px 28px rgba(0,0,0,0.35)',
+      'padding:24px 22px','width:360px','max-width:92vw','font-family:inherit',
+      'box-sizing:border-box'
+    ].join(';');
+
+    // Título
+    var titulo = document.createElement('p');
+    titulo.style.cssText = 'margin:0 0 14px;font-size:15px;font-weight:700;color:#1a237e;';
+    titulo.textContent = '📂 KML/KMZ Compartilhados';
+
+    // Texto
+    var texto = document.createElement('p');
+    texto.style.cssText = 'margin:0 0 18px;font-size:13.5px;color:#333;line-height:1.55;';
+    texto.textContent = 'Nova função para facilitar a troca de arquivos entre colegas de diversas regiões. Qualquer arquivo que o seu colega de trabalho importar: todos de qualquer região tem a possibilidade de fazer o download ou carregar em seu mapa.';
+
+    // Checkbox row
+    var checkRow = document.createElement('label');
+    checkRow.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:13px;color:#555;cursor:pointer;margin-bottom:18px;';
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.id = 'kmlInfoChk';
+    chk.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:#1565c0;';
+    var chkLabel = document.createTextNode('Não mostrar novamente');
+    checkRow.appendChild(chk);
+    checkRow.appendChild(chkLabel);
+
+    // Botão Entendi
+    var btn = document.createElement('button');
+    btn.textContent = 'Entendi';
+    btn.style.cssText = [
+      'display:block','width:100%','padding:11px 0','background:#1565c0',
+      'color:#fff','border:none','border-radius:8px','font-size:14px',
+      'font-weight:700','cursor:pointer','letter-spacing:0.3px'
+    ].join(';');
+    btn.onmouseover = function() { btn.style.background = '#0d47a1'; };
+    btn.onmouseout  = function() { btn.style.background = '#1565c0'; };
+    btn.onclick = function() {
+      if (chk.checked) localStorage.setItem(LS_KEY, '1');
+      document.body.removeChild(infoOverlay);
+      callback();
+    };
+
+    card.appendChild(titulo);
+    card.appendChild(texto);
+    card.appendChild(checkRow);
+    card.appendChild(btn);
+    infoOverlay.appendChild(card);
+    document.body.appendChild(infoOverlay);
+  }
+
   // ── Modal: abrir / fechar ─────────────────────────────────────────────────
   window.abrirKmlCompartilhados = function() {
-    var overlay = document.getElementById('kmlCompartOverlay');
-    if (!overlay) return;
-    overlay.classList.add('aberto');
-    _carregarLista();
+    _mostrarInfoKmlCompartilhados(function() {
+      var overlay = document.getElementById('kmlCompartOverlay');
+      if (!overlay) return;
+      overlay.classList.add('aberto');
+      _carregarLista();
+    });
   };
 
   window.fecharKmlCompartilhados = function() {
