@@ -24109,7 +24109,16 @@ if ('launchQueue' in window) {
 
   function _atualizarLayer() {
     var m = _mapa();
-    if (!m || !m.isStyleLoaded || !m.isStyleLoaded()) return;
+    if (!m) { return; }
+    if (!m.isStyleLoaded || !m.isStyleLoaded()) {
+      // Mapa ainda não pronto: aguardar evento 'idle' (dispara UMA vez após todas as operações pendentes)
+      if (!_atualizarLayer._pendente) {
+        _atualizarLayer._pendente = true;
+        m.once('idle', function() { _atualizarLayer._pendente = false; _atualizarLayer(); });
+      }
+      return;
+    }
+    _atualizarLayer._pendente = false;
     var lista = _lerDefeitos();
     var geojson = _buildGeoJSON(lista);
     if (m.getSource(SOURCE_ID)) {
@@ -24226,7 +24235,9 @@ if ('launchQueue' in window) {
 
   // ---- API pública: renderizar defeito recebido via MQTT ----
   window.__defeitoRede_renderizar = function(d) {
-    if (!d || !d.defeitoId || !d.tracado) return;
+    if (!d || !d.defeitoId || !d.tracado) {
+      return;
+    }
     var lista = _lerDefeitos();
     var idx = lista.findIndex(function(x){ return x.defeitoId === d.defeitoId; });
     if (idx === -1) lista.push(d);
@@ -24262,8 +24273,8 @@ if ('launchQueue' in window) {
       return; // Não chamar _atualizarLayer — sem linha duplicada
     }
 
-    // Outros usuários: salvar no localStorage apenas (sem renderizar layer no mapa).
-    // Defeitos de outros aparecem via notificação no chat — sem linhas no mapa por enquanto.
+    // Outros usuários: salvar no localStorage e renderizar no mapa.
+    _atualizarLayer();
   };
 
   // ---- API pública: remover defeito ----
@@ -24281,7 +24292,8 @@ if ('launchQueue' in window) {
       // podaManualLayer já é removido por desativar(true) em _apagarDefeito.
       return;
     }
-    // Outros usuários: apenas remover do localStorage (sem atualizar layer no mapa).
+    // Outros usuários: atualizar layer no mapa (remove a linha do defeito apagado).
+    _atualizarLayer();
   };
 
   // ---- Publicar defeito via MQTT e salvar localmente ----
@@ -24455,12 +24467,22 @@ if ('launchQueue' in window) {
     _abrirModalEscolha(segmentos, onRocada, function(){});
   };
 
-  // ---- Inicialização: defeitos carregados do localStorage apenas como dados de referência.
-  // _atualizarLayer NÃO é chamado aqui — defeitos de outros usuários chegam via MQTT retained
-  // e são tratados em __defeitoRede_renderizar. Evita renderizar lixo de sessões anteriores.
+  // ---- Inicialização: aguardar mapa pronto e renderizar defeitos do localStorage.
+  // Cobre o caso de retained messages MQTT que chegaram antes do mapa estar pronto.
   function _init() {
-    // Sem-op: inicialização visual removida intencionalmente.
-    // O MQTT retained cuida de entregar defeitos ativos de outros usuários.
+    var m = _mapa();
+    var lista = _lerDefeitos();
+    if (!lista.length) return; // Nada a renderizar
+    if (m && m.isStyleLoaded && m.isStyleLoaded()) {
+      _atualizarLayer();
+    } else if (m) {
+      m.once('load', function() {
+        _atualizarLayer();
+      });
+    } else {
+      // Mapa ainda não existe — tentar novamente em 2s
+      setTimeout(_init, 2000);
+    }
   }
 
   if (document.readyState === 'loading') {
@@ -24650,44 +24672,13 @@ if ('launchQueue' in window) {
     return firebase.storage().ref('kml-compartilhados/' + nome);
   }
 
-  // ── Helper: XHR blob — SW agora faz passthrough para firebasestorage ──────
-  function _xhrBlob(url) {
-    return new Promise(function(resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.responseType = 'blob';
-      xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) { resolve(xhr.response); }
-        else { reject(new Error('XHR HTTP ' + xhr.status)); }
-      };
-      xhr.onerror = function() { reject(new Error('XHR network error')); };
-      xhr.open('GET', url);
-      xhr.send();
-    });
-  }
-
-  // ── Helper: XHR text — para KML (não-KMZ) ────────────────────────────────
-  function _xhrText(url) {
-    return new Promise(function(resolve, reject) {
-      var xhr = new XMLHttpRequest();
-      xhr.responseType = 'text';
-      xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) { resolve(xhr.responseText || ''); }
-        else { reject(new Error('XHR HTTP ' + xhr.status)); }
-      };
-      xhr.onerror = function() { reject(new Error('XHR network error')); };
-      xhr.open('GET', url);
-      xhr.send();
-    });
-  }
-
-  // ── Download: getDownloadURL() → window.open (sem XHR, sem CORS) ─────────
+  // ── Download: getDownloadURL() → <a> tag (sem fetch/XHR, sem CORS) ────────
   window._kmlcDownload = function(idx) {
     var item = _kmlcItems[idx];
     if (!item) { console.error('[KML-Firebase] item não encontrado:', idx); return; }
     var nome = item.nome;
     _storageRef(nome).getDownloadURL()
       .then(function(signedUrl) {
-        // window.open com URL assinada: browser navega diretamente, sem CORS
         var a = document.createElement('a');
         a.href = signedUrl;
         a.download = nome;
@@ -24703,7 +24694,7 @@ if ('launchQueue' in window) {
       });
   };
 
-  // ── Carregar no mapa: getDownloadURL() → XHR (SW faz passthrough) ─────────
+  // ── Carregar no mapa: getDownloadURL() → fetch (cache:no-store) → fallback ─
   window._kmlcCarregarNoMapa = function(idx) {
     var item = _kmlcItems[idx];
     if (!item) { console.error('[KML-Firebase] item não encontrado:', idx); return; }
@@ -24715,20 +24706,46 @@ if ('launchQueue' in window) {
 
     _storageRef(nome).getDownloadURL()
       .then(function(signedUrl) {
-        // KMZ precisa de blob binário; KML pode usar texto direto
-        if (nome.toLowerCase().endsWith('.kmz')) {
-          return _xhrBlob(signedUrl).then(function(blob) {
-            return { blob: blob, signedUrl: signedUrl };
+        // Tentativa 1: fetch com cache:no-store para evitar header Range automático
+        return fetch(signedUrl, { cache: 'no-store', mode: 'cors' })
+          .then(function(resp) {
+            if (!resp.ok && resp.status !== 206) throw new Error('HTTP ' + resp.status);
+            if (nome.toLowerCase().endsWith('.kmz')) {
+              return resp.blob().then(function(blob) { return { blob: blob }; });
+            } else {
+              return resp.text().then(function(txt) { return { text: txt.replace(/^\uFEFF/, '') }; });
+            }
+          })
+          .catch(function(fetchErr) {
+            // Fallback: CORS bloqueado — fazer download e orientar o usuário
+            console.warn('[KML-Firebase] fetch bloqueado por CORS, usando fallback download:', fetchErr);
+            var a = document.createElement('a');
+            a.href = signedUrl;
+            a.download = nome;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() { document.body.removeChild(a); }, 500);
+            // Retornar sentinela para o próximo .then saber que foi fallback
+            return { _fallback: true, nome: nome };
           });
-        } else {
-          return _xhrText(signedUrl).then(function(txt) {
-            return { text: txt.replace(/^\uFEFF/, ''), signedUrl: signedUrl };
-          });
-        }
       })
       .then(function(result) {
+        if (!result) return;
+
+        // Fallback ativado: arquivo foi baixado, orientar o usuário
+        if (result._fallback) {
+          if (typeof mostrarNotificacaoRealTime === 'function') {
+            mostrarNotificacaoRealTime('⬇️ ' + result.nome + ' baixado! Use "Add KML/KMZ" para carregar no mapa.', '#E65100', false, 8000);
+          } else {
+            alert('O arquivo "' + result.nome + '" foi baixado para o seu dispositivo.\nUse o botão "Add KML/KMZ" para carregá-lo no mapa.');
+          }
+          return;
+        }
+
         if (result.text !== undefined) {
-          // KML: texto já disponível
+          // KML: processar texto diretamente
           if (!result.text) throw new Error('Arquivo vazio ou ilegível');
           var fakeFile = new File([result.text], nome, { type: 'application/vnd.google-earth.kml+xml' });
           fecharKmlCompartilhados();
