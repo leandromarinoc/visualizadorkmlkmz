@@ -23704,7 +23704,15 @@ if ('launchQueue' in window) {
         99: { emoji: '⛈️',  anim: 'storm', label: 'Trovoada com granizo forte' }
     };
 
-    function _wmo(code) {
+    // Mapeamento noturno para códigos de céu claro/parcialmente nublado
+    var WMO_NIGHT = {
+        0: { emoji: '🌙',  anim: 'sun',   label: 'Céu limpo' },
+        1: { emoji: '🌙',  anim: 'sun',   label: 'Principalmente limpo' },
+        2: { emoji: '🌙☁️', anim: 'cloud', label: 'Parcialmente nublado' }
+    };
+
+    function _wmo(code, isNight) {
+        if (isNight && WMO_NIGHT[code]) return WMO_NIGHT[code];
         return WMO[code] || { emoji: '🌡️', anim: 'cloud', label: 'Condição ' + code };
     }
 
@@ -23938,7 +23946,18 @@ if ('launchQueue' in window) {
             }
         }
 
-        var wmo = _wmo(cur.weather_code);
+        // Determinar se é noite: usar is_day da API (0 = noite) ou comparar hora com nascer/pôr
+        var isNight = false;
+        if (typeof cur.is_day === 'number') {
+            isNight = (cur.is_day === 0);
+        } else if (daily && daily.sunrise && daily.sunset) {
+            var nowMs = Date.now();
+            var srMs  = new Date(daily.sunrise[0]).getTime();
+            var ssMs  = new Date(daily.sunset[0]).getTime();
+            if (!isNaN(srMs) && !isNaN(ssMs)) isNight = (nowMs < srMs || nowMs > ssMs);
+        }
+
+        var wmo = _wmo(cur.weather_code, isNight);
         var status = _climaStatus(cur, rainProb1h);
 
         // Nascer/pôr do sol de hoje
@@ -23981,7 +24000,7 @@ if ('launchQueue' in window) {
         if (daily && daily.time) {
             html += '<div class="clima-forecast">';
             for (var d = 0; d < daily.time.length && d < 7; d++) {
-                var dw = _wmo(daily.weather_code[d]);
+                var dw = _wmo(daily.weather_code[d], d === 0 && isNight);
                 var dayLabel = _diaSemana(daily.time[d], d);
                 var tmax = Math.round(daily.temperature_2m_max[d]);
                 var tmin = Math.round(daily.temperature_2m_min[d]);
