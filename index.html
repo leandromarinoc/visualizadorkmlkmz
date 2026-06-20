@@ -22,6 +22,28 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="./icon.png">
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <!-- Firebase CDN (compat) — KML/KMZ compartilhados -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script>
+      (function() {
+        var firebaseConfig = {
+          apiKey: 'AIzaSyDPNVb9FK5rlUtYt0OVb6PXU-APYmp99aw',
+          authDomain: 'inspecaopro-1989.firebaseapp.com',
+          projectId: 'inspecaopro-1989',
+          storageBucket: 'inspecaopro-1989.firebasestorage.app',
+          messagingSenderId: '826135664752',
+          appId: '1:826135664752:web:e530bb43feac9c29b23cb5'
+        };
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        window._kmlFirestore = firebase.firestore();
+        window._kmlStorage  = firebase.storage();
+        console.log('[KML-Firebase] inicializado');
+      })();
+    </script>
     <!-- Captura beforeinstallprompt o mais cedo possível para não perder o evento -->
      
     <script>
@@ -463,6 +485,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             #btnTraj      { top: 174px !important; right: 10px !important; display: flex !important; }
             #btn3D        { top: 228px !important; right: 10px !important; }
             #btnClima     { top: 290px !important; right: 10px !important; }
+            #btnKmlCompartilhado { top: 344px !important; right: 10px !important; background: #111 !important; }
             /* Cores distintas por botão */
             .btn-kml            { background: #E65100 !important; }
             .btn-circular[onclick*="apagarTudo"]  { background: #C62828 !important; }
@@ -595,10 +618,10 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         #btnTraj.traj-ativo { background: #00C853 !important; box-shadow: inset 3px 0 0 #00C853, 0 4px 12px rgba(0,0,0,0.35) !important; }
         #btn3D        { position: absolute; top: 210px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #FFD600, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #FFD600; transition: background 0.2s; color: #000; font-weight: 900; }
         #btn3D.ativo3d { background: #43A047 !important; box-shadow: inset 3px 0 0 #43A047, 0 4px 12px rgba(0,0,0,0.35) !important; }
-        /* v8.62 CLIMA */
+        /* v8.63 CLIMA */
         #btnClima     { position: absolute; top: 260px; right: 10px; z-index: 1000; box-shadow: inset 3px 0 0 #0288D1, 0 4px 12px rgba(0,0,0,0.35); display: flex; background: #4FC3F7; transition: background 0.2s; color: #000; font-weight: 900; }
         #btnClima.clima-ativo { background: #1976D2 !important; color: #FFF !important; box-shadow: inset 3px 0 0 #1976D2, 0 4px 12px rgba(0,0,0,0.35) !important; }
-        /* v8.61 CLIMA CARD MODAL */
+        /* v8.63 CLIMA CARD MODAL */
         #climaOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9000; align-items:center; justify-content:center; }
         #climaOverlay.aberto { display:flex; }
         #climaCard { background:#fff; border-radius:14px; box-shadow:0 6px 28px rgba(0,0,0,0.30); padding:14px 16px; width:320px; max-width:85vw; max-height:75vh; overflow-y:auto; font-family:inherit; position:relative; }
@@ -639,6 +662,25 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .anim-storm { display:inline-block; animation:stormFlash 2s ease-in-out infinite; }
         .anim-snow { display:inline-block; animation:snowFall 3s ease-in-out infinite alternate; }
         .anim-fog { display:inline-block; animation:fogPulse 3s ease-in-out infinite; }
+        /* v8.65 KML/KMZ COMPARTILHADOS */
+        #btnKmlCompartilhado { position: absolute; top: 310px; right: 10px; z-index: 1000; background: #111 !important; display: flex; box-shadow: inset 3px 0 0 #333, 0 4px 12px rgba(0,0,0,0.35); }
+        body.modo-celular #btnKmlCompartilhado { background: #111 !important; }
+        #kmlCompartOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9100; align-items:center; justify-content:center; }
+        #kmlCompartOverlay.aberto { display:flex; }
+        #kmlCompartCard { background:#fff; border-radius:14px; box-shadow:0 6px 28px rgba(0,0,0,0.35); padding:14px 16px; width:340px; max-width:92vw; max-height:80vh; overflow-y:auto; font-family:inherit; position:relative; }
+        .kmlc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+        .kmlc-title { font-size:15px; font-weight:800; color:#111; }
+        .kmlc-close { background:none; border:none; font-size:20px; cursor:pointer; color:#555; padding:0 4px; line-height:1; }
+        .kmlc-loading { text-align:center; padding:20px; font-size:13px; color:#555; }
+        .kmlc-empty { text-align:center; padding:20px; font-size:13px; color:#888; }
+        .kmlc-item { border:1px solid #e0e0e0; border-radius:9px; padding:9px 11px; margin-bottom:8px; background:#fafafa; }
+        .kmlc-item-name { font-size:13px; font-weight:700; color:#222; word-break:break-all; margin-bottom:3px; }
+        .kmlc-item-meta { font-size:11px; color:#777; margin-bottom:7px; }
+        .kmlc-item-btns { display:flex; gap:7px; }
+        .kmlc-btn-dl { flex:1; background:#1565C0; color:#fff; border:none; border-radius:7px; padding:6px 0; font-size:12px; font-weight:700; cursor:pointer; }
+        .kmlc-btn-load { flex:1; background:#2E7D32; color:#fff; border:none; border-radius:7px; padding:6px 0; font-size:12px; font-weight:700; cursor:pointer; }
+        .kmlc-btn-dl:hover { background:#0D47A1; }
+        .kmlc-btn-load:hover { background:#1B5E20; }
         #btnToggleUI  { position: absolute; top: 12px; right: 10px; z-index: 10001; }
         
         /* Modo Computador em Celular - TODOS os botões 120×120px */
@@ -2181,7 +2223,21 @@ document.onkeydown = function(e) {
 
         <button id="btnClima" class="btn-circular" onclick="toggleClimaCard()" title="Clima">🌦️<span style="font-size:8px; font-weight:900;">CLIMA</span></button>
 
-        <!-- v8.61 CLIMA CARD MODAL -->
+        <!-- v8.65 BOTÃO KML/KMZ COMPARTILHADOS -->
+        <button id="btnKmlCompartilhado" class="btn-circular" onclick="abrirKmlCompartilhados()" title="KML/KMZ compartilhados">📂<span style="font-size:7px; font-weight:900;">KML/KMZ</span></button>
+
+        <!-- v8.65 MODAL KML/KMZ COMPARTILHADOS -->
+        <div id="kmlCompartOverlay" onclick="if(event.target===this)fecharKmlCompartilhados()">
+            <div id="kmlCompartCard">
+                <div class="kmlc-header">
+                    <span class="kmlc-title">📂 KML/KMZ Compartilhados</span>
+                    <button class="kmlc-close" onclick="fecharKmlCompartilhados()" title="Fechar">✕</button>
+                </div>
+                <div id="kmlCompartBody"><div class="kmlc-loading">⏳ Carregando...</div></div>
+            </div>
+        </div>
+
+        <!-- v8.63 CLIMA CARD MODAL -->
         <div id="climaOverlay" onclick="climaOverlayClick(event)">
             <div id="climaCard">
                 <div class="clima-card-header">
@@ -3969,7 +4025,9 @@ window.addEventListener('load', () => {
         // SISTEMA DE SINCRONIZAÇÃO MQTT E USUÁRIOS ONLINE
         // ==========================================
         const meuID = Math.random().toString(36).substring(2, 10);
+        window.meuID = meuID;
         const TEMA_MQTT = 'inspecao_pro_podas_bebedouro_oficial'; 
+        window.TEMA_MQTT = TEMA_MQTT;
         const TEMA_PODAS = TEMA_MQTT + '/poda';
         let clienteMQTT = null; const colegasNoMapa = {};
 
@@ -4084,6 +4142,7 @@ window.addEventListener('load', () => {
                     reconnectPeriod: 5000,
                     connectTimeout: 10000
                 });
+                window.clienteMQTT = clienteMQTT;
 
                 const TEMA_CHAVES = TEMA_MQTT + '/chave';
                 const TEMA_COMENTARIOS = TEMA_MQTT + '/comentario';
@@ -4099,6 +4158,7 @@ window.addEventListener('load', () => {
                     clienteMQTT.subscribe(TEMA_CHAVES + '/#', { qos: 1 });
                     clienteMQTT.subscribe(TEMA_COMENTARIOS + '/+', { qos: 1 });
                     clienteMQTT.subscribe(TEMA_INTERLIGACOES + '/+', { qos: 1 });
+                    clienteMQTT.subscribe(TEMA_MQTT + '/defeito_rede/+', { qos: 1 });
                     // Anuncia presença ao conectar/reconectar
                     setTimeout(() => {
                         const ll = userMarker ? userMarker.getLngLat() : null;
@@ -4304,6 +4364,19 @@ window.addEventListener('load', () => {
                                 }
                             }
                         }
+                        return;
+                    }
+
+                    // v8.64: defeito na rede
+                    if (topic.startsWith(TEMA_MQTT + '/defeito_rede/')) {
+                        const defeitoId = topic.substring((TEMA_MQTT + '/defeito_rede/').length);
+                        if (!payload) {
+                            // tombstone: remover defeito
+                            if (typeof window.__defeitoRede_remover === 'function') window.__defeitoRede_remover(defeitoId);
+                            return;
+                        }
+                        let msgD; try { msgD = JSON.parse(payload); } catch(e) { return; }
+                        if (typeof window.__defeitoRede_renderizar === 'function') window.__defeitoRede_renderizar(msgD);
                         return;
                     }
 
@@ -18711,6 +18784,14 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       mostrarToast('Marque pelo menos um segmento antes de encerrar.');
       return;
     }
+    // v8.64: hook externo para interceptar (ex: modal escolha roçada/defeito)
+    if (typeof window.__podaManual_onEncerrar === 'function') {
+      window.__podaManual_onEncerrar(segmentos, function() {
+        // callback: prosseguir com fluxo original de roçada
+        abrirModalRelatorio(function(){ _abrirModal4Botoes(); });
+      });
+      return;
+    }
     // Abre modal de relatório rápido primeiro
     abrirModalRelatorio(function(){
       // Após preencher relatório, abre modal de 4 botões
@@ -19587,7 +19668,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     m.on('dblclick', _dblclickHandler);
   }
 
-  window.podaManual = { iniciar: iniciar, desativar: desativar };
+  window.podaManual = { iniciar: iniciar, desativar: desativar, getSegmentos: function(){ return segmentos; }, _abrirModalEncerrar: abrirModalEncerrar };
 
   // ---- Exportar relatórios por cidade ----
   function abrirModalExportarPorCidade() {
@@ -19960,7 +20041,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     btn.id = 'btnPodaManual';
     btn.className = 'btn-ferram-item';
     btn.style.background = '#E65100';
-    btn.innerHTML = '🌿<span style="margin-left:6px;">ROÇADA</span>';
+    btn.innerHTML = '🌿<span style="margin-left:6px;">ROÇADA / DEFEITO</span>';
     btn.onclick = function(){
       if(typeof togglePanelFerram === 'function') togglePanelFerram();
       __rocadaMostrarInfo(function(){ window.podaManual.iniciar(); });
@@ -19999,6 +20080,8 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       '<div style="font-size:18px;font-weight:900;color:#FF8C00;margin-bottom:12px;">Como usar a Roçada</div>' +
       '<div style="font-size:14px;line-height:1.55;color:#333;text-align:left;background:#f5f9ff;padding:13px;border-left:4px solid #FF8C00;border-radius:8px;margin-bottom:14px;">' +
         'Marque um ponto de roçada e <b>envie por WhatsApp</b> ou <b>exporte</b> para depois enviar como quiser. <b>Não esqueça de salvar</b> se quiser gerar um relatório para depois exportar.' +
+        '<br><br>' +
+        'Você também pode usar esta ferramenta para <b>desenhar aonde está o defeito na rede</b>, permitindo que todos os usuários vejam a localização do problema em tempo real.' +
       '</div>' +
       '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;margin-bottom:14px;cursor:pointer;text-align:left;">' +
         '<input type="checkbox" id="chkRocadaInfoOcultar" style="width:16px;height:16px;cursor:pointer;">' +
@@ -23588,12 +23671,13 @@ if ('launchQueue' in window) {
 })();
 
 // ============================================================
-// v8.61 CLIMA — Card Modal Open-Meteo (sem chave, grátis)
+// v8.63 CLIMA — Card Modal Open-Meteo (sem chave, grátis)
+// Detecção de cidade: GPS → BigDataCloud → Nominatim fallback → centro do mapa
 // ============================================================
 (function() {
     'use strict';
 
-    console.log('[v8.61 CLIMA] init');
+    console.log('[v8.63 CLIMA] init');
 
     // --- Mapeamento WMO weather_code ---
     var WMO = {
@@ -23660,7 +23744,7 @@ if ('launchQueue' in window) {
 
     // --- Estado ---
     var _cardAberto = false;
-    var _lastCity = null; // { lat, lon, name }
+    var _lastCity = null; // { lat, lon, name, ts, fonte }
 
     function _loadLastCity() {
         try {
@@ -23670,8 +23754,16 @@ if ('launchQueue' in window) {
     }
 
     function _saveLastCity(obj) {
+        obj.ts = Date.now();
         _lastCity = obj;
         try { localStorage.setItem('clima_last_city', JSON.stringify(obj)); } catch(e) {}
+    }
+
+    // Retorna _lastCity se foi salva há menos de 30 minutos
+    function _lastCityRecente() {
+        if (!_lastCity || !_lastCity.ts) return null;
+        if (Date.now() - _lastCity.ts < 30 * 60 * 1000) return _lastCity;
+        return null;
     }
 
     // --- Abrir / fechar ---
@@ -23685,7 +23777,7 @@ if ('launchQueue' in window) {
         var btn = document.getElementById('btnClima');
         overlay.classList.add('aberto');
         if (btn) btn.classList.add('clima-ativo');
-        console.log('[v8.61 CLIMA] card aberto');
+        console.log('[v8.63 CLIMA] card aberto');
         _climaCarregarLocalizacao();
     };
 
@@ -23695,7 +23787,7 @@ if ('launchQueue' in window) {
         var btn = document.getElementById('btnClima');
         overlay.classList.remove('aberto');
         if (btn) btn.classList.remove('clima-ativo');
-        console.log('[v8.61 CLIMA] card fechado');
+        console.log('[v8.63 CLIMA] card fechado');
     };
 
     window.climaOverlayClick = function(e) {
@@ -23723,20 +23815,29 @@ if ('launchQueue' in window) {
     function _climaCarregarLocalizacao() {
         _showLoading();
         _loadLastCity();
+
+        // Se há cidade recente (< 30 min), recarrega clima dela sem nova detecção
+        var recente = _lastCityRecente();
+        if (recente) {
+            console.log('[v8.63 CLIMA] reutilizando cidade recente:', recente.name, '(fonte:', recente.fonte || 'desconhecida', ')');
+            _fetchForecast(recente.lat, recente.lon, recente.name, recente.fonte || 'recente');
+            return;
+        }
+
         if (navigator.geolocation) {
             var timer = setTimeout(function() {
-                console.log('[v8.61 CLIMA] geolocation timeout, usando centro do mapa');
+                console.log('[v8.63 CLIMA] geolocation timeout, usando centro do mapa');
                 _usarCentroMapa();
             }, 5000);
             navigator.geolocation.getCurrentPosition(
                 function(pos) {
                     clearTimeout(timer);
-                    console.log('[v8.61 CLIMA] geolocation ok');
-                    _fetchReverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                    console.log('[v8.63 CLIMA] geolocation ok');
+                    _fetchReverseGeocode(pos.coords.latitude, pos.coords.longitude, 'GPS');
                 },
                 function(err) {
                     clearTimeout(timer);
-                    console.log('[v8.61 CLIMA] geolocation erro:', err.message);
+                    console.log('[v8.63 CLIMA] geolocation erro:', err.message);
                     _usarCentroMapa();
                 },
                 { timeout: 4500, maximumAge: 60000 }
@@ -23748,51 +23849,81 @@ if ('launchQueue' in window) {
 
     function _usarCentroMapa() {
         var center = (window.map && map.getCenter) ? map.getCenter() : { lat: -15.78, lng: -47.93 };
-        console.log('[v8.61 CLIMA] usando centro do mapa:', center.lat, center.lng);
-        _fetchReverseGeocode(center.lat, center.lng);
+        console.log('[v8.63 CLIMA] usando centro do mapa:', center.lat, center.lng);
+        _fetchReverseGeocode(center.lat, center.lng, 'mapa');
     }
 
-    // --- Reverse geocode ---
-    function _fetchReverseGeocode(lat, lon) {
-        var url = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=pt';
-        fetch(url)
+    // --- Reverse geocode (BigDataCloud + Nominatim fallback) ---
+    function _fetchReverseGeocode(lat, lon, fonte) {
+        fonte = fonte || 'desconhecida';
+        var urlBDC = 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=pt';
+        fetch(urlBDC)
             .then(function(r) { return r.json(); })
             .then(function(d) {
-                var city = d.city || d.locality || d.principalSubdivision || 'Local';
+                var city = d.city || d.locality || d.principalSubdivision || '';
+                if (!city) throw new Error('sem cidade BDC');
                 var state = d.principalSubdivisionCode ? d.principalSubdivisionCode.replace('BR-','') : '';
                 var name = city + (state ? ', ' + state : '');
-                console.log('[v8.61 CLIMA] reverse geocode:', name);
-                _saveLastCity({ lat: lat, lon: lon, name: name });
-                _fetchForecast(lat, lon, name);
+                console.log('[v8.63 CLIMA] reverse geocode (BigDataCloud):', name, '| fonte:', fonte);
+                _saveLastCity({ lat: lat, lon: lon, name: name, fonte: fonte });
+                _fetchForecast(lat, lon, name, fonte);
             })
             .catch(function(e) {
-                console.log('[v8.61 CLIMA] reverse geocode erro:', e);
-                _fetchForecast(lat, lon, 'Local atual');
+                console.log('[v8.63 CLIMA] BigDataCloud falhou, tentando Nominatim:', e);
+                _fetchReverseGeocodeNominatim(lat, lon, fonte);
+            });
+    }
+
+    function _fetchReverseGeocodeNominatim(lat, lon, fonte) {
+        var urlNom = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lon + '&zoom=10&addressdetails=1';
+        fetch(urlNom, { headers: { 'Accept-Language': 'pt-BR,pt;q=0.9' } })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                var addr = (d && d.address) || {};
+                var city = addr.city || addr.town || addr.village || addr.municipality || addr.county || 'Local';
+                var state = addr.state_code || addr.state || '';
+                var name = city + (state ? ', ' + state : '');
+                console.log('[v8.63 CLIMA] reverse geocode (Nominatim):', name, '| fonte:', fonte);
+                _saveLastCity({ lat: lat, lon: lon, name: name, fonte: fonte });
+                _fetchForecast(lat, lon, name, fonte);
+            })
+            .catch(function(e) {
+                console.log('[v8.63 CLIMA] Nominatim também falhou:', e);
+                _fetchForecast(lat, lon, 'Local atual', fonte);
             });
     }
 
     // --- Fetch forecast Open-Meteo ---
-    function _fetchForecast(lat, lon, cityName) {
+    function _fetchForecast(lat, lon, cityName, fonte) {
         var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
             '&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m,wind_direction_10m' +
             '&hourly=precipitation_probability' +
             '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_probability_max' +
             '&timezone=America%2FSao_Paulo&forecast_days=7';
-        console.log('[v8.61 CLIMA] fetch forecast:', cityName);
+        console.log('[v8.63 CLIMA] fetch forecast:', cityName);
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                console.log('[v8.61 CLIMA] forecast ok');
-                _renderCard(data, cityName);
+                console.log('[v8.63 CLIMA] forecast ok');
+                _renderCard(data, cityName, fonte);
             })
             .catch(function(e) {
-                console.log('[v8.61 CLIMA] forecast erro:', e);
+                console.log('[v8.63 CLIMA] forecast erro:', e);
                 _showError('Não foi possível obter o clima.', _climaCarregarLocalizacao);
             });
     }
 
+    // --- Rótulo de fonte de detecção ---
+    function _fonteLabel(fonte) {
+        if (fonte === 'GPS') return '📡 GPS';
+        if (fonte === 'mapa') return '🗺️ Centro do mapa';
+        if (fonte === 'busca') return '🔍 Busca manual';
+        if (fonte === 'recente') return '🕐 Última cidade';
+        return '';
+    }
+
     // --- Renderizar card ---
-    function _renderCard(data, cityName) {
+    function _renderCard(data, cityName, fonte) {
         var cur = data.current;
         var daily = data.daily;
         var hourly = data.hourly;
@@ -23816,8 +23947,11 @@ if ('launchQueue' in window) {
 
         var html = '';
 
-        // Localização
-        html += '<div class="clima-card-loc">📍 ' + cityName + '</div>';
+        // Localização + fonte de detecção
+        var fonteStr = _fonteLabel(fonte);
+        html += '<div class="clima-card-loc">📍 ' + cityName;
+        if (fonteStr) html += ' <span style="font-size:10px;color:#888;font-weight:400;">(' + fonteStr + ')</span>';
+        html += '</div>';
 
         // Ícone + temp principal
         html += '<div class="clima-card-main">';
@@ -23874,7 +24008,7 @@ if ('launchQueue' in window) {
         if (!nome) return;
         _showLoading();
         var url = 'https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(nome) + '&count=1&language=pt&format=json';
-        console.log('[v8.61 CLIMA] busca cidade:', nome);
+        console.log('[v8.63 CLIMA] busca cidade:', nome);
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(d) {
@@ -23884,13 +24018,13 @@ if ('launchQueue' in window) {
                 }
                 var r = d.results[0];
                 var cityName = r.name + (r.admin1 ? ', ' + r.admin1 : '') + (r.country_code ? ' (' + r.country_code + ')' : '');
-                console.log('[v8.61 CLIMA] cidade encontrada:', cityName, r.latitude, r.longitude);
-                _saveLastCity({ lat: r.latitude, lon: r.longitude, name: cityName });
-                _fetchForecast(r.latitude, r.longitude, cityName);
+                console.log('[v8.63 CLIMA] cidade encontrada:', cityName, r.latitude, r.longitude);
+                _saveLastCity({ lat: r.latitude, lon: r.longitude, name: cityName, fonte: 'busca' });
+                _fetchForecast(r.latitude, r.longitude, cityName, 'busca');
                 input.value = '';
             })
             .catch(function(e) {
-                console.log('[v8.61 CLIMA] geocoding erro:', e);
+                console.log('[v8.63 CLIMA] geocoding erro:', e);
                 _showError('Erro ao buscar cidade.', function() { window.climaBuscarCidade(); });
             });
     };
@@ -23905,6 +24039,733 @@ if ('launchQueue' in window) {
         }
     });
 
-    console.log('[v8.61 CLIMA] init completo');
+    console.log('[v8.63 CLIMA] init completo');
 })();
 </script>
+
+<!-- ===== v8.64: DEFEITO NA REDE ===== -->
+<script>
+(function() {
+  'use strict';
+
+  var LS_KEY = 'inspecao_pro_defeitos_rede';
+  var SOURCE_ID = 'src-defeitos-rede';
+  var LAYER_ID  = 'l-defeitos-rede';
+  var LAYER_CLICK_ID = 'l-defeitos-rede-click';
+
+  // ---- Helpers localStorage ----
+  function _lerDefeitos() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch(e) { return []; }
+  }
+  function _salvarDefeitos(lista) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(lista)); } catch(e) {}
+  }
+
+  // ---- Obter mapa ----
+  function _mapa() {
+    return window.__mapPodaManual__ || window.map || (typeof map !== 'undefined' ? map : null);
+  }
+
+  // ---- Toast simples ----
+  function _toast(msg, cor) {
+    cor = cor || '#333';
+    var el = document.getElementById('defeitoRedeToast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'defeitoRedeToast';
+      el.style.cssText = 'position:fixed;top:68px;left:50%;transform:translateX(-50%);padding:10px 22px;border-radius:22px;font-size:14px;font-weight:700;z-index:99999;pointer-events:none;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,0.4);transition:opacity 0.3s;color:#fff;';
+      document.body.appendChild(el);
+    }
+    el.style.background = cor;
+    el.textContent = msg;
+    el.style.opacity = '1';
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(function(){ el.style.opacity = '0'; setTimeout(function(){ el.style.display='none'; }, 300); }, 3500);
+  }
+
+  // ---- Renderizar GeoJSON layer de defeitos ----
+  function _buildGeoJSON(lista) {
+    return {
+      type: 'FeatureCollection',
+      features: lista.map(function(d) {
+        return {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: d.tracado },
+          properties: {
+            defeitoId: d.defeitoId,
+            userId: d.userId,
+            userName: d.userName,
+            cidade: d.cidade || '',
+            alimentador: d.alimentador || '',
+            dataHora: d.dataHora,
+            cor: '#E65100',
+            largura: d.largura || 5
+          }
+        };
+      })
+    };
+  }
+
+  function _atualizarLayer() {
+    var m = _mapa();
+    if (!m || !m.isStyleLoaded || !m.isStyleLoaded()) return;
+    var lista = _lerDefeitos();
+    var geojson = _buildGeoJSON(lista);
+    if (m.getSource(SOURCE_ID)) {
+      m.getSource(SOURCE_ID).setData(geojson);
+    } else {
+      m.addSource(SOURCE_ID, { type: 'geojson', data: geojson });
+      // Linha laranja visível para todos os usuários.
+      // podaManualLayer é removido via desativar(true) antes de chegar aqui,
+      // portanto não há duplicata para o criador.
+      m.addLayer({
+        id: LAYER_ID,
+        type: 'line',
+        source: SOURCE_ID,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': ['get', 'cor'], 'line-width': ['get', 'largura'], 'line-opacity': 0.92 }
+      });
+      // Camada invisível mais larga para facilitar clique — inclui TODOS
+      m.addLayer({
+        id: LAYER_CLICK_ID,
+        type: 'line',
+        source: SOURCE_ID,
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#E65100', 'line-width': 18, 'line-opacity': 0 }
+      });
+      // Cursor pointer ao passar sobre defeito
+      m.on('mouseenter', LAYER_CLICK_ID, function(){ var el = document.getElementById('map'); if(el) el.style.cursor='pointer'; });
+      m.on('mouseleave', LAYER_CLICK_ID, function(){ var el = document.getElementById('map'); if(el) el.style.cursor=''; });
+      // Clique no traço
+      m.on('click', LAYER_CLICK_ID, function(e) {
+        if (!e.features || !e.features.length) return;
+        var props = e.features[0].properties;
+        _abrirPopupDefeito(props, e.lngLat);
+      });
+    }
+  }
+
+  // ---- Popup ao clicar no traço ----
+  function _abrirPopupDefeito(props, lngLat) {
+    var m = _mapa();
+    if (!m) return;
+    var meuID = window.meuID || '';
+    var ehCriador = props.userId === meuID;
+    var dataStr = props.dataHora ? new Date(props.dataHora).toLocaleString('pt-BR') : '—';
+    var html =
+      '<div style="font-family:sans-serif;min-width:200px;max-width:280px;">' +
+        '<div style="font-size:15px;font-weight:900;color:#D32F2F;margin-bottom:6px;">⚡ Defeito na Rede</div>' +
+        '<div style="font-size:13px;color:#333;margin-bottom:3px;"><b>Marcado por:</b> ' + (props.userName || '—') + '</div>' +
+        '<div style="font-size:13px;color:#333;margin-bottom:3px;"><b>Data:</b> ' + dataStr + '</div>' +
+        (props.cidade ? '<div style="font-size:13px;color:#333;margin-bottom:3px;"><b>Cidade:</b> ' + props.cidade + '</div>' : '') +
+        (props.alimentador ? '<div style="font-size:13px;color:#333;margin-bottom:8px;"><b>Alimentador:</b> ' + props.alimentador + '</div>' : '') +
+        (ehCriador ? '<button id="__btnApagarDefeito" data-id="' + props.defeitoId + '" style="width:100%;padding:9px;background:#D32F2F;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer;">🗑 Apagar defeito</button>' : '') +
+      '</div>';
+
+    var popup = new maplibregl.Popup({ closeButton: true, maxWidth: '300px' })
+      .setLngLat(lngLat)
+      .setHTML(html)
+      .addTo(m);
+
+    // Attach handler directly after addTo() — popup.on('open') fires during addTo()
+    // so registering after the fact misses it. Use getElement() for scoped lookup.
+    var popupEl = popup.getElement();
+    if (popupEl) {
+      var btn = popupEl.querySelector('#__btnApagarDefeito');
+      if (btn) {
+        btn.onclick = function() {
+          var id = btn.getAttribute('data-id');
+          popup.remove();
+          _apagarDefeito(id);
+        };
+      }
+    }
+  }
+
+  // ---- Apagar defeito ----
+  function _apagarDefeito(defeitoId) {
+    var temaMQTT = window.TEMA_MQTT || 'inspecao_pro_podas_bebedouro_oficial';
+    var topico = temaMQTT + '/defeito_rede/' + defeitoId;
+    // Buscar dados do defeito antes de remover (para mensagem de chat)
+    var lista = _lerDefeitos();
+    var registro = lista.find(function(x){ return x.defeitoId === defeitoId; });
+    if (window.clienteMQTT && window.clienteMQTT.connected) {
+      // Payload vazio retained = tombstone: limpa o retained no broker para outros usuários
+      window.clienteMQTT.publish(topico, '', { qos: 1, retain: true }, function(){});
+      // Publicar aviso no chat
+      var meuID = window.meuID || '';
+      var userName = (typeof getAutorFormatado === 'function') ? getAutorFormatado() : (registro && registro.userName) || 'Desconhecido';
+      var partes = [];
+      if (registro && registro.alimentador) partes.push('alimentador ' + registro.alimentador);
+      if (registro && registro.cidade) partes.push(registro.cidade);
+      var localizacao = partes.length ? ' — ' + partes.join(', ') : '';
+      var msgChat = {
+        remetenteId: meuID,
+        autor: '⚡ DEFEITO NA REDE',
+        texto: '✅ DEFEITO NA REDE apagado por ' + userName + localizacao,
+        timestamp: Date.now(),
+        destino: 'todos',
+        isSistema: true
+      };
+      window.clienteMQTT.publish(temaMQTT, JSON.stringify({ acao: 'NOVA_MENSAGEM_CHAT', mensagem: msgChat }), { qos: 1 }, function(){});
+    }
+    window.__defeitoRede_remover(defeitoId);
+    // Remover o click listener do podaManualLayer (registrado para o criador)
+    var m = _mapa();
+    if (m && window.__defeitoRede_podaClickHandler) {
+      m.off('click', 'podaManualLayer', window.__defeitoRede_podaClickHandler);
+      window.__defeitoRede_podaClickHandler = null;
+    }
+    // Remover o tracado laranja da roçada (podaManualLayer) — desativar(true) chama limparTudo
+    if (window.podaManual && typeof window.podaManual.desativar === 'function') {
+      window.podaManual.desativar(true);
+    }
+    _toast('Defeito removido.', '#555');
+  }
+
+  // ---- API pública: renderizar defeito recebido via MQTT ----
+  window.__defeitoRede_renderizar = function(d) {
+    if (!d || !d.defeitoId || !d.tracado) return;
+    var lista = _lerDefeitos();
+    var idx = lista.findIndex(function(x){ return x.defeitoId === d.defeitoId; });
+    if (idx === -1) lista.push(d);
+    else lista[idx] = d;
+    _salvarDefeitos(lista);
+
+    if (d.userId && d.userId === window.meuID) {
+      // Criador: podaManualLayer já está visível — NÃO criar l-defeitos-rede por cima.
+      // Registrar click listener no podaManualLayer para abrir popup "Apagar defeito".
+      var m = _mapa();
+      if (m) {
+        // Remover listener anterior para evitar duplicatas em chamadas repetidas
+        if (window.__defeitoRede_podaClickHandler) {
+          m.off('click', 'podaManualLayer', window.__defeitoRede_podaClickHandler);
+        }
+        window.__defeitoRede_podaClickHandler = function(e) {
+          // Buscar o defeito do criador no localStorage
+          var lista2 = _lerDefeitos();
+          var meuDefeito = lista2.find(function(x){ return x.userId === window.meuID; });
+          if (!meuDefeito) return;
+          var lngLat = e.lngLat;
+          _abrirPopupDefeito({
+            defeitoId: meuDefeito.defeitoId,
+            userId: meuDefeito.userId,
+            userName: meuDefeito.userName,
+            cidade: meuDefeito.cidade,
+            alimentador: meuDefeito.alimentador,
+            dataHora: meuDefeito.dataHora
+          }, lngLat);
+        };
+        m.on('click', 'podaManualLayer', window.__defeitoRede_podaClickHandler);
+      }
+      return; // Não chamar _atualizarLayer — sem linha duplicada
+    }
+
+    // Outros usuários: salvar no localStorage apenas (sem renderizar layer no mapa).
+    // Defeitos de outros aparecem via notificação no chat — sem linhas no mapa por enquanto.
+  };
+
+  // ---- API pública: remover defeito ----
+  window.__defeitoRede_remover = function(defeitoId) {
+    var lista = _lerDefeitos();
+    // Verificar dono ANTES de filtrar (para decidir se chama _atualizarLayer)
+    var registro = lista.find(function(x){ return x.defeitoId === defeitoId; });
+    // Se registro não existe, o defeito já foi removido (echo MQTT ou tombstone duplicado).
+    // Retornar imediatamente — não chamar _atualizarLayer para não criar LAYER_ID indesejado.
+    if (!registro) return;
+    var eraCriador = registro.userId && registro.userId === window.meuID;
+    _salvarDefeitos(lista.filter(function(x){ return x.defeitoId !== defeitoId; }));
+    if (eraCriador) {
+      // Criador: LAYER_ID nunca foi criado — não chamar _atualizarLayer.
+      // podaManualLayer já é removido por desativar(true) em _apagarDefeito.
+      return;
+    }
+    // Outros usuários: apenas remover do localStorage (sem atualizar layer no mapa).
+  };
+
+  // ---- Publicar defeito via MQTT e salvar localmente ----
+  function _publicarDefeito(tracado, cidade, alimentador) {
+    var meuID = window.meuID || ('anon_' + Math.random().toString(36).substring(2,8));
+    var userName = (function(){
+      try {
+        var modo = localStorage.getItem('modoTrabalho') || 'sozinho';
+        var ident = localStorage.getItem('usuarioIdentificacao') || 'Desconhecido';
+        return modo === 'equipe' ? 'Equipe ' + ident : ident;
+      } catch(e) { return 'Desconhecido'; }
+    })();
+
+    var defeitoId = 'def_' + meuID + '_' + Date.now();
+    var payload = {
+      defeitoId: defeitoId,
+      userId: meuID,
+      userName: userName,
+      cidade: cidade,
+      alimentador: alimentador,
+      dataHora: Date.now(),
+      tracado: tracado,
+      cor: '#E65100',
+      largura: 5
+    };
+
+    var temaMQTT = window.TEMA_MQTT || 'inspecao_pro_podas_bebedouro_oficial';
+    var topico = temaMQTT + '/defeito_rede/' + defeitoId;
+    window.__defeitoRede_renderizar(payload);
+
+    if (window.clienteMQTT && window.clienteMQTT.connected) {
+      // Publicar defeito retido (retained) para novos usuários receberem ao conectar
+      window.clienteMQTT.publish(topico, JSON.stringify(payload), { qos: 1, retain: true }, function(){});
+      // Publicar aviso no chat para todos os usuários online
+      var partes = [];
+      if (alimentador) partes.push('alimentador ' + alimentador);
+      if (cidade) partes.push(cidade);
+      var localizacao = partes.length ? ' — ' + partes.join(', ') : '';
+      var msgChat = {
+        remetenteId: meuID,
+        autor: '⚡ DEFEITO NA REDE',
+        texto: '⚡ DEFEITO NA REDE marcado por ' + userName + localizacao,
+        timestamp: Date.now(),
+        destino: 'todos',
+        isSistema: true
+      };
+      window.clienteMQTT.publish(temaMQTT, JSON.stringify({ acao: 'NOVA_MENSAGEM_CHAT', mensagem: msgChat }), { qos: 1 }, function(){});
+    }
+
+    _toast('Defeito marcado ✅', '#2E7D32');
+  }
+
+  // ---- Modal de confirmação de defeito (cidade + alimentador) ----
+  function _abrirModalConfirmarDefeito(tracado, onConfirmar, onCancelar) {
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;opacity:0;transition:opacity .2s;';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:18px;padding:26px 22px;max-width:400px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.35);transform:scale(0.92);transition:transform .25s cubic-bezier(0.16,1,0.3,1);';
+
+    card.innerHTML =
+      '<div style="font-size:32px;text-align:center;margin-bottom:8px;">⚡</div>' +
+      '<div style="font-size:16px;font-weight:900;color:#D32F2F;text-align:center;margin-bottom:16px;">Confirmar Defeito na Rede</div>' +
+      '<label style="display:block;font-size:13px;font-weight:700;color:#555;margin-bottom:4px;">Cidade</label>' +
+      '<input id="__defeitoCidade" type="text" placeholder="Ex: Bebedouro" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:12px;">' +
+      '<label style="display:block;font-size:13px;font-weight:700;color:#555;margin-bottom:4px;">Alimentador</label>' +
+      '<input id="__defeitoAlimentador" type="text" placeholder="Ex: bebo4" style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:18px;">' +
+      '<div style="display:flex;gap:10px;">' +
+        '<button id="__btnDefeitoCancelar" style="flex:1;padding:12px;background:#eee;color:#555;border:none;border-radius:10px;font-size:14px;cursor:pointer;">Cancelar</button>' +
+        '<button id="__btnDefeitoConfirmar" style="flex:2;padding:12px;background:#D32F2F;color:#fff;border:none;border-radius:10px;font-weight:900;font-size:14px;cursor:pointer;">✅ Marcar defeito</button>' +
+      '</div>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function(){
+      overlay.style.opacity = '1';
+      card.style.transform = 'scale(1)';
+    });
+
+    function _fechar() {
+      overlay.style.opacity = '0';
+      card.style.transform = 'scale(0.92)';
+      setTimeout(function(){ try { overlay.remove(); } catch(e){} }, 200);
+    }
+
+    document.getElementById('__btnDefeitoCancelar').onclick = function(){
+      _fechar();
+      if (onCancelar) onCancelar();
+    };
+
+    document.getElementById('__btnDefeitoConfirmar').onclick = function(){
+      var cidade = (document.getElementById('__defeitoCidade').value || '').trim();
+      var alimentador = (document.getElementById('__defeitoAlimentador').value || '').trim();
+      _fechar();
+      onConfirmar(cidade, alimentador);
+    };
+  }
+
+  // ---- Modal de escolha: roçada ou defeito (aparece APÓS o traço ser desenhado) ----
+  function _abrirModalEscolha(segmentos, onRocada, onDefeito) {
+    var overlay = document.createElement('div');
+    overlay.id = 'modalEscolhaRocadaDefeito';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;opacity:0;transition:opacity .2s;';
+
+    var card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:18px;padding:28px 22px;max-width:400px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.35);text-align:center;transform:scale(0.92);transition:transform .25s cubic-bezier(0.16,1,0.3,1);';
+
+    card.innerHTML =
+      '<div style="font-size:36px;margin-bottom:8px;">🌿⚡</div>' +
+      '<div style="font-size:17px;font-weight:900;color:#333;margin-bottom:6px;">O que deseja marcar?</div>' +
+      '<div style="font-size:13px;color:#666;margin-bottom:22px;">Trecho desenhado. Escolha a ação.</div>' +
+      '<div style="display:flex;flex-direction:column;gap:12px;">' +
+        '<button id="__btnEscolhaDefeito" style="padding:14px 10px;background:#D32F2F;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🔧 Mostrar defeito na rede</button>' +
+        '<button id="__btnEscolhaRocada" style="padding:14px 10px;background:#E65100;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🌿 Marcar roçada</button>' +
+      '</div>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    requestAnimationFrame(function(){
+      overlay.style.opacity = '1';
+      card.style.transform = 'scale(1)';
+    });
+
+    function _fechar() {
+      overlay.style.opacity = '0';
+      card.style.transform = 'scale(0.92)';
+      setTimeout(function(){ try { overlay.remove(); } catch(e){} }, 200);
+    }
+
+    card.querySelector('#__btnEscolhaRocada').onclick = function(){
+      _fechar();
+      setTimeout(onRocada, 220);
+    };
+
+    card.querySelector('#__btnEscolhaDefeito').onclick = function(){
+      _fechar();
+      // Extrair coordenadas dos segmentos do traço desenhado
+      // Estrutura: segmentos = [{ p1:{lng,lat}, p2:{lng,lat}, texto }, ...]
+      var tracado = [];
+      var segsRef = (segmentos && segmentos.length) ? segmentos
+        : (window.podaManual && window.podaManual.getSegmentos ? window.podaManual.getSegmentos() : []);
+      if (segsRef && segsRef.length) {
+        // Reconstrói a polilinha: p1 do primeiro segmento + p2 de todos
+        tracado.push([segsRef[0].p1.lng, segsRef[0].p1.lat]);
+        segsRef.forEach(function(seg) {
+          tracado.push([seg.p2.lng, seg.p2.lat]);
+        });
+      }
+      setTimeout(function(){
+        _abrirModalConfirmarDefeito(tracado, function(cidade, alimentador){
+          _publicarDefeito(tracado, cidade, alimentador);
+          // NÃO chamar desativar(true) — o podaManualLayer deve PERMANECER visível
+          // para o criador como o tracado laranja do defeito.
+          // Apenas desativar o modo de desenho (sem apagar o layer).
+          if (window.podaManual && typeof window.podaManual.desativar === 'function') {
+            window.podaManual.desativar();
+          }
+        }, function(){
+          // Cancelou: usuário pode redesenhar
+        });
+      }, 220);
+    };
+  }
+
+  // ---- Hook: interceptar abrirModalEncerrar ----
+  window.__podaManual_onEncerrar = function(segmentos, onRocada) {
+    // Guard: se o modal já está aberto (duplo disparo de click+dblclick), ignorar
+    if (document.getElementById('modalEscolhaRocadaDefeito')) return;
+    _abrirModalEscolha(segmentos, onRocada, function(){});
+  };
+
+  // ---- Inicialização: defeitos carregados do localStorage apenas como dados de referência.
+  // _atualizarLayer NÃO é chamado aqui — defeitos de outros usuários chegam via MQTT retained
+  // e são tratados em __defeitoRede_renderizar. Evita renderizar lixo de sessões anteriores.
+  function _init() {
+    // Sem-op: inicialização visual removida intencionalmente.
+    // O MQTT retained cuida de entregar defeitos ativos de outros usuários.
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(_init, 800); });
+  } else {
+    setTimeout(_init, 800);
+  }
+
+  console.log('[v8.64 DEFEITO_REDE] init completo');
+})();
+</script>
+<!-- ===== FIM DEFEITO NA REDE ===== -->
+
+<!-- ===== v8.65 KML/KMZ COMPARTILHADOS (Firebase) ===== -->
+<script>
+(function() {
+  'use strict';
+
+  // ── Utilitários ──────────────────────────────────────────────────────────
+  function _fmtTamanho(bytes) {
+    if (!bytes) return '?';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(2) + ' MB';
+  }
+
+  function _fmtData(ts) {
+    if (!ts) return '';
+    var d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  function _userId() {
+    try { return window.meuID || localStorage.getItem('userId') || 'anonimo'; } catch(e) { return 'anonimo'; }
+  }
+
+  // ── Upload automático para Firebase ──────────────────────────────────────
+  async function _uploadKmlFirebase(file) {
+    try {
+      var db = window._kmlFirestore;
+      var st = window._kmlStorage;
+      if (!db || !st) { console.warn('[KML-Firebase] não inicializado'); return; }
+
+      // Deduplicação: mesmo nome E mesmo tamanho
+      try {
+        var snap = await db.collection('kml_files')
+          .where('nome', '==', file.name)
+          .where('tamanho', '==', file.size)
+          .limit(1)
+          .get();
+        if (!snap.empty) {
+          console.log('[KML-Firebase] arquivo já existe no servidor, pulando upload:', file.name);
+          return;
+        }
+      } catch(eDedup) {
+        // Se falhar a dedup (ex: permissão), continua tentando o upload
+        console.warn('[KML-Firebase] dedup falhou, tentando upload mesmo assim:', eDedup && eDedup.message);
+      }
+
+      // Upload para Storage
+      var ref = st.ref('kml-compartilhados/' + file.name);
+      try {
+        await ref.put(file);
+      } catch(eStorage) {
+        console.warn('[KML-Firebase] erro no upload para Storage:', eStorage);
+        return;
+      }
+      var url = await ref.getDownloadURL();
+
+      // Salvar metadados no Firestore
+      try {
+        await db.collection('kml_files').add({
+          nome: file.name,
+          tamanho: file.size,
+          dataUpload: firebase.firestore.FieldValue.serverTimestamp(),
+          uploadedBy: _userId(),
+          url: url
+        });
+        console.log('[KML-Firebase] upload concluído:', file.name);
+      } catch(eFirestore) {
+        var msg = eFirestore && eFirestore.message ? eFirestore.message : String(eFirestore);
+        if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('Missing') !== -1) {
+          console.warn(
+            '[KML-Firebase] PERMISSÃO NEGADA no Firestore.\n' +
+            'Adicione esta regra no Firebase Console > Firestore > Rules:\n\n' +
+            '  match /kml_files/{docId} {\n' +
+            '    allow read, write: if true;\n' +
+            '  }\n\n' +
+            'Acesse: https://console.firebase.google.com/project/inspecaopro-1989/firestore/rules'
+          );
+        } else {
+          console.warn('[KML-Firebase] erro ao salvar metadados no Firestore:', eFirestore);
+        }
+      }
+    } catch(e) {
+      console.warn('[KML-Firebase] erro no upload:', e);
+    }
+  }
+
+  // Hook no listener existente de arquivoUpload
+  // Aguarda DOM pronto para garantir que o listener original já foi registrado
+  function _hookUpload() {
+    var input = document.getElementById('arquivoUpload');
+    if (!input) { setTimeout(_hookUpload, 500); return; }
+    input.addEventListener('change', function(e) {
+      var files = Array.from(e.target.files || []);
+      files.forEach(function(file) {
+        if (file.name.toLowerCase() === 'bancocap.kmz') return; // arquivo protegido
+        _uploadKmlFirebase(file);
+      });
+    });
+    console.log('[KML-Firebase] hook de upload registrado');
+  }
+
+  // ── Modal: abrir / fechar ─────────────────────────────────────────────────
+  window.abrirKmlCompartilhados = function() {
+    var overlay = document.getElementById('kmlCompartOverlay');
+    if (!overlay) return;
+    overlay.classList.add('aberto');
+    _carregarLista();
+  };
+
+  window.fecharKmlCompartilhados = function() {
+    var overlay = document.getElementById('kmlCompartOverlay');
+    if (overlay) overlay.classList.remove('aberto');
+  };
+
+  // ── Cache de itens da lista (evita passar URL/nome em onclick inline) ────
+  var _kmlcItems = [];
+
+  // ── Carregar lista do Firestore ───────────────────────────────────────────
+  async function _carregarLista() {
+    var body = document.getElementById('kmlCompartBody');
+    if (!body) return;
+    body.innerHTML = '<div class="kmlc-loading">⏳ Carregando...</div>';
+
+    try {
+      var db = window._kmlFirestore;
+      if (!db) { body.innerHTML = '<div class="kmlc-empty">Firebase não disponível.</div>'; return; }
+
+      var snap = await db.collection('kml_files')
+        .orderBy('dataUpload', 'desc')
+        .limit(100)
+        .get();
+
+      if (snap.empty) {
+        body.innerHTML = '<div class="kmlc-empty">Nenhum arquivo compartilhado ainda.<br>Importe um KML/KMZ para compartilhar automaticamente.</div>';
+        return;
+      }
+
+      _kmlcItems = [];
+      var html = '';
+      snap.forEach(function(doc) {
+        var d = doc.data();
+        var idx = _kmlcItems.length;
+        _kmlcItems.push({ url: d.url, nome: d.nome });
+        html += '<div class="kmlc-item">' +
+          '<div class="kmlc-item-name">' + _esc(d.nome) + '</div>' +
+          '<div class="kmlc-item-meta">' + _fmtTamanho(d.tamanho) + ' &bull; ' + _fmtData(d.dataUpload) + '</div>' +
+          '<div class="kmlc-item-btns">' +
+            '<button class="kmlc-btn-dl" onclick="_kmlcDownload(' + idx + ')">⬇️ Download</button>' +
+            '<button class="kmlc-btn-load" onclick="_kmlcCarregarNoMapa(' + idx + ')">🗺️ Carregar no meu mapa</button>' +
+          '</div>' +
+        '</div>';
+      });
+      body.innerHTML = html;
+    } catch(e) {
+      console.error('[KML-Firebase] erro ao carregar lista:', e);
+      var msg = e && e.message ? e.message : String(e);
+      if (msg.indexOf('permission') !== -1 || msg.indexOf('insufficient') !== -1 || msg.indexOf('Missing') !== -1) {
+        body.innerHTML = '<div class="kmlc-empty">⚠️ Permissão negada no Firestore.<br><br>' +
+          'Adicione esta regra no <a href="https://console.firebase.google.com/project/inspecaopro-1989/firestore/rules" target="_blank" style="color:#1565C0">Firebase Console &gt; Firestore &gt; Rules</a>:<br><br>' +
+          '<code style="font-size:11px;background:#f5f5f5;padding:6px;display:block;border-radius:6px;white-space:pre">' +
+          'match /kml_files/{docId} {\n  allow read, write: if true;\n}</code></div>';
+      } else {
+        body.innerHTML = '<div class="kmlc-empty">Erro ao carregar lista. Verifique a conexão.</div>';
+      }
+    }
+  }
+
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Helper: ref do Storage pelo nome do arquivo ───────────────────────────
+  function _storageRef(nome) {
+    return firebase.storage().ref('kml-compartilhados/' + nome);
+  }
+
+  // ── Helper: XHR blob — SW agora faz passthrough para firebasestorage ──────
+  function _xhrBlob(url) {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.responseType = 'blob';
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(xhr.response); }
+        else { reject(new Error('XHR HTTP ' + xhr.status)); }
+      };
+      xhr.onerror = function() { reject(new Error('XHR network error')); };
+      xhr.open('GET', url);
+      xhr.send();
+    });
+  }
+
+  // ── Helper: XHR text — para KML (não-KMZ) ────────────────────────────────
+  function _xhrText(url) {
+    return new Promise(function(resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.responseType = 'text';
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) { resolve(xhr.responseText || ''); }
+        else { reject(new Error('XHR HTTP ' + xhr.status)); }
+      };
+      xhr.onerror = function() { reject(new Error('XHR network error')); };
+      xhr.open('GET', url);
+      xhr.send();
+    });
+  }
+
+  // ── Download: getDownloadURL() → window.open (sem XHR, sem CORS) ─────────
+  window._kmlcDownload = function(idx) {
+    var item = _kmlcItems[idx];
+    if (!item) { console.error('[KML-Firebase] item não encontrado:', idx); return; }
+    var nome = item.nome;
+    _storageRef(nome).getDownloadURL()
+      .then(function(signedUrl) {
+        // window.open com URL assinada: browser navega diretamente, sem CORS
+        var a = document.createElement('a');
+        a.href = signedUrl;
+        a.download = nome;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() { document.body.removeChild(a); }, 500);
+      })
+      .catch(function(e) {
+        console.error('[KML-Firebase] erro no download:', e);
+        alert('Erro ao baixar ' + nome + ': ' + (e && e.message ? e.message : String(e)));
+      });
+  };
+
+  // ── Carregar no mapa: getDownloadURL() → XHR (SW faz passthrough) ─────────
+  window._kmlcCarregarNoMapa = function(idx) {
+    var item = _kmlcItems[idx];
+    if (!item) { console.error('[KML-Firebase] item não encontrado:', idx); return; }
+    var nome = item.nome;
+
+    if (typeof mostrarNotificacaoRealTime === 'function') {
+      mostrarNotificacaoRealTime('⏳ Baixando ' + nome + '...', '#333', false, 8000);
+    }
+
+    _storageRef(nome).getDownloadURL()
+      .then(function(signedUrl) {
+        // KMZ precisa de blob binário; KML pode usar texto direto
+        if (nome.toLowerCase().endsWith('.kmz')) {
+          return _xhrBlob(signedUrl).then(function(blob) {
+            return { blob: blob, signedUrl: signedUrl };
+          });
+        } else {
+          return _xhrText(signedUrl).then(function(txt) {
+            return { text: txt.replace(/^\uFEFF/, ''), signedUrl: signedUrl };
+          });
+        }
+      })
+      .then(function(result) {
+        if (result.text !== undefined) {
+          // KML: texto já disponível
+          if (!result.text) throw new Error('Arquivo vazio ou ilegível');
+          var fakeFile = new File([result.text], nome, { type: 'application/vnd.google-earth.kml+xml' });
+          fecharKmlCompartilhados();
+          processarKML(result.text, nome, fakeFile, function() {});
+          if (window.arquivosVisiveis) window.arquivosVisiveis[nome] = true;
+          if (typeof mostrarNotificacaoRealTime === 'function') {
+            mostrarNotificacaoRealTime('✅ ' + nome + ' carregado no mapa!', '#2E7D32', false, 4000);
+          }
+        } else {
+          // KMZ: extrair KML do blob
+          var file = new File([result.blob], nome, { type: 'application/vnd.google-earth.kmz' });
+          if (typeof extrairTextoDoKMZ !== 'function') throw new Error('extrairTextoDoKMZ não disponível');
+          return Promise.resolve(extrairTextoDoKMZ(file)).then(function(kmlStr) {
+            if (!kmlStr) throw new Error('KMZ vazio ou ilegível');
+            fecharKmlCompartilhados();
+            processarKML(kmlStr, nome, file, function() {});
+            if (window.arquivosVisiveis) window.arquivosVisiveis[nome] = true;
+            if (typeof mostrarNotificacaoRealTime === 'function') {
+              mostrarNotificacaoRealTime('✅ ' + nome + ' carregado no mapa!', '#2E7D32', false, 4000);
+            }
+          });
+        }
+      })
+      .catch(function(e) {
+        console.error('[KML-Firebase] erro ao carregar no mapa:', e);
+        alert('Erro ao carregar ' + nome + ': ' + (e && e.message ? e.message : String(e)));
+      });
+  };
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _hookUpload);
+  } else {
+    _hookUpload();
+  }
+
+  console.log('[v8.65 KML-COMPARTILHADOS] init completo');
+})();
+</script>
+<!-- ===== FIM KML/KMZ COMPARTILHADOS ===== -->
