@@ -5965,10 +5965,14 @@ window.addEventListener('load', () => {
                     const allFeatures = [];
                     console.log('[loadVisibleFiles] listFiles retornou', files.length, 'arquivos');
                     console.log('[loadVisibleFiles] visíveis:', vis.length);
-                    for (const f of vis) {
-                        const feats = await loadFile(f.nome);
-                        console.log('[loadVisibleFiles]   ←', f.nome, ':', feats.length, 'features');
-                        allFeatures.push(...feats);
+                    const _BATCH_SIZE = 4;
+                    for (let _bi = 0; _bi < vis.length; _bi += _BATCH_SIZE) {
+                        const _lote = vis.slice(_bi, _bi + _BATCH_SIZE);
+                        const _resultados = await Promise.all(_lote.map(f => loadFile(f.nome)));
+                        _resultados.forEach((_feats, _j) => {
+                            console.log('[loadVisibleFiles]   ←', _lote[_j].nome, ':', _feats.length, 'features');
+                            allFeatures.push(..._feats);
+                        });
                     }
                     console.log('[loadVisibleFiles] TOTAL features carregadas:', allFeatures.length);
                     return allFeatures;
@@ -7474,6 +7478,14 @@ function _ocultarProgressoKML() {
     if (bar) bar.style.display = 'none';
 }
 
+// Otimização: flag para suprimir renderizações intermediárias durante importação em lote
+if (typeof window._renderizacaoPendente === 'undefined') window._renderizacaoPendente = false;
+function _renderizarSeNaoPendente() {
+    if (!window._renderizacaoPendente) {
+        try { renderizarMapa(); } catch(e) { console.warn('[_renderizarSeNaoPendente] erro:', e); }
+    }
+}
+
 function processarKML(kmlStr, fileName, originalFile, onConcluido) {
     // Sugere ao GC liberar memória antes de processar arquivo grande
     if (window.gc) window.gc();
@@ -7695,7 +7707,7 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
             StorageManager.saveFile(fileName, featuresDoArquivo)
                 .catch(e => console.error('[processarKML] Erro ao salvar arquivo:', fileName, e));
             // Renderizar mapa IMEDIATAMENTE pra todas as chaves aparecerem (não esperar comentários)
-            try { renderizarMapa(); if (typeof aplicarFiltros === 'function') aplicarFiltros(); } catch(e) { console.warn('[processarKML] erro ao renderizar:', e); }
+            try { _renderizarSeNaoPendente(); if (typeof aplicarFiltros === 'function') aplicarFiltros(); } catch(e) { console.warn('[processarKML] erro ao renderizar:', e); }
             // Reaplicar comentários salvos anteriormente (permite reimportar KML sem perder comentários)
             StorageManager.loadFile('comentarios-' + fileName).then(function(comentariosSalvos) {
                 if (!comentariosSalvos || comentariosSalvos.length === 0) return;
@@ -7722,13 +7734,13 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
                 // Re-salvar arquivo com comentários reaplicados
                 const featsAtualizadas = geoJsonGlobal.features.filter(function(f) { return f.properties && f.properties.sourceFile === fileName; });
                 StorageManager.saveFile(fileName, featsAtualizadas).catch(function(e) { console.error('[processarKML] Erro ao re-salvar com comentários:', e); });
-                renderizarMapa();
+                _renderizarSeNaoPendente();
             }).catch(function(e) { /* sem comentários salvos, normal */ });
             if (originalFile && !_isMobile && StorageManager.hasHandle()) {
                 StorageManager.saveOriginalFile(originalFile).catch(e => console.error('Erro ao copiar original:', e));
             }
 
-            renderizarMapa();
+            _renderizarSeNaoPendente();
             atualizarPainel();
             // Celular: adia salvarTudo para depois de TODOS os arquivos (evita serialização repetida que causa OOM)
             if (!document.body.classList.contains('modo-celular')) {
