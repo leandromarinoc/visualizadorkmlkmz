@@ -3999,9 +3999,44 @@ window.addEventListener('load', () => {
             setTimeout(() => notif.close(), 5000); 
         }
 
+        // ---- SOM DE NOTIFICAÇÃO (Web Audio API, sem arquivo externo) ----
+        let _audioCtxGlobal = null;
+        let _ultimoSomNotif = 0;
+        const _THROTTLE_SOM_MS = 2000;
+
+        function _tocarSomNotificacao() {
+            try {
+                const agora = Date.now();
+                if (agora - _ultimoSomNotif < _THROTTLE_SOM_MS) return;
+                _ultimoSomNotif = agora;
+                if (!_audioCtxGlobal) {
+                    _audioCtxGlobal = new (window.AudioContext || window.webkitAudioContext)();
+                    // Resume no primeiro clique do usuário (política do browser)
+                    document.addEventListener('click', function _resumeAudio() {
+                        if (_audioCtxGlobal && _audioCtxGlobal.state === 'suspended') _audioCtxGlobal.resume();
+                        document.removeEventListener('click', _resumeAudio);
+                    }, { once: true });
+                }
+                if (_audioCtxGlobal.state === 'suspended') _audioCtxGlobal.resume();
+                const osc = _audioCtxGlobal.createOscillator();
+                const gain = _audioCtxGlobal.createGain();
+                osc.connect(gain);
+                gain.connect(_audioCtxGlobal.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(700, _audioCtxGlobal.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(500, _audioCtxGlobal.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.7, _audioCtxGlobal.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, _audioCtxGlobal.currentTime + 0.28);
+                osc.start(_audioCtxGlobal.currentTime);
+                osc.stop(_audioCtxGlobal.currentTime + 0.28);
+            } catch (e) { /* áudio indisponível, ignora silenciosamente */ }
+        }
+        // ---- FIM SOM DE NOTIFICAÇÃO ----
+
         let liveToastTimeout;
         function mostrarNotificacaoRealTime(mensagemHTML, corBorda, ehChat = false, duracaoMs = 6000) {
             if (!ehChat && _notifIsSuppressed()) return;
+            _tocarSomNotificacao();
             const toast = document.getElementById('liveToast');
             const temBotaoFechar = duracaoMs === 0;
             toast.innerHTML = mensagemHTML + (temBotaoFechar
