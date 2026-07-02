@@ -4116,7 +4116,8 @@ window.addEventListener('load', () => {
                 const ll = userMarker ? userMarker.getLngLat() : null;
                 mqttPublish(TEMA_MQTT, {
                     acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
-                    lng: ll ? ll.lng : null, lat: ll ? ll.lat : null
+                    lng: ll ? ll.lng : null, lat: ll ? ll.lat : null,
+                    cidade: _getCidadeUsuario()
                 });
             }, 25000);
             window._heartbeatIntervalId = _heartbeatInterval;
@@ -4164,7 +4165,8 @@ window.addEventListener('load', () => {
                         const ll = userMarker ? userMarker.getLngLat() : null;
                         mqttPublish(TEMA_MQTT, {
                             acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
-                            lng: ll ? ll.lng : null, lat: ll ? ll.lat : null
+                            lng: ll ? ll.lng : null, lat: ll ? ll.lat : null,
+                            cidade: _getCidadeUsuario()
                         });
                     }, 600);
                     _iniciarHeartbeat();
@@ -4405,6 +4407,13 @@ window.addEventListener('load', () => {
             }
             else if (msg.acao === "PRESENCA_ONLINE") {
                 if (msg.remetente === meuID) return;
+                // Notifica primeira aparição do colega nesta sessão
+                if (!window._usuariosJaNotificados) window._usuariosJaNotificados = new Set();
+                if (!window._usuariosJaNotificados.has(msg.remetente)) {
+                    window._usuariosJaNotificados.add(msg.remetente);
+                    const cidadeColega = msg.cidade ? ` em ${msg.cidade}` : '';
+                    mostrarNotificacaoRealTime(`🟢 <b>${msg.autor}</b> está online${cidadeColega}`, '#4CAF50', false, 2000);
+                }
                 // Atualiza marcador no mapa quando recebe posicao do colega
                 if (msg.lng != null && msg.lat != null) {
                     atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat);
@@ -12259,6 +12268,27 @@ function _getCidadeUsuario() {
     return window.cidadeUsuario || localStorage.getItem('cidadeUsuario') || '';
 }
 
+function _inicializarCidadeUsuario() {
+    if (window.cidadeUsuario) return;
+    const cached = localStorage.getItem('cidadeUsuario');
+    if (cached) { window.cidadeUsuario = cached; return; }
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude, lon = pos.coords.longitude;
+        fetch('https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lon)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                const cidade = data.address && (data.address.city || data.address.town || data.address.village || data.address.county) || '';
+                if (cidade) {
+                    window.cidadeUsuario = cidade;
+                    localStorage.setItem('cidadeUsuario', cidade);
+                }
+            })
+            .catch(function(){});
+    }, function(){}, { enableHighAccuracy: false, timeout: 8000, maximumAge: 3600000 });
+}
+_inicializarCidadeUsuario();
+
 window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
     const textarea = document.getElementById('txtComentario_' + uid);
     if (!textarea) return;
@@ -12293,6 +12323,9 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
             var _payloadComCriar = { acao: 'COMENTARIO_CHAVE', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: agora, foto: fotoStaged || '' };
             mqttPublish(TEMA_MQTT, _payloadComCriar);
             if (chaveNome) mqttPublish(TEMA_MQTT + '/comentario/' + (window._topicoNomeChave ? window._topicoNomeChave(chaveNome) : chaveId), _payloadComCriar, { retain: true, qos: 1 });
+        }
+        if (typeof enviarMensagemSistemaChat === 'function') {
+            enviarMensagemSistemaChat(`💬 <b>${autor}</b> comentou na chave <b style="color:#FF9800;">${chaveNome || chaveId}</b>`);
         }
         if (typeof __wppCompartilharAcao === 'function') {
             __wppCompartilharAcao({
@@ -12680,6 +12713,7 @@ window.apagarInterligacao = function(featId) {
         // Tombstone retained: limpa do broker pra usuários offline não receberem versão antiga
     mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat, data: Date.now() }, { retain: false, qos: 1 });
     mqttPublish(TEMA_MQTT + '/interligacao/' + featId, '', { retain: true, qos: 1 });
+        if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
     }
 };
 
