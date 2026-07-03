@@ -662,7 +662,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .anim-storm { display:inline-block; animation:stormFlash 2s ease-in-out infinite; }
         .anim-snow { display:inline-block; animation:snowFall 3s ease-in-out infinite alternate; }
         .anim-fog { display:inline-block; animation:fogPulse 3s ease-in-out infinite; }
-        /* v8.65 KML/KMZ COMPARTILHADOS */
+        /* v8.67 KML/KMZ COMPARTILHADOS */
         #btnKmlCompartilhado { position: absolute; top: 310px; right: 10px; z-index: 1000; background: #111 !important; display: flex; box-shadow: inset 3px 0 0 #333, 0 4px 12px rgba(0,0,0,0.35); }
         body.modo-celular #btnKmlCompartilhado { background: #111 !important; }
         #kmlCompartOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9100; align-items:center; justify-content:center; }
@@ -2228,10 +2228,10 @@ document.onkeydown = function(e) {
 
         <button id="btnClima" class="btn-circular" onclick="toggleClimaCard()" title="Clima">🌦️<span style="font-size:8px; font-weight:900;">CLIMA</span></button>
 
-        <!-- v8.65 BOTÃO KML/KMZ COMPARTILHADOS -->
+        <!-- v8.67 BOTÃO KML/KMZ COMPARTILHADOS -->
         <button id="btnKmlCompartilhado" class="btn-circular" onclick="abrirKmlCompartilhados()" title="KML/KMZ compartilhados">📂<span style="font-size:7px; font-weight:900;">KML/KMZ</span></button>
 
-        <!-- v8.65 MODAL KML/KMZ COMPARTILHADOS -->
+        <!-- v8.67 MODAL KML/KMZ COMPARTILHADOS -->
         <div id="kmlCompartOverlay" onclick="if(event.target===this)fecharKmlCompartilhados()">
             <div id="kmlCompartCard">
                 <div class="kmlc-header">
@@ -4412,7 +4412,7 @@ window.addEventListener('load', () => {
                         return;
                     }
 
-                    // v8.64: defeito na rede
+                    // v8.67: defeito na rede
                     if (topic.startsWith(TEMA_MQTT + '/defeito_rede/')) {
                         const defeitoId = topic.substring((TEMA_MQTT + '/defeito_rede/').length);
                         if (!payload) {
@@ -19331,7 +19331,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       mostrarToast('Marque pelo menos um segmento antes de encerrar.');
       return;
     }
-    // v8.64: hook externo para interceptar (ex: modal escolha roçada/defeito)
+    // v8.67: hook externo para interceptar (ex: modal escolha roçada/defeito)
     if (typeof window.__podaManual_onEncerrar === 'function') {
       window.__podaManual_onEncerrar(segmentos, function() {
         // callback: prosseguir com fluxo original de roçada
@@ -24609,7 +24609,7 @@ if ('launchQueue' in window) {
 })();
 </script>
 
-<!-- ===== v8.64: DEFEITO NA REDE ===== -->
+<!-- ===== v8.67: DEFEITO NA REDE ===== -->
 <script>
 (function() {
   'use strict';
@@ -25174,12 +25174,12 @@ if ('launchQueue' in window) {
     setTimeout(_init, 800);
   }
 
-  console.log('[v8.64 DEFEITO_REDE] init completo');
+  console.log('[v8.67 DEFEITO_REDE] init completo');
 })();
 </script>
 <!-- ===== FIM DEFEITO NA REDE ===== -->
 
-<!-- ===== v8.65 KML/KMZ COMPARTILHADOS (Firebase) ===== -->
+<!-- ===== v8.67 KML/KMZ COMPARTILHADOS (Firebase) ===== -->
 <script>
 (function() {
   'use strict';
@@ -25635,7 +25635,7 @@ if ('launchQueue' in window) {
     _hookUpload();
   }
 
-  console.log('[v8.65 KML-COMPARTILHADOS] init completo');
+  console.log('[v8.67 KML-COMPARTILHADOS] init completo');
 })();
 </script>
 <!-- ===== FIM KML/KMZ COMPARTILHADOS ===== -->
