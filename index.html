@@ -676,11 +676,16 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .kmlc-item { border:1px solid #e0e0e0; border-radius:9px; padding:9px 11px; margin-bottom:8px; background:#fafafa; }
         .kmlc-item-name { font-size:13px; font-weight:700; color:#222; word-break:break-all; margin-bottom:3px; }
         .kmlc-item-meta { font-size:11px; color:#777; margin-bottom:7px; }
-        .kmlc-item-btns { display:flex; gap:7px; }
+        .kmlc-item-btns { display:flex; flex-wrap:wrap; gap:7px; }
         .kmlc-btn-dl { flex:1; background:#1565C0; color:#fff; border:none; border-radius:7px; padding:6px 0; font-size:12px; font-weight:700; cursor:pointer; }
         .kmlc-btn-load { flex:1; background:#2E7D32; color:#fff; border:none; border-radius:7px; padding:6px 0; font-size:12px; font-weight:700; cursor:pointer; }
+        .kmlc-btn-del { width:100%; background:#e53935; color:#fff; border:none; border-radius:7px; padding:6px 0; font-size:12px; font-weight:700; cursor:pointer; margin-top:0; }
         .kmlc-btn-dl:hover { background:#0D47A1; }
         .kmlc-btn-load:hover { background:#1B5E20; }
+        .kmlc-btn-del:hover { background:#b71c1c; }
+        .kmlc-search-wrap { padding:0 0 10px 0; }
+        .kmlc-search-wrap input { width:100%; box-sizing:border-box; padding:7px 10px 7px 32px; border:1px solid #ccc; border-radius:20px; font-size:13px; outline:none; background:#f9f9f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center; }
+        .kmlc-search-wrap input:focus { border-color:#1565C0; background-color:#fff; }
         #btnToggleUI  { position: absolute; top: 12px; right: 10px; z-index: 10001; }
         
         /* Modo Computador em Celular - TODOS os botões 120×120px */
@@ -2232,6 +2237,9 @@ document.onkeydown = function(e) {
                 <div class="kmlc-header">
                     <span class="kmlc-title">📂 KML/KMZ Compartilhados</span>
                     <button class="kmlc-close" onclick="fecharKmlCompartilhados()" title="Fechar">✕</button>
+                </div>
+                <div class="kmlc-search-wrap">
+                    <input type="text" id="kmlcSearchInput" placeholder="Pesquisar arquivo..." autocomplete="off" oninput="_kmlcFiltrar(this.value)">
                 </div>
                 <div id="kmlCompartBody"><div class="kmlc-loading">⏳ Carregando...</div></div>
             </div>
@@ -6788,6 +6796,157 @@ window.addEventListener('load', () => {
 
 
 // ==========================================
+// FALLBACK NATIVO PARA KMZ COM METADADOS CORROMPIDOS
+// Usa DecompressionStream para ignorar tamanhos inconsistentes no header ZIP
+// ==========================================
+async function _kmzFallbackNativo(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    const view = new DataView(arrayBuffer);
+
+    // Primeiro, parsear o Central Directory para obter tamanhos reais
+    // (necessário quando Local File Header tem compressedSize=0, bit 3 flag)
+    const centralDir = {};
+    // Encontrar End of Central Directory (PK\x05\x06 = 0x06054b50)
+    let eocdOffset = -1;
+    for (let i = bytes.length - 22; i >= 0; i--) {
+        if (view.getUint32(i, true) === 0x06054b50) {
+            eocdOffset = i;
+            break;
+        }
+    }
+    if (eocdOffset >= 0) {
+        const cdOffset = view.getUint32(eocdOffset + 16, true); // offset do Central Directory
+        const cdEntries = view.getUint16(eocdOffset + 10, true); // total de entradas
+        let pos = cdOffset;
+        for (let e = 0; e < cdEntries && pos < bytes.length - 46; e++) {
+            const cdSig = view.getUint32(pos, true);
+            if (cdSig !== 0x02014b50) break; // Central Directory File Header signature
+            const cdCompSize = view.getUint32(pos + 20, true);
+            const cdUncompSize = view.getUint32(pos + 24, true);
+            const cdNameLen = view.getUint16(pos + 28, true);
+            const cdExtraLen = view.getUint16(pos + 30, true);
+            const cdCommentLen = view.getUint16(pos + 32, true);
+            const cdLocalHeaderOffset = view.getUint32(pos + 42, true);
+            const cdName = new TextDecoder('utf-8').decode(bytes.slice(pos + 46, pos + 46 + cdNameLen));
+            centralDir[cdLocalHeaderOffset] = { name: cdName, compressedSize: cdCompSize, uncompressedSize: cdUncompSize };
+            pos += 46 + cdNameLen + cdExtraLen + cdCommentLen;
+        }
+    }
+
+    // Percorre as entradas do ZIP procurando arquivos .kml
+    const results = [];
+    let offset = 0;
+
+    while (offset < bytes.length - 4) {
+        const sig = view.getUint32(offset, true);
+        if (sig !== 0x04034b50) {
+            offset++;
+            continue;
+        }
+
+        // Local File Header encontrado
+        const compression = view.getUint16(offset + 8, true);
+        let compressedSize = view.getUint32(offset + 18, true);
+        const fileNameLen = view.getUint16(offset + 26, true);
+        const extraLen = view.getUint16(offset + 28, true);
+        const dataOffset = offset + 30 + fileNameLen + extraLen;
+
+        // Se compressedSize é 0, usar o Central Directory
+        if (compressedSize === 0 && centralDir[offset]) {
+            compressedSize = centralDir[offset].compressedSize;
+        }
+
+        // Ler nome do arquivo
+        const nameBytes = bytes.slice(offset + 30, offset + 30 + fileNameLen);
+        const fileName = new TextDecoder('utf-8').decode(nameBytes);
+
+        if (/\.kml$/i.test(fileName)) {
+            let kmlText;
+            if (compression === 0) {
+                // Stored (sem compressão)
+                const rawBytes = bytes.slice(dataOffset, dataOffset + compressedSize);
+                kmlText = new TextDecoder('utf-8').decode(rawBytes);
+            } else if (compression === 8) {
+                // Deflate - usar DecompressionStream nativo
+                if (compressedSize === 0) {
+                    throw new Error('[KMZ] compressedSize=0 para ' + fileName + ' e sem entrada no Central Directory');
+                }
+                const compressedData = bytes.slice(dataOffset, dataOffset + compressedSize);
+                const ds = new DecompressionStream('deflate-raw');
+                const writer = ds.writable.getWriter();
+                const reader2 = ds.readable.getReader();
+                // Escrever em chunks pequenos (64KB) para forçar flush e não perder dados no buffer
+                var _writeChunkSize = 65536;
+                (async function() {
+                    try {
+                        for (var wi = 0; wi < compressedData.length; wi += _writeChunkSize) {
+                            await writer.write(compressedData.subarray(wi, Math.min(wi + _writeChunkSize, compressedData.length)));
+                        }
+                        await writer.close();
+                    } catch(ew) { /* suprimir "Junk found after end of compressed data" */ }
+                })();
+                const chunks = [];
+                let totalLen = 0;
+                try {
+                    while (true) {
+                        const { done, value } = await reader2.read();
+                        if (done) break;
+                        chunks.push(value);
+                        totalLen += value.length;
+                    }
+                } catch (eDeflate) {
+                    // "Junk found after end of compressed data" — dados já descomprimidos nos chunks
+                    if (chunks.length === 0) throw eDeflate;
+                    console.warn('[KMZ] DecompressionStream warning (dados recuperados):', eDeflate.message || eDeflate);
+                }
+                // Log tamanho para diagnóstico
+                var expectedSize = centralDir[offset] ? centralDir[offset].uncompressedSize : 0;
+                console.log('[KMZ]', fileName, '| descomprimido:', totalLen, 'bytes | esperado:', expectedSize, 'bytes', (expectedSize && totalLen < expectedSize ? '⚠️ TRUNCADO' : '✅'));
+                const merged = new Uint8Array(totalLen);
+                let pos = 0;
+                for (const chunk of chunks) { merged.set(chunk, pos); pos += chunk.length; }
+                kmlText = new TextDecoder('utf-8').decode(merged);
+            } else {
+                throw new Error('[KMZ] Método de compressão não suportado: ' + compression);
+            }
+            results.push({ name: fileName, text: kmlText });
+        }
+
+        // Avançar para próxima entrada
+        if (compressedSize > 0) {
+            offset = dataOffset + compressedSize;
+        } else {
+            offset++;
+        }
+    }
+
+    if (!results.length) {
+        throw new Error('[KMZ] Nenhum arquivo .kml encontrado via fallback nativo');
+    }
+
+    if (results.length === 1) {
+        let txt = results[0].text;
+        if (txt.charCodeAt(0) === 0xFEFF) txt = txt.slice(1);
+        return txt;
+    }
+
+    // Múltiplos .kml: concatenar Placemarks
+    let placemarksCombinados = '';
+    let headerKML = '';
+    for (const r of results) {
+        let txt = r.text.replace(/^\uFEFF/, '');
+        const matches = txt.match(/<Placemark[\s\S]*?<\/Placemark>/gi);
+        if (matches && matches.length) placemarksCombinados += '\n' + matches.join('\n');
+        if (!headerKML) {
+            const mHeader = txt.match(/<\?xml[\s\S]*?<Document[^>]*>/);
+            headerKML = mHeader ? mHeader[0] : '';
+        }
+    }
+    if (!headerKML) headerKML = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>';
+    return headerKML + '\n' + placemarksCombinados + '\n</Document></kml>';
+}
+
+// ==========================================
 // EXTRATOR SEGURO DE KMZ E LEITOR DE ARQUIVOS
 // ==========================================
 async function extrairTextoDoKMZ(file) {
@@ -6801,9 +6960,28 @@ async function extrairTextoDoKMZ(file) {
         reader.onload = async (ev) => {
             try {
                 let arrayBuffer = ev.target.result;
+
+                // Tentativa 1: DecompressionStream nativo (resolve 'uncompressed data size mismatch')
+                if (typeof DecompressionStream !== 'undefined') {
+                    try {
+                        const kmlText = await _kmzFallbackNativo(arrayBuffer);
+                        if (kmlText && kmlText.trim().length > 0) {
+                            console.log('[KMZ]', file.name, '- carregado via DecompressionStream nativo');
+                            // BOM strip
+                            var resultado = kmlText;
+                            if (resultado.charCodeAt(0) === 0xFEFF) resultado = resultado.slice(1);
+                            resolve(resultado);
+                            return;
+                        }
+                    } catch (eNativo) {
+                        console.warn('[KMZ] DecompressionStream nativo falhou para', file.name, ', tentando JSZip...', eNativo.message || eNativo);
+                    }
+                }
+
+                // Tentativa 2: JSZip padrão
                 const zip = await JSZip.loadAsync(arrayBuffer);
-                arrayBuffer = null; // Libera o ArrayBuffer original
-                reader.onload = null; // Libera referência do reader
+                arrayBuffer = null;
+                reader.onload = null;
 
                 // Listar TODOS os arquivos do zip e logar lista completa
                 const todosArquivos = Object.keys(zip.files);
@@ -6829,12 +7007,10 @@ async function extrairTextoDoKMZ(file) {
 
                 let kmlFinal;
                 if (kmlFiles.length === 1) {
-                    // Caso simples: apenas um .kml
                     const kmlFile = kmlFiles[0];
                     kmlFinal = await kmlFile.async('string');
                     console.log('[KMZ] único .kml:', kmlFile.name, '| tamanho:', kmlFinal.length, 'chars');
                 } else {
-                    // Múltiplos .kml: concatenar Placemarks de todos em um KML mestre
                     console.log('[KMZ] múltiplos .kml:', kmlFiles.length, '- concatenando Placemarks de todos.');
                     let placemarksCombinados = '';
                     let headerKML = '';
@@ -6848,7 +7024,6 @@ async function extrairTextoDoKMZ(file) {
                             if (matches && matches.length) {
                                 placemarksCombinados += '\n' + matches.join('\n');
                             }
-                            // Capturar header XML do primeiro arquivo
                             if (!headerKML) {
                                 const mHeader = txt.match(/<\?xml[\s\S]*?<Document[^>]*>/);
                                 headerKML = mHeader ? mHeader[0] : '';
@@ -6857,7 +7032,6 @@ async function extrairTextoDoKMZ(file) {
                             console.warn('[KMZ] erro ao ler', kf.name, ':', eKf);
                         }
                     }
-                    // Usar header padrao se nao encontrou
                     if (!headerKML) {
                         headerKML = '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2">\n<Document>';
                     }
@@ -7496,30 +7670,136 @@ function lerAlimentadoresKML(xmlDoc) {
 
 
 
-// Detecta o tamanho ideal de chunk conforme poder de processamento do dispositivo.
-// navigator.hardwareConcurrency: núcleos lógicos; quanto mais, maior o chunk.
-function _detectarChunkSize() {
+// Detecta o tamanho ideal de chunk conforme poder de processamento do dispositivo e total de features.
+// Para arquivos grandes, usa chunks maiores para reduzir o número de iterações de agendamento.
+function _detectarChunkSize(total) {
+    const n = total || 0;
+    // Arquivos grandes: chunks grandes para minimizar overhead de agendamento
+    if (n > 50000) return 10000;
+    if (n > 10000) return 5000;
+    if (n > 5000)  return 2000;
+    // Arquivos pequenos: chunks menores para não bloquear o render
     const cores = navigator.hardwareConcurrency || 2;
     if (cores >= 8) return 500;
     if (cores >= 4) return 300;
     return 150; // processadores fracos
 }
 
-// Exibe/oculta barra de progresso de importação
-function _mostrarProgressoKML(atual, total, fileName) {
-    let bar = document.getElementById('_kml-progress-bar');
-    if (!bar) {
-        bar = document.createElement('div');
-        bar.id = '_kml-progress-bar';
-        bar.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.82);color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;z-index:99999;pointer-events:none;min-width:220px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.4)';
-        document.body.appendChild(bar);
+// ─── Overlay de importação fullscreen ────────────────────────────────────────
+function _criarOverlayImportacao(fileName) {
+    // Remove overlay anterior se existir
+    const old = document.getElementById('_kml-import-overlay');
+    if (old) old.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_kml-import-overlay';
+    overlay.style.cssText = [
+        'position:fixed;top:0;left:0;width:100%;height:100%;',
+        'background:rgba(10,15,30,0.88);',
+        'z-index:999999;',
+        'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+        'pointer-events:all;',
+        'backdrop-filter:blur(3px);',
+        '-webkit-backdrop-filter:blur(3px);'
+    ].join('');
+
+    const card = document.createElement('div');
+    card.style.cssText = [
+        'background:linear-gradient(135deg,#1a2340 0%,#0d1b2a 100%);',
+        'border:1px solid rgba(100,160,255,0.25);',
+        'border-radius:18px;',
+        'padding:36px 44px;',
+        'min-width:320px;max-width:480px;width:90%;',
+        'box-shadow:0 8px 40px rgba(0,0,0,0.6);',
+        'text-align:center;color:#e8f0fe;font-family:inherit;'
+    ].join('');
+
+    // Ícone animado
+    const icon = document.createElement('div');
+    icon.style.cssText = 'font-size:40px;margin-bottom:16px;animation:_kmlSpin 1.4s linear infinite;display:inline-block;';
+    icon.textContent = '⚙';
+
+    // Título
+    const titulo = document.createElement('div');
+    titulo.style.cssText = 'font-size:17px;font-weight:700;color:#90caf9;margin-bottom:6px;letter-spacing:0.3px;';
+    titulo.textContent = 'Importando arquivo';
+
+    // Nome do arquivo
+    const nomeEl = document.createElement('div');
+    nomeEl.style.cssText = 'font-size:13px;color:#b0bec5;margin-bottom:20px;word-break:break-all;max-width:380px;';
+    nomeEl.textContent = fileName;
+
+    // Etapa atual
+    const etapaEl = document.createElement('div');
+    etapaEl.id = '_kml-overlay-etapa';
+    etapaEl.style.cssText = 'font-size:14px;color:#e3f2fd;margin-bottom:14px;min-height:20px;font-weight:500;';
+    etapaEl.textContent = 'Iniciando...';
+
+    // Barra de progresso container
+    const barraContainer = document.createElement('div');
+    barraContainer.style.cssText = 'width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:12px;';
+
+    const barraFill = document.createElement('div');
+    barraFill.id = '_kml-overlay-barra';
+    barraFill.style.cssText = 'height:100%;width:0%;background:linear-gradient(90deg,#1976d2,#42a5f5,#80d8ff);border-radius:4px;transition:width 0.3s ease;';
+    barraContainer.appendChild(barraFill);
+
+    // Contador
+    const contadorEl = document.createElement('div');
+    contadorEl.id = '_kml-overlay-contador';
+    contadorEl.style.cssText = 'font-size:12px;color:#78909c;';
+    contadorEl.textContent = '';
+
+    card.appendChild(icon);
+    card.appendChild(titulo);
+    card.appendChild(nomeEl);
+    card.appendChild(etapaEl);
+    card.appendChild(barraContainer);
+    card.appendChild(contadorEl);
+    overlay.appendChild(card);
+
+    // Injetar keyframe de animação se ainda não existir
+    if (!document.getElementById('_kml-spin-style')) {
+        const st = document.createElement('style');
+        st.id = '_kml-spin-style';
+        st.textContent = '@keyframes _kmlSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(st);
     }
-    bar.textContent = `Importando ${fileName}: ${atual} / ${total} itens...`;
-    bar.style.display = 'block';
+
+    document.body.appendChild(overlay);
+    // Bloquear scroll do mapa
+    document.body.style.overflow = 'hidden';
+    return overlay;
 }
-function _ocultarProgressoKML() {
+
+function _atualizarOverlayImportacao(etapa, progresso, contador) {
+    const etapaEl = document.getElementById('_kml-overlay-etapa');
+    const barraEl = document.getElementById('_kml-overlay-barra');
+    const contEl  = document.getElementById('_kml-overlay-contador');
+    if (etapaEl && etapa !== undefined) etapaEl.textContent = etapa;
+    if (barraEl && progresso !== undefined) barraEl.style.width = Math.min(100, Math.max(0, progresso)) + '%';
+    if (contEl  && contador !== undefined) contEl.textContent = contador;
+}
+
+function _removerOverlayImportacao() {
+    const overlay = document.getElementById('_kml-import-overlay');
+    if (overlay) overlay.remove();
+    document.body.style.overflow = '';
+    // Manter barra de progresso legada oculta também
     const bar = document.getElementById('_kml-progress-bar');
     if (bar) bar.style.display = 'none';
+}
+
+// Exibe/oculta barra de progresso de importação (legado — mantido para compatibilidade)
+function _mostrarProgressoKML(atual, total, fileName) {
+    _atualizarOverlayImportacao(
+        'Classificando features...',
+        Math.round((atual / total) * 80) + 15,
+        atual + ' / ' + total + ' features'
+    );
+}
+function _ocultarProgressoKML() {
+    _atualizarOverlayImportacao('Finalizando...', 98, '');
 }
 
 // Otimização: flag para suprimir renderizações intermediárias durante importação em lote
@@ -7530,12 +7810,42 @@ function _renderizarSeNaoPendente() {
     }
 }
 
+// Regexes pré-compilados para o loop de classificação (evita recompilação por feature)
+const _RX_KVA      = /(\d{3,}[\-\s]*\d*\s*[kK][vV][aA])/;
+const _RX_NOPER    = /N\s*[.\s]*Oper[.\s]*[:\s]*(\d+)/i;
+const _RX_NUMERO   = /(?:N[uú]mero|Equip[a-z]*|C[oó]d[a-z]*)\s*[:\s]*(\d{4,}[\-\w]*)/i;
+const _RX_GENERICO = /(\d{5,}[\-]\d+)/;
+const _RX_HTML     = /<[^>]*>/g;
+const _RX_PASTA    = /\[PASTA:.*?\]\s*/;
+const _RX_HTML_GM  = /<[^>]*>?/gm;
+
 function processarKML(kmlStr, fileName, originalFile, onConcluido) {
+    // Lança a execução assíncrona e retorna imediatamente (compatível com callers que usam callback)
+    _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido).catch(function(e) {
+        console.error('[processarKML] erro fatal:', e);
+        _removerOverlayImportacao();
+        if (typeof onConcluido === 'function') onConcluido();
+    });
+}
+
+async function _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido) {
+    const t0 = performance.now();
+
     // Sugere ao GC liberar memória antes de processar arquivo grande
     if (window.gc) window.gc();
 
+    // ── Etapa 0: mostrar overlay e garantir repaint antes de bloquear ──────────
+    _criarOverlayImportacao(fileName);
+    _atualizarOverlayImportacao('Descomprimindo / lendo arquivo...', 2, '');
+    await new Promise(function(r) { requestAnimationFrame(r); });
+
+    // ── Etapa 1: parsear XML ────────────────────────────────────────────────────
+    _atualizarOverlayImportacao('Parseando XML...', 8, '');
+    await new Promise(function(r) { setTimeout(r, 0); }); // yield para o browser renderizar o overlay
+
     const parser = new DOMParser();
     let xml = parser.parseFromString(kmlStr, "text/xml");
+    console.log('[processarKML] parseFromString levou', (performance.now() - t0).toFixed(0), 'ms');
 
     // 1. Verificar parsererror (XML malformado) — tenta recuperação em 3 etapas
     let arquivoMalformado = false;
@@ -7543,6 +7853,8 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
     if (xml.querySelector('parsererror')) {
         arquivoMalformado = true;
         console.warn('[KML] parsererror detectado em', originalFile?.name || fileName, '- iniciando recuperacao');
+        _atualizarOverlayImportacao('Recuperando XML malformado...', 10, '');
+        await new Promise(function(r) { setTimeout(r, 0); });
 
         // Tentativa 1: truncar no ultimo </kml>
         const idxKml = kmlStr.lastIndexOf('</kml>');
@@ -7589,6 +7901,7 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
         if (xml.querySelector('parsererror')) {
             const nomeArq = originalFile?.name || fileName || 'arquivo desconhecido';
             console.error('[KML] todas as tentativas de recuperacao falharam para', nomeArq);
+            _removerOverlayImportacao();
             alert('Atenção: o arquivo "' + nomeArq + '" está completamente corrompido e não foi possível recuperar nenhuma informação.\n\nVerifique o arquivo no Google Earth ou re-exporte do sistema de origem.');
             if (typeof onConcluido === 'function') onConcluido();
             return;
@@ -7607,12 +7920,20 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
     // Diagnóstico: contar Placemarks no XML antes do togeojson
     const numPlacemarks = xml.querySelectorAll('Placemark').length;
 
+    // ── Etapa 2: converter para GeoJSON ────────────────────────────────────────
+    _atualizarOverlayImportacao('Convertendo ' + numPlacemarks + ' features para GeoJSON...', 20, numPlacemarks + ' placemarks');
+    await new Promise(function(r) { setTimeout(r, 0); }); // yield para renderizar overlay
+
+    const t1 = performance.now();
     const gj = toGeoJSON.kml(xml);
+    console.log('[processarKML] toGeoJSON.kml levou', (performance.now() - t1).toFixed(0), 'ms');
+
     // Libera o DOM XML imediatamente — não é mais necessário após a conversão
     xml = null;
     kmlStr = null;
     if (!gj || !gj.features) {
         console.warn('[processarKML]', fileName, '— toGeoJSON retornou nulo ou sem features. Placemarks no XML:', numPlacemarks);
+        _removerOverlayImportacao();
         if (typeof onConcluido === 'function') onConcluido();
         return;
     }
@@ -7630,194 +7951,308 @@ function processarKML(kmlStr, fileName, originalFile, onConcluido) {
 
     let features = gj.features;
     const total = features.length;
-    const CHUNK = _detectarChunkSize();
-    let i = 0;
+    const _arquivoGrande = total > 5000;
     let featuresIgnoradas = 0;
     // ID global único - não reinicia entre arquivos para evitar colisões
     if (!window._globalKmlIdCounter) window._globalKmlIdCounter = Date.now();
+    const _isCelular = document.body.classList.contains('modo-celular');
 
-    function processarChunk() {
-        const fim = Math.min(i + CHUNK, total);
-        try {
-            for (; i < fim; i++) {
-                const f = features[i];
-                try {
-                    if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; console.warn('[processarKML] feature sem geometria descartada em', fileName, 'índice', i, '- name:', (f.properties && f.properties.name) || '(sem nome)'); continue; }
-                    if (!f.properties) f.properties = {};
+    // ── Etapa 3: classificar features ──────────────────────────────────────────
+    _atualizarOverlayImportacao('Classificando ' + total + ' features...', 25, '0 / ' + total);
+    await new Promise(function(r) { setTimeout(r, 0); }); // yield para renderizar overlay
 
-                    let feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
-                    if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
-                    feat.properties.sourceFile = fileName;
+    const t2 = performance.now();
 
-                    // Celular: trunca description pesada para economizar memória
-                    if (document.body.classList.contains('modo-celular') && feat.properties.description && feat.properties.description.length > 300) {
-                        feat.properties.description = feat.properties.description.substring(0, 300);
-                    }
+    if (_arquivoGrande) {
+        // ── MODO ARQUIVO GRANDE: loop único sincrono (sem chunks/setTimeout) ──
+        // A UI já está bloqueada pelo overlay, então não importa bloquear aqui.
+        // Elimina o overhead de ~10-50 agendamentos de setTimeout.
+        for (let i = 0; i < total; i++) {
+            const f = features[i];
+            try {
+                if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; console.warn('[processarKML] feature sem geometria descartada em', fileName, 'índice', i, '- name:', (f.properties && f.properties.name) || '(sem nome)'); continue; }
+                if (!f.properties) f.properties = {};
 
-                    let nAtivo = (feat.properties.name || "S/N").toUpperCase();
-                    let descCrua = String(feat.properties.description || "");
+                const feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
+                if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
+                feat.properties.sourceFile = fileName;
 
-                    // Se name está vazio e description tem dados, tenta extrair número do equipamento
-                    if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
-                        // Limpa HTML para buscar no texto puro
-                        const descTexto = descCrua.replace(/<[^>]*>/g, ' ');
-                        // Tenta extrair número com KVA (ex: "135001-30kVA", "135001 30kVA")
-                        const matchKVA = descTexto.match(/(\d{3,}[\-\s]*\d*\s*[kK][vV][aA])/);
-                        const matchNOper = descTexto.match(/N\s*[.\s]*Oper[.\s]*[:\s]*(\d+)/i);
-                        const matchNumero = descTexto.match(/(?:N[uú]mero|Equip[a-z]*|C[oó]d[a-z]*)\s*[:\s]*(\d{4,}[\-\w]*)/i);
-                        // Tenta pegar qualquer número com 5+ dígitos seguido de traço e algo (ex: 135001-30)
-                        const matchGenerico = descTexto.match(/(\d{5,}[\-]\d+)/);
-
-                        if (matchKVA) {
-                            feat.properties.name = matchKVA[1].trim();
-                        } else if (matchNOper) {
-                            feat.properties.name = 'N Oper ' + matchNOper[1];
-                        } else if (matchNumero) {
-                            feat.properties.name = matchNumero[1].trim();
-                        } else if (matchGenerico) {
-                            feat.properties.name = matchGenerico[1].trim();
-                        }
-                        nAtivo = (feat.properties.name || "S/N").toUpperCase();
-                    }
-
-                    let descLimpa = descCrua.replace(/\[PASTA:.*?\]\s*/, '').replace(/<[^>]*>?/gm, ' ').toUpperCase();
-                    let txtTotal = nAtivo + " " + descLimpa;
-                    feat.properties.textoBusca = txtTotal;
-
-                    let vinculo = novosNomes.find(c => txtTotal.includes(c)) || "OUTROS";
-                    feat.properties.alimRef = vinculo;
-
-                    if (!f.geometry.type.includes('Point')) {
-                        feat.properties.isPoint = false;
-                        feat.properties.alimRef = nAtivo;
-                        let corOriginal = f.properties.stroke;
-                        let corPaleta = circuitosState[nAtivo] ? circuitosState[nAtivo].color : null;
-                        feat.properties.corRede = corOriginal || corPaleta || '#4285F4';
-                    } else {
-                        feat.properties.isPoint = true;
-                        const classificado = classificarEquipamento(feat.properties);
-                        if (classificado.visivel) {
-                            feat.properties.tipoEquip = classificado.tipoEquip;
-                            feat.properties.corPonto = classificado.corPonto;
-                            feat.properties.iconName = classificado.iconName;
-                            feat.properties.statusTxt = classificado.statusTxt;
-                        } else {
-                            // Zero feature loss: em vez de descartar, classifica como GENERICO
-                            console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
-                            feat.properties.tipoEquip = 'GENERICO';
-                            feat.properties.corPonto = '#607D8B';
-                            feat.properties.iconName = 'circulo-cinza';
-                            feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
-                        }
-                    }
-                    geoJsonGlobal.features.push(feat);
-                } catch(e) {
-                    featuresIgnoradas++;
-                    console.warn('[processarKML] feature ignorada em', fileName, 'índice', i, ':', e && e.message);
+                // Celular: trunca description pesada para economizar memória
+                if (_isCelular && feat.properties.description && feat.properties.description.length > 300) {
+                    feat.properties.description = feat.properties.description.substring(0, 300);
                 }
+
+                // Cache toUpperCase do name (evita chamadas repetidas)
+                let nAtivo = (feat.properties.name || "S/N").toUpperCase();
+                const descCrua = String(feat.properties.description || "");
+
+                // Se name está vazio e description tem dados, tenta extrair número do equipamento
+                if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
+                    const descTexto = descCrua.replace(_RX_HTML, ' ');
+                    const matchKVA      = _RX_KVA.exec(descTexto);
+                    const matchNOper    = matchKVA   ? null : _RX_NOPER.exec(descTexto);
+                    const matchNumero   = matchNOper ? null : _RX_NUMERO.exec(descTexto);
+                    const matchGenerico = matchNumero ? null : _RX_GENERICO.exec(descTexto);
+
+                    if (matchKVA) {
+                        feat.properties.name = matchKVA[1].trim();
+                    } else if (matchNOper) {
+                        feat.properties.name = 'N Oper ' + matchNOper[1];
+                    } else if (matchNumero) {
+                        feat.properties.name = matchNumero[1].trim();
+                    } else if (matchGenerico) {
+                        feat.properties.name = matchGenerico[1].trim();
+                    }
+                    nAtivo = (feat.properties.name || "S/N").toUpperCase();
+                }
+
+                const descLimpa = descCrua.replace(_RX_PASTA, '').replace(_RX_HTML_GM, ' ').toUpperCase();
+                const txtTotal = nAtivo + " " + descLimpa;
+                feat.properties.textoBusca = txtTotal;
+
+                let vinculo = novosNomes.find(c => txtTotal.includes(c)) || "OUTROS";
+                feat.properties.alimRef = vinculo;
+
+                if (!f.geometry.type.includes('Point')) {
+                    feat.properties.isPoint = false;
+                    feat.properties.alimRef = nAtivo;
+                    const corOriginal = f.properties.stroke;
+                    const corPaleta = circuitosState[nAtivo] ? circuitosState[nAtivo].color : null;
+                    feat.properties.corRede = corOriginal || corPaleta || '#4285F4';
+                } else {
+                    feat.properties.isPoint = true;
+                    const classificado = classificarEquipamento(feat.properties);
+                    if (classificado.visivel) {
+                        feat.properties.tipoEquip = classificado.tipoEquip;
+                        feat.properties.corPonto = classificado.corPonto;
+                        feat.properties.iconName = classificado.iconName;
+                        feat.properties.statusTxt = classificado.statusTxt;
+                    } else {
+                        // Zero feature loss: em vez de descartar, classifica como GENERICO
+                        console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
+                        feat.properties.tipoEquip = 'GENERICO';
+                        feat.properties.corPonto = '#607D8B';
+                        feat.properties.iconName = 'circulo-cinza';
+                        feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
+                    }
+                }
+                geoJsonGlobal.features.push(feat);
+            } catch(e) {
+                featuresIgnoradas++;
+                console.warn('[processarKML] feature ignorada em', fileName, 'índice', i, ':', e && e.message);
             }
-        } catch(chunkErr) {
-            console.error('[processarKML] erro no chunk de', fileName, '(i=', i, '):', chunkErr);
+        }
+        console.log('[processarKML] loop classificação (grande) levou', (performance.now() - t2).toFixed(0), 'ms');
+        // Finalizar diretamente
+        await _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, total);
+    } else {
+        // ── MODO ARQUIVO PEQUENO: chunks com requestIdleCallback (não bloqueia render) ──
+        const CHUNK = _detectarChunkSize(total);
+        let i = 0;
+
+        function processarChunk() {
+            const fim = Math.min(i + CHUNK, total);
+            try {
+                for (; i < fim; i++) {
+                    const f = features[i];
+                    try {
+                        if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; console.warn('[processarKML] feature sem geometria descartada em', fileName, 'índice', i, '- name:', (f.properties && f.properties.name) || '(sem nome)'); continue; }
+                        if (!f.properties) f.properties = {};
+
+                        const feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
+                        if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
+                        feat.properties.sourceFile = fileName;
+
+                        if (_isCelular && feat.properties.description && feat.properties.description.length > 300) {
+                            feat.properties.description = feat.properties.description.substring(0, 300);
+                        }
+
+                        let nAtivo = (feat.properties.name || "S/N").toUpperCase();
+                        const descCrua = String(feat.properties.description || "");
+
+                        if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
+                            const descTexto = descCrua.replace(_RX_HTML, ' ');
+                            const matchKVA      = _RX_KVA.exec(descTexto);
+                            const matchNOper    = matchKVA   ? null : _RX_NOPER.exec(descTexto);
+                            const matchNumero   = matchNOper ? null : _RX_NUMERO.exec(descTexto);
+                            const matchGenerico = matchNumero ? null : _RX_GENERICO.exec(descTexto);
+
+                            if (matchKVA) {
+                                feat.properties.name = matchKVA[1].trim();
+                            } else if (matchNOper) {
+                                feat.properties.name = 'N Oper ' + matchNOper[1];
+                            } else if (matchNumero) {
+                                feat.properties.name = matchNumero[1].trim();
+                            } else if (matchGenerico) {
+                                feat.properties.name = matchGenerico[1].trim();
+                            }
+                            nAtivo = (feat.properties.name || "S/N").toUpperCase();
+                        }
+
+                        const descLimpa = descCrua.replace(_RX_PASTA, '').replace(_RX_HTML_GM, ' ').toUpperCase();
+                        const txtTotal = nAtivo + " " + descLimpa;
+                        feat.properties.textoBusca = txtTotal;
+
+                        let vinculo = novosNomes.find(c => txtTotal.includes(c)) || "OUTROS";
+                        feat.properties.alimRef = vinculo;
+
+                        if (!f.geometry.type.includes('Point')) {
+                            feat.properties.isPoint = false;
+                            feat.properties.alimRef = nAtivo;
+                            const corOriginal = f.properties.stroke;
+                            const corPaleta = circuitosState[nAtivo] ? circuitosState[nAtivo].color : null;
+                            feat.properties.corRede = corOriginal || corPaleta || '#4285F4';
+                        } else {
+                            feat.properties.isPoint = true;
+                            const classificado = classificarEquipamento(feat.properties);
+                            if (classificado.visivel) {
+                                feat.properties.tipoEquip = classificado.tipoEquip;
+                                feat.properties.corPonto = classificado.corPonto;
+                                feat.properties.iconName = classificado.iconName;
+                                feat.properties.statusTxt = classificado.statusTxt;
+                            } else {
+                                console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
+                                feat.properties.tipoEquip = 'GENERICO';
+                                feat.properties.corPonto = '#607D8B';
+                                feat.properties.iconName = 'circulo-cinza';
+                                feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
+                            }
+                        }
+                        geoJsonGlobal.features.push(feat);
+                    } catch(e) {
+                        featuresIgnoradas++;
+                        console.warn('[processarKML] feature ignorada em', fileName, 'índice', i, ':', e && e.message);
+                    }
+                }
+            } catch(chunkErr) {
+                console.error('[processarKML] erro no chunk de', fileName, '(i=', i, '):', chunkErr);
+            }
+
+            if (i < total) {
+                _mostrarProgressoKML(i, total, fileName);
+                if (typeof requestIdleCallback === 'function') {
+                    requestIdleCallback(processarChunk, { timeout: 200 });
+                } else {
+                    setTimeout(processarChunk, 0);
+                }
+            } else {
+                _ocultarProgressoKML();
+                console.log('[processarKML] loop classificação (pequeno) levou', (performance.now() - t2).toFixed(0), 'ms');
+                _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, total).catch(function(e) {
+                    console.error('[processarKML] erro ao finalizar:', e);
+                    _removerOverlayImportacao();
+                    if (typeof onConcluido === 'function') onConcluido();
+                });
+            }
         }
 
-        if (i < total) {
-            _mostrarProgressoKML(i, total, fileName);
-            // requestIdleCallback para não bloquear o render, com fallback para setTimeout
-            if (typeof requestIdleCallback === 'function') {
-                requestIdleCallback(processarChunk, { timeout: 200 });
-            } else {
-                setTimeout(processarChunk, 0);
-            }
-        } else {
-            // Finalizado — salvar arquivo COMPLETO e atualizar mapa
-            _ocultarProgressoKML();
-            const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === fileName);
-            const featuresAdicionadas = featuresDoArquivo.length;
-            console.log('[KML import]', { arquivo: fileName, placemarksLidos: numPlacemarks, featuresProcessadas: featuresAdicionadas, descartados: 0 });
-            console.log('[processarKML]', fileName, '— concluído. Features salvas:', featuresAdicionadas, '| ignoradas:', featuresIgnoradas);
-            // Aviso PT-BR se arquivo foi recuperado (qualquer método)
-            if (arquivoMalformado && featuresAdicionadas > 0) {
-                const metodoMsg = metodoRecuperacao ? ' (método: ' + metodoRecuperacao + ')' : '';
-                alert('Aviso: o arquivo "' + (originalFile?.name || fileName) + '" estava malformado, mas foi recuperado automaticamente' + metodoMsg + '.\n\nForam importadas ' + featuresAdicionadas + ' feições. Recomenda-se verificar o arquivo de origem.');
-            } else if (arquivoMalformado && featuresAdicionadas === 0) {
-                alert('Atenção: o arquivo "' + (originalFile?.name || fileName) + '" foi recuperado, mas nenhuma feição válida foi encontrada. Verifique o arquivo de origem.');
-            }
-            // Toast resumido ao usuário
-            if (typeof _mostrarToastImportacao === 'function') {
-                _mostrarToastImportacao('Importado: ' + featuresAdicionadas + ' equipamentos de ' + fileName, 5000);
-            }
+        processarChunk();
+    }
+}
 
-            // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
-            StorageManager.saveFile(fileName, featuresDoArquivo)
-                .catch(e => console.error('[processarKML] Erro ao salvar arquivo:', fileName, e));
-            // Renderizar mapa IMEDIATAMENTE pra todas as chaves aparecerem (não esperar comentários)
-            try { _renderizarSeNaoPendente(); if (typeof aplicarFiltros === 'function') aplicarFiltros(); } catch(e) { console.warn('[processarKML] erro ao renderizar:', e); }
-            // Reaplicar comentários salvos anteriormente (permite reimportar KML sem perder comentários)
-            StorageManager.loadFile('comentarios-' + fileName).then(function(comentariosSalvos) {
-                if (!comentariosSalvos || comentariosSalvos.length === 0) return;
-                comentariosSalvos.forEach(function(c) {
-                    const fi = geoJsonGlobal.features.findIndex(function(f) {
-                        return f.properties && (
-                            (c.id && f.properties.id === c.id) ||
-                            (c.name && f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === c.name.trim().toUpperCase())
-                        );
-                    });
-                    if (fi !== -1) {
-                        geoJsonGlobal.features[fi].properties.comentario = c.comentario;
-                        geoJsonGlobal.features[fi].properties.comentarioAutor = c.autor || '';
-                        geoJsonGlobal.features[fi].properties.comentarioData = c.data || Date.now();
-                        geoJsonGlobal.features[fi].properties.comentarioEditado = c.editado || false;
-                        if (c.lat) geoJsonGlobal.features[fi].properties.comentarioLat = c.lat;
-                        if (c.lng) geoJsonGlobal.features[fi].properties.comentarioLng = c.lng;
-                        if (typeof c.foto !== 'undefined') {
-                            if (c.foto) geoJsonGlobal.features[fi].properties.comentarioFoto = c.foto;
-                            else delete geoJsonGlobal.features[fi].properties.comentarioFoto;
-                        }
-                    }
-                });
-                // Re-salvar arquivo com comentários reaplicados
-                const featsAtualizadas = geoJsonGlobal.features.filter(function(f) { return f.properties && f.properties.sourceFile === fileName; });
-                StorageManager.saveFile(fileName, featsAtualizadas).catch(function(e) { console.error('[processarKML] Erro ao re-salvar com comentários:', e); });
-                _renderizarSeNaoPendente();
-            }).catch(function(e) { /* sem comentários salvos, normal */ });
-            if (originalFile && !_isMobile && StorageManager.hasHandle()) {
-                StorageManager.saveOriginalFile(originalFile).catch(e => console.error('Erro ao copiar original:', e));
-            }
+async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, totalProcessado) {
+    // ── Etapa 4: renderizar ─────────────────────────────────────────────────────
+    _atualizarOverlayImportacao('Renderizando mapa...', 90, '');
+    await new Promise(function(r) { setTimeout(r, 0); });
 
-            _renderizarSeNaoPendente();
-            atualizarPainel();
-            // Celular: adia salvarTudo para depois de TODOS os arquivos (evita serialização repetida que causa OOM)
-            if (!document.body.classList.contains('modo-celular')) {
-                salvarTudoSeguro();
-            }
-            if (typeof window._arquivosPendentes === 'number') {
-                window._arquivosPendentes--;
-            }
-            if (!window._arquivosPendentes || window._arquivosPendentes <= 0) {
-                // Marca todos os filtros como ativos ao concluir importação
-                filtrosStatus.verdes = true;
-                filtrosStatus.vermelhos = true;
-                filtrosStatus.cinzas = true;
-                filtrosStatus.laranjas = true;
-                filtrosStatus.alim = true;
-                filtrosStatus.bc = true;
-                filtrosStatus.reg = true;
-                filtrosStatus.trafoEmpresa = true;
-                filtrosStatus.trafoParticular = true;
-                filtrosStatus.di = true;
-                filtrosStatus.anotacao = true;
-                filtrosStatus.consumidor = true;
-                aplicarFiltros();
-                if (document.body.classList.contains('modo-celular')) {
-                    setTimeout(function() { salvarTudoSeguro(); }, 2000);
+    const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === fileName);
+    const featuresAdicionadas = featuresDoArquivo.length;
+    console.log('[KML import]', { arquivo: fileName, placemarksLidos: numPlacemarks, featuresProcessadas: featuresAdicionadas, descartados: 0 });
+    console.log('[processarKML]', fileName, '— concluído. Features salvas:', featuresAdicionadas, '| ignoradas:', featuresIgnoradas);
+
+    // Aviso PT-BR se arquivo foi recuperado (qualquer método)
+    if (arquivoMalformado && featuresAdicionadas > 0) {
+        const metodoMsg = metodoRecuperacao ? ' (método: ' + metodoRecuperacao + ')' : '';
+        alert('Aviso: o arquivo "' + (originalFile?.name || fileName) + '" estava malformado, mas foi recuperado automaticamente' + metodoMsg + '.\n\nForam importadas ' + featuresAdicionadas + ' feições. Recomenda-se verificar o arquivo de origem.');
+    } else if (arquivoMalformado && featuresAdicionadas === 0) {
+        alert('Atenção: o arquivo "' + (originalFile?.name || fileName) + '" foi recuperado, mas nenhuma feição válida foi encontrada. Verifique o arquivo de origem.');
+    }
+
+    // Toast resumido ao usuário
+    if (typeof _mostrarToastImportacao === 'function') {
+        _mostrarToastImportacao('Importado: ' + featuresAdicionadas + ' equipamentos de ' + fileName, 5000);
+    }
+
+    // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
+    StorageManager.saveFile(fileName, featuresDoArquivo)
+        .catch(e => console.error('[processarKML] Erro ao salvar arquivo:', fileName, e));
+
+    // Renderizar mapa IMEDIATAMENTE pra todas as chaves aparecerem (não esperar comentários)
+    try { _renderizarSeNaoPendente(); if (typeof aplicarFiltros === 'function') aplicarFiltros(); } catch(e) { console.warn('[processarKML] erro ao renderizar:', e); }
+
+    // ── Etapa 5: remover overlay ANTES de reaplicar comentários ────────────────
+    _removerOverlayImportacao();
+
+    // Reaplicar comentários salvos anteriormente (permite reimportar KML sem perder comentários)
+    StorageManager.loadFile('comentarios-' + fileName).then(function(comentariosSalvos) {
+        if (!comentariosSalvos || comentariosSalvos.length === 0) return;
+        comentariosSalvos.forEach(function(c) {
+            const fi = geoJsonGlobal.features.findIndex(function(f) {
+                return f.properties && (
+                    (c.id && f.properties.id === c.id) ||
+                    (c.name && f.properties.isPoint && (f.properties.name||'').trim().toUpperCase() === c.name.trim().toUpperCase())
+                );
+            });
+            if (fi !== -1) {
+                geoJsonGlobal.features[fi].properties.comentario = c.comentario;
+                geoJsonGlobal.features[fi].properties.comentarioAutor = c.autor || '';
+                geoJsonGlobal.features[fi].properties.comentarioData = c.data || Date.now();
+                geoJsonGlobal.features[fi].properties.comentarioEditado = c.editado || false;
+                if (c.lat) geoJsonGlobal.features[fi].properties.comentarioLat = c.lat;
+                if (c.lng) geoJsonGlobal.features[fi].properties.comentarioLng = c.lng;
+                if (typeof c.foto !== 'undefined') {
+                    if (c.foto) geoJsonGlobal.features[fi].properties.comentarioFoto = c.foto;
+                    else delete geoJsonGlobal.features[fi].properties.comentarioFoto;
                 }
             }
-            // Notificar chamador que este arquivo terminou (permite import sequencial)
-            if (typeof onConcluido === 'function') onConcluido();
+        });
+        // Re-salvar arquivo com comentários reaplicados
+        const featsAtualizadas = geoJsonGlobal.features.filter(function(f) { return f.properties && f.properties.sourceFile === fileName; });
+        StorageManager.saveFile(fileName, featsAtualizadas).catch(function(e) { console.error('[processarKML] Erro ao re-salvar com comentários:', e); });
+        _renderizarSeNaoPendente();
+    }).catch(function(e) { /* sem comentários salvos, normal */ });
+
+    if (originalFile && !_isMobile && StorageManager.hasHandle()) {
+        StorageManager.saveOriginalFile(originalFile).catch(e => console.error('Erro ao copiar original:', e));
+    }
+
+    _renderizarSeNaoPendente();
+    atualizarPainel();
+
+    // Celular: adia salvarTudo para depois de TODOS os arquivos (evita serialização repetida que causa OOM)
+    // Arquivos grandes: adia salvarTudoSeguro por 5s para dar tempo ao MapLibre processar setData
+    if (!document.body.classList.contains('modo-celular')) {
+        if (totalProcessado > 10000) {
+            setTimeout(function() { salvarTudoSeguro(); }, 5000);
+        } else {
+            salvarTudoSeguro();
         }
     }
 
-    processarChunk();
+    if (typeof window._arquivosPendentes === 'number') {
+        window._arquivosPendentes--;
+    }
+    if (!window._arquivosPendentes || window._arquivosPendentes <= 0) {
+        // Marca todos os filtros como ativos ao concluir importação
+        filtrosStatus.verdes = true;
+        filtrosStatus.vermelhos = true;
+        filtrosStatus.cinzas = true;
+        filtrosStatus.laranjas = true;
+        filtrosStatus.alim = true;
+        filtrosStatus.bc = true;
+        filtrosStatus.reg = true;
+        filtrosStatus.trafoEmpresa = true;
+        filtrosStatus.trafoParticular = true;
+        filtrosStatus.di = true;
+        filtrosStatus.anotacao = true;
+        filtrosStatus.consumidor = true;
+        aplicarFiltros();
+        if (document.body.classList.contains('modo-celular')) {
+            setTimeout(function() { salvarTudoSeguro(); }, 2000);
+        }
+    }
+    // Notificar chamador que este arquivo terminou (permite import sequencial)
+    if (typeof onConcluido === 'function') onConcluido();
 }
 
 
@@ -8778,10 +9213,13 @@ function criarIconeQuadrado(corBase, tamanho) {
     }
 
     // Celular: duas sources separadas (sem clustering) para reduzir memória
-    // Desktop: source única
+    // Desktop com > 50000 features: duas sources separadas com clustering para evitar 'Too many glyphs'
+    // Desktop normal: source única
     var isCelular = document.body.classList.contains('modo-celular');
+    var totalFeatures = dadosCompletos.features ? dadosCompletos.features.length : 0;
+    var _usarClusterDesktop = !isCelular && totalFeatures > 50000;
     
-    if (isCelular) {
+    if (isCelular || _usarClusterDesktop) {
         var pontos = { type: 'FeatureCollection', features: [] };
         var linhas = { type: 'FeatureCollection', features: [] };
         if (dadosMapa.features) {
@@ -8796,15 +9234,17 @@ function criarIconeQuadrado(corBase, tamanho) {
         }
         
         if (!map.getSource('src-rede')) {
-            map.addSource('src-rede', { type: 'geojson', data: linhas, tolerance: 2 });
+            map.addSource('src-rede', { type: 'geojson', data: linhas, tolerance: isCelular ? 2 : 1 });
         } else {
             map.getSource('src-rede').setData(linhas);
         }
         
         if (!map.getSource('src-pontos')) {
+            var clusterMaxZoom = isCelular ? 5 : 14;
+            var clusterRadius  = isCelular ? 5 : 50;
             map.addSource('src-pontos', {
                 type: 'geojson', data: pontos,
-                cluster: true, clusterMaxZoom: 5, clusterRadius: 5
+                cluster: true, clusterMaxZoom: clusterMaxZoom, clusterRadius: clusterRadius
             });
         } else {
             map.getSource('src-pontos').setData(pontos);
@@ -8819,7 +9259,8 @@ function criarIconeQuadrado(corBase, tamanho) {
     }
     
     // Define qual source usar para pontos
-    var srcPontos = isCelular ? 'src-pontos' : 'src-rede';
+    // Celular e desktop com clustering usam 'src-pontos'; desktop normal usa 'src-rede'
+    var srcPontos = (isCelular || _usarClusterDesktop) ? 'src-pontos' : 'src-rede';
 
     // --- CAMADAS DE POLÍGONOS ---
     if (!map.getLayer('l-poligonos-fill')) {
@@ -9110,8 +9551,8 @@ function criarIconeQuadrado(corBase, tamanho) {
         }, 'l-labels');
     }
 
-    // --- CLUSTERS (somente celular) ---
-    if (document.body.classList.contains('modo-celular')) {
+    // --- CLUSTERS (celular e desktop com > 50000 features) ---
+    if (isCelular || _usarClusterDesktop) {
         // Círculos dos clusters — cor varia com quantidade
         if (!map.getLayer('l-clusters')) {
             map.addLayer({
@@ -9155,42 +9596,67 @@ function criarIconeQuadrado(corBase, tamanho) {
                 }
             });
         }
+        // Desktop com clustering: adicionar handler de clique para expandir cluster
+        if (_usarClusterDesktop && !window._clusterClickDesktopAdded) {
+            window._clusterClickDesktopAdded = true;
+            map.on('click', 'l-clusters', function(e) {
+                var features = map.queryRenderedFeatures(e.point, { layers: ['l-clusters'] });
+                if (!features.length) return;
+                var clusterId = features[0].properties.cluster_id;
+                map.getSource('src-pontos').getClusterExpansionZoom(clusterId, function(err, zoom) {
+                    if (err) return;
+                    map.easeTo({ center: features[0].geometry.coordinates, zoom: zoom });
+                });
+            });
+            map.on('mouseenter', 'l-clusters', function() { map.getCanvas().style.cursor = 'pointer'; });
+            map.on('mouseleave', 'l-clusters', function() { map.getCanvas().style.cursor = ''; });
+            console.log('[renderizarMapa] clustering desktop ativado para', totalFeatures, 'features');
+        }
     }
 
     // Aplica filtros de visibilidade (Alimentadores ativos/inativos)
     if (typeof aplicarFiltros === 'function') aplicarFiltros(); 
 
     // Celular: otimizações de memória — linhas simples e pins maiores
-    if (document.body.classList.contains('modo-celular')) {
-        // Linha principal: grossa e simples (sem blur, opacidade total)
-        if (map.getLayer('l-linhas')) {
-            map.setPaintProperty('l-linhas', 'line-width', ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 18, 8]);
-            map.setPaintProperty('l-linhas', 'line-opacity', 1);
-            map.setPaintProperty('l-linhas', 'line-blur', 0);
-        }
-        // Pins maiores para melhor toque/visualização em telas pequenas
-        ['l-pontos-quadrados', 'l-pontos-triangulos-kva', 'l-pontos-triangulos-verdes', 'l-podas-x', 'l-pontos-circulos-pretos'].forEach(function(camada) {
-            if (map.getLayer(camada)) {
-                map.setLayoutProperty(camada, 'icon-size', ['interpolate', ['linear'], ['zoom'], 5, 0.04, 10, 0.13, 14, 0.38, 18, 0.6]);
+    // Desktop com clustering: excluir clusters dos filtros de pontos individuais
+    if (isCelular || _usarClusterDesktop) {
+        if (isCelular) {
+            // Linha principal: grossa e simples (sem blur, opacidade total)
+            if (map.getLayer('l-linhas')) {
+                map.setPaintProperty('l-linhas', 'line-width', ['interpolate', ['linear'], ['zoom'], 10, 2, 14, 4, 18, 8]);
+                map.setPaintProperty('l-linhas', 'line-opacity', 1);
+                map.setPaintProperty('l-linhas', 'line-blur', 0);
             }
-        });
-        // Exclui clusters dos filtros de pontos individuais
+            // Pins maiores para melhor toque/visualização em telas pequenas
+            ['l-pontos-quadrados', 'l-pontos-triangulos-kva', 'l-pontos-triangulos-verdes', 'l-podas-x', 'l-pontos-circulos-pretos'].forEach(function(camada) {
+                if (map.getLayer(camada)) {
+                    map.setLayoutProperty(camada, 'icon-size', ['interpolate', ['linear'], ['zoom'], 5, 0.04, 10, 0.13, 14, 0.38, 18, 0.6]);
+                }
+            });
+        }
+        // Exclui clusters dos filtros de pontos individuais (celular e desktop com clustering)
         ['l-pontos-quadrados', 'l-pontos-triangulos-kva', 'l-pontos-triangulos-verdes', 'l-podas-x', 'l-pontos-circulos-pretos', 'l-pontos-circulos-azuis'].forEach(function(camada) {
             if (map.getLayer(camada)) {
                 var filtroAtual = map.getFilter(camada) || ['all'];
                 if (Array.isArray(filtroAtual) && filtroAtual[0] !== 'all') {
                     filtroAtual = ['all', filtroAtual];
                 }
-                filtroAtual.push(['!', ['has', 'point_count']]);
-                map.setFilter(camada, filtroAtual);
+                // Evitar duplicar o filtro em chamadas repetidas
+                var jaTemFiltroCluster = filtroAtual.some(function(f) { return Array.isArray(f) && f[0] === '!' && Array.isArray(f[1]) && f[1][0] === 'has' && f[1][1] === 'point_count'; });
+                if (!jaTemFiltroCluster) {
+                    filtroAtual.push(['!', ['has', 'point_count']]);
+                    map.setFilter(camada, filtroAtual);
+                }
             }
         });
-        // Labels só em zoom alto para não sobrecarregar
-        ['l-labels', 'l-labels-bg'].forEach(function(camada) {
-            if (map.getLayer(camada)) {
-                map.setPaintProperty(camada, 'text-opacity', 1);
-            }
-        });
+        if (isCelular) {
+            // Labels só em zoom alto para não sobrecarregar
+            ['l-labels', 'l-labels-bg'].forEach(function(camada) {
+                if (map.getLayer(camada)) {
+                    map.setPaintProperty(camada, 'text-opacity', 1);
+                }
+            });
+        }
     }
 
     // === RENDERIZAÇÃO PROGRESSIVA (somente no primeiro render) ===
@@ -24898,11 +25364,43 @@ if ('launchQueue' in window) {
   // ── Cache de itens da lista (evita passar URL/nome em onclick inline) ────
   var _kmlcItems = [];
 
+  // ── Filtro de pesquisa em tempo real ─────────────────────────────────────
+  window._kmlcFiltrar = function(termo) {
+    var body = document.getElementById('kmlCompartBody');
+    if (!body) return;
+    var items = body.querySelectorAll('.kmlc-item');
+    var t = (termo || '').toLowerCase().trim();
+    var visiveis = 0;
+    items.forEach(function(el) {
+      var nome = (el.getAttribute('data-nome') || '').toLowerCase();
+      if (!t || nome.indexOf(t) !== -1) {
+        el.style.display = '';
+        visiveis++;
+      } else {
+        el.style.display = 'none';
+      }
+    });
+    var semResultado = body.querySelector('.kmlc-no-result');
+    if (visiveis === 0 && items.length > 0) {
+      if (!semResultado) {
+        var div = document.createElement('div');
+        div.className = 'kmlc-empty kmlc-no-result';
+        div.textContent = 'Nenhum arquivo encontrado';
+        body.appendChild(div);
+      }
+    } else {
+      if (semResultado) semResultado.remove();
+    }
+  };
+
   // ── Carregar lista do Firestore ───────────────────────────────────────────
   async function _carregarLista() {
     var body = document.getElementById('kmlCompartBody');
     if (!body) return;
     body.innerHTML = '<div class="kmlc-loading">⏳ Carregando...</div>';
+    // Limpar campo de pesquisa ao recarregar
+    var searchInput = document.getElementById('kmlcSearchInput');
+    if (searchInput) searchInput.value = '';
 
     try {
       var db = window._kmlFirestore;
@@ -24923,13 +25421,14 @@ if ('launchQueue' in window) {
       snap.forEach(function(doc) {
         var d = doc.data();
         var idx = _kmlcItems.length;
-        _kmlcItems.push({ url: d.url, nome: d.nome });
-        html += '<div class="kmlc-item">' +
+        _kmlcItems.push({ url: d.url, nome: d.nome, docId: doc.id });
+        html += '<div class="kmlc-item" data-nome="' + _esc(d.nome) + '">' +
           '<div class="kmlc-item-name">' + _esc(d.nome) + '</div>' +
           '<div class="kmlc-item-meta">' + _fmtTamanho(d.tamanho) + ' &bull; ' + _fmtData(d.dataUpload) + '</div>' +
           '<div class="kmlc-item-btns">' +
             '<button class="kmlc-btn-dl" onclick="_kmlcDownload(' + idx + ')">⬇️ Download</button>' +
             '<button class="kmlc-btn-load" onclick="_kmlcCarregarNoMapa(' + idx + ')">🗺️ Carregar no meu mapa</button>' +
+            '<button class="kmlc-btn-del" onclick="_kmlcApagar(' + idx + ')">🗑️ Apagar</button>' +
           '</div>' +
         '</div>';
       });
@@ -25057,6 +25556,75 @@ if ('launchQueue' in window) {
       .catch(function(e) {
         console.error('[KML-Firebase] erro ao carregar no mapa:', e);
         alert('Erro ao carregar ' + nome + ': ' + (e && e.message ? e.message : String(e)));
+      });
+  };
+
+  // ── Apagar arquivo (Storage + Firestore + DOM + chat) ────────────────────
+  window._kmlcApagar = function(idx) {
+    var item = _kmlcItems[idx];
+    if (!item) { console.error('[KML-Firebase] item não encontrado:', idx); return; }
+    var nome = item.nome;
+    var docId = item.docId;
+
+    var confirmado = confirm('Tem certeza que deseja apagar o arquivo "' + nome + '"?\nEsta ação não pode ser desfeita.');
+    if (!confirmado) return;
+
+    var db = window._kmlFirestore;
+    if (!db) { alert('Firebase não disponível.'); return; }
+
+    // Apagar do Storage
+    var storagePromise = _storageRef(nome).delete()
+      .catch(function(e) {
+        // Se o arquivo não existir no Storage, continuar mesmo assim
+        if (e && e.code === 'storage/object-not-found') return;
+        throw e;
+      });
+
+    // Apagar do Firestore pelo docId
+    var firestorePromise;
+    if (docId) {
+      firestorePromise = db.collection('kml_files').doc(docId).delete();
+    } else {
+      // Fallback: buscar pelo nome
+      firestorePromise = db.collection('kml_files').where('nome', '==', nome).get()
+        .then(function(snap) {
+          var batch = db.batch();
+          snap.forEach(function(d) { batch.delete(d.ref); });
+          return batch.commit();
+        });
+    }
+
+    Promise.all([storagePromise, firestorePromise])
+      .then(function() {
+        // Remover da lista visual
+        var body = document.getElementById('kmlCompartBody');
+        if (body) {
+          var items = body.querySelectorAll('.kmlc-item');
+          items.forEach(function(el) {
+            if ((el.getAttribute('data-nome') || '') === nome) el.remove();
+          });
+          // Verificar se ficou vazio
+          var restantes = body.querySelectorAll('.kmlc-item');
+          if (restantes.length === 0) {
+            body.innerHTML = '<div class="kmlc-empty">Nenhum arquivo compartilhado ainda.<br>Importe um KML/KMZ para compartilhar automaticamente.</div>';
+          }
+        }
+        // Remover do cache
+        _kmlcItems[idx] = null;
+
+        // Mensagem no chat
+        if (typeof enviarMensagemSistemaChat === 'function' && typeof getAutorFormatado === 'function') {
+          enviarMensagemSistemaChat('🗑️ ' + getAutorFormatado() + ' apagou o arquivo compartilhado: ' + nome);
+        }
+
+        // Toast de confirmação
+        if (typeof mostrarNotificacaoRealTime === 'function') {
+          mostrarNotificacaoRealTime('Arquivo apagado: ' + nome, '#e53935', false, 3000);
+        }
+      })
+      .catch(function(e) {
+        console.error('[KML-Firebase] erro ao apagar:', e);
+        alert('Erro ao apagar "' + nome + '": ' + (e && e.message ? e.message : String(e)));
       });
   };
 
