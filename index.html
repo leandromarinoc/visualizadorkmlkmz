@@ -25210,6 +25210,7 @@ if ('launchQueue' in window) {
       if (!db || !st) { console.warn('[KML-Firebase] não inicializado'); return; }
 
       // Deduplicação: mesmo nome E mesmo tamanho
+      // Também verifica se o arquivo físico existe no Storage (evita bug de reimport após apagar)
       try {
         var snap = await db.collection('kml_files')
           .where('nome', '==', file.name)
@@ -25217,8 +25218,35 @@ if ('launchQueue' in window) {
           .limit(1)
           .get();
         if (!snap.empty) {
-          console.log('[KML-Firebase] arquivo já existe no servidor, pulando upload:', file.name);
-          return;
+          // Verificar se o arquivo físico realmente existe no Storage
+          var storageOk = false;
+          try {
+            await st.ref('kml-compartilhados/' + file.name).getDownloadURL();
+            storageOk = true;
+          } catch(eCheck) {
+            if (eCheck && eCheck.code === 'storage/object-not-found') {
+              // Arquivo foi apagado do Storage mas o registro Firestore ficou órfão
+              // Limpar o(s) registro(s) órfão(s) e prosseguir com o upload
+              console.warn('[KML-Firebase] registro órfão detectado (Storage ausente), limpando Firestore e re-enviando:', file.name);
+              try {
+                var batchLimpar = db.batch();
+                snap.forEach(function(d) { batchLimpar.delete(d.ref); });
+                await batchLimpar.commit();
+              } catch(eLimpar) {
+                console.warn('[KML-Firebase] erro ao limpar registro órfão:', eLimpar && eLimpar.message);
+              }
+              storageOk = false;
+            } else {
+              // Outro erro (rede, permissão) — assumir que existe para não duplicar
+              console.warn('[KML-Firebase] erro ao verificar Storage, assumindo que arquivo existe:', eCheck && eCheck.message);
+              storageOk = true;
+            }
+          }
+          if (storageOk) {
+            console.log('[KML-Firebase] arquivo já existe no servidor, pulando upload:', file.name);
+            return;
+          }
+          // storageOk === false: registro órfão foi limpo, continua para re-upload
         }
       } catch(eDedup) {
         // Se falhar a dedup (ex: permissão), continua tentando o upload
