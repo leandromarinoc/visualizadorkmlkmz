@@ -50,26 +50,37 @@
     <!-- FCM: inicialização do Firebase Messaging -->
     <script>
       (function _initFCM() {
+        console.log('[FCM] Iniciando FCM...');
         try {
           var messaging = firebase.messaging();
           window._fcmMessaging = messaging;
+          console.log('[FCM] firebase.messaging() OK');
 
-          var VAPID_KEY = 'BKCQqIm8OcXrZYApcY8TOJTeBua6Hjp6QiOx9WG0Bit57KyIpEzA8Dia7O5TVdEldJUq5pPtf8x4DOigRrl8Sb4'; // Substituir pela chave real do Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+          var VAPID_KEY = 'BKCQqIm8OcXrZYApcY8TOJTeBua6Hjp6QiOx9WG0Bit57KyIpEzA8Dia7O5TVdEldJUq5pPtf8x4DOigRrl8Sb4';
 
           // Registrar token FCM e salvar no Firestore
+          // IMPORTANTE: só chamar APÓS window.meuID estar definido pelo Auth anônimo
           function registrarTokenFCM(swReg) {
+            var uid = window.meuID;
+            if (!uid) {
+              console.warn('[FCM] registrarTokenFCM chamado sem window.meuID — abortando');
+              return;
+            }
             var opts = { vapidKey: VAPID_KEY };
             if (swReg) opts.serviceWorkerRegistration = swReg;
+            console.log('[FCM] Obtendo token para UID:', uid);
             messaging.getToken(opts).then(function(token) {
               if (token) {
                 console.log('[FCM] Token registrado:', token);
-                if (window._kmlFirestore && window.meuID) {
-                  window._kmlFirestore.collection('fcm_tokens').doc(window.meuID).set({
+                if (window._kmlFirestore) {
+                  window._kmlFirestore.collection('fcm_tokens').doc(uid).set({
                     token: token,
                     tokens: firebase.firestore.FieldValue.arrayUnion(token),
                     autor: localStorage.getItem('usuarioIdentificacao') || 'Desconhecido',
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                  }, { merge: true }).catch(function(e) {
+                  }, { merge: true }).then(function() {
+                    console.log('[FCM] Token salvo no Firestore para UID:', uid);
+                  }).catch(function(e) {
                     console.warn('[FCM] Erro ao salvar token no Firestore:', e);
                   });
                 }
@@ -81,19 +92,32 @@
             });
           }
 
-          // Solicitar permissão de notificação e registrar token
+          // Expor globalmente para ser chamado pelo Auth após UID estar disponível
+          window._registrarTokenFCM = function() {
+            console.log('[FCM] _registrarTokenFCM chamado, meuID:', window.meuID);
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistration('./firebase-messaging-sw.js').then(function(swReg) {
+                registrarTokenFCM(swReg || null);
+              }).catch(function() {
+                registrarTokenFCM(null);
+              });
+            } else {
+              registrarTokenFCM(null);
+            }
+          };
+
+          // Solicitar permissão de notificação
+          // NÃO registra token aqui — aguarda Auth resolver (chamado via window._registrarTokenFCM)
           Notification.requestPermission().then(function(permission) {
             console.log('[FCM] Permissão de notificação:', permission);
             if (permission === 'granted') {
-              // Aguardar SW de messaging estar registrado antes de obter token
-              if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistration('./firebase-messaging-sw.js').then(function(swReg) {
-                  registrarTokenFCM(swReg || null);
-                }).catch(function() {
-                  registrarTokenFCM(null);
-                });
+              // Se Auth já resolveu (window.meuID disponível), registrar agora
+              // Caso contrário, _initFirebaseAuth chamará window._registrarTokenFCM após Auth
+              if (window.meuID && window.meuID.length > 10) {
+                window._registrarTokenFCM();
               } else {
-                registrarTokenFCM(null);
+                console.log('[FCM] Permissão concedida, aguardando Auth resolver para registrar token...');
+                window._fcmPermissaoGranted = true;
               }
             }
           }).catch(function(e) {
@@ -4294,23 +4318,35 @@ window.addEventListener('load', () => {
 
         // Inicializar Auth anônimo Firebase
         (function _initFirebaseAuth() {
+            console.log('[Auth] Iniciando auth anônimo...');
             try {
                 var auth = firebase.auth();
                 // Listener: atualiza meuID quando Auth resolver (cache local = imediato)
                 auth.onAuthStateChanged(function(user) {
+                    console.log('[Auth] onAuthStateChanged:', user ? user.uid : null);
                     if (user) {
                         meuID = user.uid;
                         window.meuID = meuID;
                         console.log('[Auth] UID persistente:', meuID);
+                        // Registrar token FCM agora que temos o UID real
+                        if (window._fcmPermissaoGranted && typeof window._registrarTokenFCM === 'function') {
+                            console.log('[Auth] Disparando registro FCM após Auth resolver...');
+                            window._registrarTokenFCM();
+                            window._fcmPermissaoGranted = false;
+                        }
+                    } else {
+                        console.log('[Auth] Nenhum usuário autenticado ainda, aguardando signInAnonymously...');
                     }
                 });
                 // Sign in anônimo (se já tem sessão em cache, onAuthStateChanged dispara antes)
-                auth.signInAnonymously().catch(function(e) {
-                    console.warn('[Auth] Erro auth anônimo, usando fallback:', e.message);
+                auth.signInAnonymously().then(function() {
+                    console.log('[Auth] signInAnonymously() chamado com sucesso');
+                }).catch(function(e) {
+                    console.error('[Auth] Erro auth anônimo, usando fallback:', e.message, e.code);
                     // meuID já tem o fallback Math.random() definido acima
                 });
             } catch(e) {
-                console.warn('[Auth] Firebase Auth indisponível, usando fallback:', e.message);
+                console.error('[Auth] Firebase Auth indisponível, usando fallback:', e.message);
             }
         })();
         const TEMA_MQTT = 'inspecao_pro_podas_bebedouro_oficial'; 
