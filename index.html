@@ -26,6 +26,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script>
       (function() {
         var firebaseConfig = {
@@ -4097,8 +4098,32 @@ window.addEventListener('load', () => {
         // ==========================================
         // SISTEMA DE SINCRONIZAÇÃO MQTT E USUÁRIOS ONLINE
         // ==========================================
-        const meuID = Math.random().toString(36).substring(2, 10);
+        // meuID: usa Firebase Auth anônimo para UID persistente entre sessões.
+        // Fallback para Math.random() se Auth falhar (offline, etc.)
+        let meuID = Math.random().toString(36).substring(2, 10); // fallback inicial
         window.meuID = meuID;
+
+        // Inicializar Auth anônimo Firebase
+        (function _initFirebaseAuth() {
+            try {
+                var auth = firebase.auth();
+                // Listener: atualiza meuID quando Auth resolver (cache local = imediato)
+                auth.onAuthStateChanged(function(user) {
+                    if (user) {
+                        meuID = user.uid;
+                        window.meuID = meuID;
+                        console.log('[Auth] UID persistente:', meuID);
+                    }
+                });
+                // Sign in anônimo (se já tem sessão em cache, onAuthStateChanged dispara antes)
+                auth.signInAnonymously().catch(function(e) {
+                    console.warn('[Auth] Erro auth anônimo, usando fallback:', e.message);
+                    // meuID já tem o fallback Math.random() definido acima
+                });
+            } catch(e) {
+                console.warn('[Auth] Firebase Auth indisponível, usando fallback:', e.message);
+            }
+        })();
         const TEMA_MQTT = 'inspecao_pro_podas_bebedouro_oficial'; 
         window.TEMA_MQTT = TEMA_MQTT;
         const TEMA_PODAS = TEMA_MQTT + '/poda';
