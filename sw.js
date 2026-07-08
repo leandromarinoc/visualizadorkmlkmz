@@ -18,15 +18,16 @@ try {
 
     fcmMessaging.onBackgroundMessage(function(payload) {
         console.log('[FCM-SW] Background message:', payload);
-        var n = payload.notification || {};
+        // Payload agora vem APENAS no campo 'data' (sem campo 'notification').
+        // Isso garante que o SW sempre controla a exibição da notificação.
         var d = payload.data || {};
-        var title = n.title || d.title || 'Inspecao Pro';
-        var body = n.body || d.body || '';
+        var title = d.title || 'Inspeção Pro';
+        var body = d.body || 'Nova mensagem recebida';
         return self.registration.showNotification(title, {
             body: body,
             icon: './icon.png',
             badge: './icon-192.png',
-            tag: 'fcm-chat-' + Date.now(),
+            tag: 'fcm-chat',
             renotify: true,
             data: d
         });
@@ -37,8 +38,9 @@ try {
 }
 
 // === Push handler explícito — fallback robusto para background/foreground ===
-// Garante notificação mesmo se onBackgroundMessage não disparar (ex: payload com notification field)
-// O handler obfuscado acima também dispara — tag fixo 'fcm-chat' evita duplicação visual
+// Garante notificação mesmo se onBackgroundMessage não disparar.
+// Payload FCM agora vem APENAS no campo 'data' (sem campo 'notification'),
+// então title e body são extraídos de event.data.json().data
 self.addEventListener('push', function(event) {
     var title = 'Inspeção Pro';
     var body = 'Nova mensagem recebida';
@@ -51,7 +53,7 @@ self.addEventListener('push', function(event) {
                     body: body,
                     icon: './icon.png',
                     badge: './icon-192.png',
-                    tag: 'fcm-chat',
+                    tag: tag,
                     renotify: true,
                     requireInteraction: false
                 });
@@ -61,10 +63,10 @@ self.addEventListener('push', function(event) {
     }
     try {
         var payload = event.data.json();
-        var n = payload.notification || {};
+        // Payload FCM data-only: os campos ficam em payload.data
         var d = payload.data || {};
-        title = n.title || d.title || title;
-        body  = n.body  || d.body  || body;
+        title = d.title || title;
+        body  = d.body  || body;
     } catch(e) {
         try { body = event.data.text() || body; } catch(e2) {}
     }
@@ -75,7 +77,7 @@ self.addEventListener('push', function(event) {
                 body: body,
                 icon: './icon.png',
                 badge: './icon-192.png',
-                tag: 'fcm-chat',
+                tag: tag,
                 renotify: true,
                 requireInteraction: false
             });

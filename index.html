@@ -6643,7 +6643,7 @@ window.addEventListener('load', () => {
 
         async function abrirDB() { return StorageManager._openDB(); }
 
-        function apagarTudo() {
+        async function apagarTudo() {
             if (!confirm('Apagar todos os arquivos importados? Esta ação não pode ser desfeita.')) return;
             // v8.54: preservar features do bancocap.kmz (arquivo protegido)
             const featsBancocap = (geoJsonGlobal && geoJsonGlobal.features)
@@ -6654,10 +6654,13 @@ window.addEventListener('load', () => {
             window.arquivosVisiveis = {};
             if (featsBancocap.length) window.arquivosVisiveis['bancocap.kmz'] = true;
             document.getElementById('arquivoUpload').value = '';
-            StorageManager.deleteAll().catch(e => console.error('apagarTudo error:', e));
+            // FIX: aguardar deleteAll() antes de atualizar UI e recarregar bancocap
+            // Sem await, o reload podia acontecer antes da exclusão ser persistida
+            await StorageManager.deleteAll().catch(e => console.error('apagarTudo error:', e));
             renderizarMapa();
             atualizarPainel();
             if (typeof atualizarPainelArquivos === 'function') atualizarPainelArquivos();
+            window.location.reload();
             // v8.55: re-disparar auto-load se bancocap não estava carregado
             if (!featsBancocap.length) {
               setTimeout(async function _autoLoadBancocapReset() {
@@ -6774,13 +6777,15 @@ window.addEventListener('load', () => {
             
             console.log('[carregarTudo] hasHandle:', StorageManager.hasHandle(), 'features:', features.length, 'visibility:', visibility ? Object.keys(visibility).length : 0);
             
-            // FALLBACK: Se features voltou vazio mas tem handle, tentar carregar TODOS os .geojson da pasta
+            // FALLBACK: Se features voltou vazio mas tem handle, tentar carregar arquivos visíveis da pasta
+            // FIX: respeitar visibilidade — não forçar visible=true para arquivos ocultados
             if (features.length === 0 && !_isMobile && StorageManager.hasHandle()) {
                 try {
                     const allFiles = await StorageManager.listFiles();
                     console.log('[carregarTudo FALLBACK] listFiles:', allFiles.length, allFiles.map(f => f.nome));
                     for (const f of allFiles) {
                         if (f.nome && f.nome.startsWith('comentarios-')) continue; // Arquivos de comentários não são GeoJSON features
+                        if (f.visivel === false) continue; // respeitar ocultação intencional
                         const feats = await StorageManager.loadFile(f.nome);
                         console.log('[carregarTudo FALLBACK] loadFile', f.nome, ':', feats.length, 'features');
                         if (feats.length > 0) {
@@ -6794,6 +6799,8 @@ window.addEventListener('load', () => {
 
             // FALLBACK 2: Verificar se há arquivos no metadata que NÃO foram carregados ainda
             // (cobre o caso de novo sourceFile de alteração que ficou "não visível" por bug)
+            // FIX: só recupera arquivos que NÃO foram explicitamente ocultados (visivel !== false)
+            // Arquivos apagados são removidos do metadata pelo deleteFile/deleteAll, então não aparecem aqui
             if (!_isMobile && StorageManager.hasHandle()) {
                 try {
                     const allFiles2 = await StorageManager.listFiles();
@@ -6802,7 +6809,10 @@ window.addEventListener('load', () => {
                     for (const f of allFiles2) {
                         if (f.nome && f.nome.startsWith('comentarios-')) continue;
                         if (sfCarregados.has(f.nome)) continue; // já foi carregado
-                        // Arquivo existe no metadata mas não foi carregado (ex: visivel=false por bug, ou arquivo novo de alteração)
+                        // FIX: não recuperar arquivos que foram explicitamente ocultados pelo usuário
+                        // (visivel === false significa que o usuário desmarcou o checkbox — não é um bug)
+                        if (f.visivel === false) continue;
+                        // Arquivo existe no metadata mas não foi carregado (ex: arquivo novo de alteração)
                         const feats2 = await StorageManager.loadFile(f.nome);
                         if (feats2.length > 0) {
                             console.log('[carregarTudo FALLBACK2] recuperando arquivo perdido:', f.nome, feats2.length, 'features');
@@ -6895,11 +6905,13 @@ window.addEventListener('load', () => {
                 const state = await StorageManager.loadState();
                 const visibility = await StorageManager.loadVisibility();
                 
-                // FALLBACK: Se features voltou vazio, tentar carregar TODOS .geojson da pasta
+                // FALLBACK: Se features voltou vazio, tentar carregar arquivos visíveis da pasta
+                // FIX: respeitar visibilidade — não forçar visible=true para arquivos ocultados
                 if (features.length === 0 && StorageManager.hasHandle()) {
                     try {
                         const allFiles = await StorageManager.listFiles();
                         for (const f of allFiles) {
+                            if (f.visivel === false) continue; // respeitar ocultação intencional
                             const feats = await StorageManager.loadFile(f.nome);
                             if (feats.length > 0) {
                                 features.push(...feats);
@@ -7418,7 +7430,7 @@ function _mostrarToastImportacao(msg, duracao) {
     if (!el) {
         el = document.createElement('div');
         el.id = '_importToast';
-        el.style.cssText = 'position:fixed;top:72px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,0.92);color:#fff;padding:10px 24px;border-radius:22px;font-size:14px;font-weight:600;z-index:99999;pointer-events:none;white-space:nowrap;box-shadow:0 2px 14px rgba(0,0,0,0.45);transition:opacity 0.3s;opacity:0;';
+        el.style.cssText = 'position:fixed;top:72px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,0.92);color:#fff;padding:10px 24px;border-radius:22px;font-size:14px;font-weight:600;z-index:99999;pointer-events:none;white-space:normal;max-width:90vw;text-align:center;box-shadow:0 2px 14px rgba(0,0,0,0.45);transition:opacity 0.3s;opacity:0;';
         document.body.appendChild(el);
     }
     el.textContent = msg;
@@ -7831,6 +7843,22 @@ function classificarEquipamento(props, statusManual = null) {
     // ===========================================================
     if (n.includes('-FD') || txtTotal.includes('FUS DIRETA') || txtTotal.includes('FUSDIRETA') || txtTotal.includes('CHAVE LAMINA')) {
         return { tipoEquip: 'NF', corPonto: '#FF1744', iconName: 'quadrado-vermelho', statusTxt: "Fechada (NF)", visivel: true };
+    }
+
+    // ===========================================================
+    // PRIORIDADE 7c: FU / FA / RE sem status NA/NF detectavel -> DESCONHECIDO (cinza)
+    // KMZ CPFL (ex: BEBEDOURO) so tem <name> e <ExtendedData> sem description,
+    // styleUrl ou campo de status. Nao e possivel determinar NA ou NF automaticamente.
+    // O usuario devera alterar o status manualmente no app.
+    // ===========================================================
+    if (n.includes('-FU') || txtTotal.includes('FUSIVEL') || txtTotal.includes('FUS VEL') || txtTotal.includes('FUSIVEIS') || txtTotal.includes('POSTO CHAVE FUSIVEL') || txtTotal.includes('CHAVE FUSIVEL')) {
+        return { tipoEquip: 'DESCONHECIDO', corPonto: '#808080', iconName: 'quadrado-cinza', statusTxt: "Status desconhecido", visivel: true };
+    }
+    if (n.includes('-FA') || txtTotal.includes('CHAVE FACA') || txtTotal.includes('FACA')) {
+        return { tipoEquip: 'DESCONHECIDO', corPonto: '#808080', iconName: 'quadrado-cinza', statusTxt: "Status desconhecido", visivel: true };
+    }
+    if (n.includes('-RE') || txtTotal.includes('RELIGADOR')) {
+        return { tipoEquip: 'DESCONHECIDO', corPonto: '#808080', iconName: 'quadrado-cinza', statusTxt: "Status desconhecido", visivel: true };
     }
 
     // ===========================================================
@@ -8367,91 +8395,41 @@ async function _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido) {
 
     const t2 = performance.now();
 
-    if (_arquivoGrande) {
-        // ── MODO ARQUIVO GRANDE: loop único sincrono (sem chunks/setTimeout) ──
-        // A UI já está bloqueada pelo overlay, então não importa bloquear aqui.
-        // Elimina o overhead de ~10-50 agendamentos de setTimeout.
-        for (let i = 0; i < total; i++) {
-            const f = features[i];
-            try {
-                if (!f.geometry || !f.geometry.type) { featuresIgnoradas++; console.warn('[processarKML] feature sem geometria descartada em', fileName, 'índice', i, '- name:', (f.properties && f.properties.name) || '(sem nome)'); continue; }
-                if (!f.properties) f.properties = {};
+    // Flag: detecta chaves FU/FA/RE sem description (classificadas como DESCONHECIDO)
+    let _flagChaveSemDesc = false;
 
-                const feat = { type: 'Feature', geometry: f.geometry, properties: { ...f.properties } };
-                if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
-                feat.properties.sourceFile = fileName;
-
-                // Celular: trunca description pesada para economizar memória
-                if (_isCelular && feat.properties.description && feat.properties.description.length > 300) {
-                    feat.properties.description = feat.properties.description.substring(0, 300);
+    // Função auxiliar inline para classificar um ponto e atualizar a flag
+    function _classificarPonto(feat) {
+        const classificado = classificarEquipamento(feat.properties);
+        if (classificado.visivel) {
+            feat.properties.tipoEquip = classificado.tipoEquip;
+            feat.properties.corPonto = classificado.corPonto;
+            feat.properties.iconName = classificado.iconName;
+            feat.properties.statusTxt = classificado.statusTxt;
+            // Detecta chave FU/FA/RE sem description (prioridade 7c -> DESCONHECIDO)
+            if (!_flagChaveSemDesc && classificado.tipoEquip === 'DESCONHECIDO') {
+                const nUp = (feat.properties.name || '').toUpperCase();
+                if (nUp.includes('-FU') || nUp.includes('-FA') || nUp.includes('-RE')) {
+                    _flagChaveSemDesc = true;
                 }
-
-                // Cache toUpperCase do name (evita chamadas repetidas)
-                let nAtivo = (feat.properties.name || "S/N").toUpperCase();
-                const descCrua = String(feat.properties.description || "");
-
-                // Se name está vazio e description tem dados, tenta extrair número do equipamento
-                if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
-                    const descTexto = descCrua.replace(_RX_HTML, ' ');
-                    const matchKVA      = _RX_KVA.exec(descTexto);
-                    const matchNOper    = matchKVA   ? null : _RX_NOPER.exec(descTexto);
-                    const matchNumero   = matchNOper ? null : _RX_NUMERO.exec(descTexto);
-                    const matchGenerico = matchNumero ? null : _RX_GENERICO.exec(descTexto);
-
-                    if (matchKVA) {
-                        feat.properties.name = matchKVA[1].trim();
-                    } else if (matchNOper) {
-                        feat.properties.name = 'N Oper ' + matchNOper[1];
-                    } else if (matchNumero) {
-                        feat.properties.name = matchNumero[1].trim();
-                    } else if (matchGenerico) {
-                        feat.properties.name = matchGenerico[1].trim();
-                    }
-                    nAtivo = (feat.properties.name || "S/N").toUpperCase();
-                }
-
-                const descLimpa = descCrua.replace(_RX_PASTA, '').replace(_RX_HTML_GM, ' ').toUpperCase();
-                const txtTotal = nAtivo + " " + descLimpa;
-                feat.properties.textoBusca = txtTotal;
-
-                let vinculo = novosNomes.find(c => txtTotal.includes(c)) || "OUTROS";
-                feat.properties.alimRef = vinculo;
-
-                if (!f.geometry.type.includes('Point')) {
-                    feat.properties.isPoint = false;
-                    feat.properties.alimRef = nAtivo;
-                    const corOriginal = f.properties.stroke;
-                    const corPaleta = circuitosState[nAtivo] ? circuitosState[nAtivo].color : null;
-                    feat.properties.corRede = corOriginal || corPaleta || '#4285F4';
-                } else {
-                    feat.properties.isPoint = true;
-                    const classificado = classificarEquipamento(feat.properties);
-                    if (classificado.visivel) {
-                        feat.properties.tipoEquip = classificado.tipoEquip;
-                        feat.properties.corPonto = classificado.corPonto;
-                        feat.properties.iconName = classificado.iconName;
-                        feat.properties.statusTxt = classificado.statusTxt;
-                    } else {
-                        // Zero feature loss: em vez de descartar, classifica como GENERICO
-                        console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
-                        feat.properties.tipoEquip = 'GENERICO';
-                        feat.properties.corPonto = '#607D8B';
-                        feat.properties.iconName = 'circulo-cinza';
-                        feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
-                    }
-                }
-                geoJsonGlobal.features.push(feat);
-            } catch(e) {
-                featuresIgnoradas++;
-                console.warn('[processarKML] feature ignorada em', fileName, 'índice', i, ':', e && e.message);
             }
+        } else {
+            console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
+            feat.properties.tipoEquip = 'GENERICO';
+            feat.properties.corPonto = '#607D8B';
+            feat.properties.iconName = 'circulo-cinza';
+            feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
         }
-        console.log('[processarKML] loop classificação (grande) levou', (performance.now() - t2).toFixed(0), 'ms');
-        // Finalizar diretamente
-        await _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, total);
-    } else {
-        // ── MODO ARQUIVO PEQUENO: chunks com requestIdleCallback (não bloqueia render) ──
-        const CHUNK = _detectarChunkSize(total);
+    }
+
+    // Tamanho de chunk para arquivo grande: ~2000 features por fatia (yield a cada ~50ms)
+    const CHUNK_GRANDE = 2000;
+
+    // ── MODO UNIFICADO: chunks com setTimeout para não bloquear a UI ──────────
+    // Tanto arquivos grandes quanto pequenos usam chunks; o tamanho varia.
+    const CHUNK = _arquivoGrande ? CHUNK_GRANDE : _detectarChunkSize(total);
+
+    await new Promise(function(resolveLoop) {
         let i = 0;
 
         function processarChunk() {
@@ -8467,13 +8445,16 @@ async function _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido) {
                         if (!feat.properties.id) feat.properties.id = 'kml_' + (++window._globalKmlIdCounter);
                         feat.properties.sourceFile = fileName;
 
+                        // Celular: trunca description pesada para economizar memória
                         if (_isCelular && feat.properties.description && feat.properties.description.length > 300) {
                             feat.properties.description = feat.properties.description.substring(0, 300);
                         }
 
+                        // Cache toUpperCase do name (evita chamadas repetidas)
                         let nAtivo = (feat.properties.name || "S/N").toUpperCase();
                         const descCrua = String(feat.properties.description || "");
 
+                        // Se name está vazio e description tem dados, tenta extrair número do equipamento
                         if ((!feat.properties.name || feat.properties.name.trim() === '') && descCrua) {
                             const descTexto = descCrua.replace(_RX_HTML, ' ');
                             const matchKVA      = _RX_KVA.exec(descTexto);
@@ -8508,19 +8489,7 @@ async function _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido) {
                             feat.properties.corRede = corOriginal || corPaleta || '#4285F4';
                         } else {
                             feat.properties.isPoint = true;
-                            const classificado = classificarEquipamento(feat.properties);
-                            if (classificado.visivel) {
-                                feat.properties.tipoEquip = classificado.tipoEquip;
-                                feat.properties.corPonto = classificado.corPonto;
-                                feat.properties.iconName = classificado.iconName;
-                                feat.properties.statusTxt = classificado.statusTxt;
-                            } else {
-                                console.warn('[processarKML] feature sem classificacao em', fileName, '- mantida como GENERICO:', feat.properties.name || '(sem nome)');
-                                feat.properties.tipoEquip = 'GENERICO';
-                                feat.properties.corPonto = '#607D8B';
-                                feat.properties.iconName = 'circulo-cinza';
-                                feat.properties.statusTxt = feat.properties.name || 'Sem classificação';
-                            }
+                            _classificarPonto(feat);
                         }
                         geoJsonGlobal.features.push(feat);
                     } catch(e) {
@@ -8533,7 +8502,11 @@ async function _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido) {
             }
 
             if (i < total) {
-                _mostrarProgressoKML(i, total, fileName);
+                _atualizarOverlayImportacao(
+                    'Classificando ' + total + ' features...',
+                    25 + Math.round((i / total) * 60),
+                    i + ' / ' + total
+                );
                 if (typeof requestIdleCallback === 'function') {
                     requestIdleCallback(processarChunk, { timeout: 200 });
                 } else {
@@ -8541,20 +8514,18 @@ async function _processarKMLAsync(kmlStr, fileName, originalFile, onConcluido) {
                 }
             } else {
                 _ocultarProgressoKML();
-                console.log('[processarKML] loop classificação (pequeno) levou', (performance.now() - t2).toFixed(0), 'ms');
-                _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, total).catch(function(e) {
-                    console.error('[processarKML] erro ao finalizar:', e);
-                    _removerOverlayImportacao();
-                    if (typeof onConcluido === 'function') onConcluido();
-                });
+                console.log('[processarKML] loop classificação levou', (performance.now() - t2).toFixed(0), 'ms');
+                resolveLoop();
             }
         }
 
         processarChunk();
-    }
+    });
+
+    await _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, total, _flagChaveSemDesc);
 }
 
-async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, totalProcessado) {
+async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numPlacemarks, featuresIgnoradas, arquivoMalformado, metodoRecuperacao, totalProcessado, flagChaveSemDesc) {
     // ── Etapa 4: renderizar ─────────────────────────────────────────────────────
     _atualizarOverlayImportacao('Renderizando mapa...', 90, '');
     await new Promise(function(r) { setTimeout(r, 0); });
@@ -8575,6 +8546,28 @@ async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numP
     // Toast resumido ao usuário
     if (typeof _mostrarToastImportacao === 'function') {
         _mostrarToastImportacao('Importado: ' + featuresAdicionadas + ' equipamentos de ' + fileName, 5000);
+    }
+
+    // Modal de aviso: chaves FU/FA/RE sem description (status desconhecido)
+    if (flagChaveSemDesc) {
+        setTimeout(function() {
+            var _overlay = document.createElement('div');
+            _overlay.id = '_modalChaveSemDescOverlay';
+            _overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;';
+            var _box = document.createElement('div');
+            _box.style.cssText = 'background:#1e1e1e;color:#f0f0f0;border-radius:12px;padding:28px 24px 20px 24px;max-width:360px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.6);text-align:center;font-family:inherit;';
+            var _msg = document.createElement('p');
+            _msg.style.cssText = 'margin:0 0 20px 0;font-size:14px;line-height:1.6;';
+            _msg.textContent = 'Arquivo importado com sucesso, porém não há como o sistema classificar se a chave é NA ou NF, devido o arquivo importado não haver descrição correta. Neste caso você mesmo terá que mudar o status conforme for usando o app.';
+            var _btn = document.createElement('button');
+            _btn.textContent = 'OK';
+            _btn.style.cssText = 'background:#e67e22;color:#fff;border:none;border-radius:8px;padding:10px 36px;font-size:15px;font-weight:700;cursor:pointer;';
+            _btn.onclick = function() { document.body.removeChild(_overlay); };
+            _box.appendChild(_msg);
+            _box.appendChild(_btn);
+            _overlay.appendChild(_box);
+            document.body.appendChild(_overlay);
+        }, 5500);
     }
 
     // SALVAR APÓS TODOS OS CHUNKS — garante que todas as features estão no geoJsonGlobal
@@ -8869,7 +8862,10 @@ async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numP
             await StorageManager.deleteFile(arq);
             // NÃO apagar 'comentarios-' + arq — comentários persistem para reimportação futura
             await StorageManager.saveVisibility(window.arquivosVisiveis);
-            recalcularCircuitosAposDelecao(); renderizarMapa(); atualizarPainel(); atualizarPainelArquivos();
+            // FIX: salvar circuitosState atualizado para que o reload não restaure circuitos do arquivo apagado
+            recalcularCircuitosAposDelecao();
+            await StorageManager.saveState(circuitosState, filtrosStatus).catch(e => console.error('apagarArquivo saveState error:', e));
+            renderizarMapa(); atualizarPainel(); atualizarPainelArquivos();
         }
 
         function _exportarArquivoAlteracao(nomeArq) {
@@ -9783,7 +9779,7 @@ function criarIconeQuadrado(corBase, tamanho) {
         map.addLayer({
             'id': 'l-pontos-quadrados', 'type': 'symbol', 'source': srcPontos,
             'minzoom': _isMobile ? 0 : 10,
-            'filter': ['any', ['==', ['get', 'tipoEquip'], 'NA'], ['==', ['get', 'tipoEquip'], 'NF'], ['==', ['get', 'tipoEquip'], 'DI']],
+            'filter': ['any', ['==', ['get', 'tipoEquip'], 'NA'], ['==', ['get', 'tipoEquip'], 'NF'], ['==', ['get', 'tipoEquip'], 'DI'], ['==', ['get', 'tipoEquip'], 'DESCONHECIDO']],
             'layout': {
                 'icon-image': ['get', 'iconName'], 
                 'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.015, 8, 0.04, 10, 0.08, 12, 0.16, 14, 0.32, 16, 0.5, 18, 0.75],
@@ -10332,7 +10328,7 @@ function aplicarFiltros() {
     if (filtrosStatus.trafoParticular) tipos.push('TRAFO_PARTICULAR');
     if (filtrosStatus.bc) tipos.push('BC');
     if (filtrosStatus.reg) tipos.push('REG');
-    if (filtrosStatus.cinzas) tipos.push('GENERICO');
+    if (filtrosStatus.cinzas) { tipos.push('GENERICO'); tipos.push('DESCONHECIDO'); }
     if (filtrosStatus.di) tipos.push('DI');
     if (filtrosStatus.anotacao) tipos.push('ANOTACAO');
     if (filtrosStatus.consumidor) tipos.push('CONSUMIDOR');
@@ -10360,7 +10356,7 @@ function aplicarFiltros() {
     const filtroPoligonos = ['all', fAlim, fArquivos, regraLinhas, ['==', ['geometry-type'], 'Polygon']];
     
     const filtroQuadrados = ['all', fAlim, fStatus, fArquivos,
-        ['any', ['==', ['get', 'tipoEquip'], 'NA'], ['==', ['get', 'tipoEquip'], 'NF'], ['==', ['get', 'tipoEquip'], 'DI']]
+        ['any', ['==', ['get', 'tipoEquip'], 'NA'], ['==', ['get', 'tipoEquip'], 'NF'], ['==', ['get', 'tipoEquip'], 'DI'], ['==', ['get', 'tipoEquip'], 'DESCONHECIDO']]
     ];
 
     const filtroPodas = ['all', fAlim, fArquivos,

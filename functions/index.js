@@ -34,24 +34,26 @@ exports.onChatMessage = functions.firestore
             return null;
         }
 
-        // Montar notificação
-        const notification = {
-            title: msg.isSistema ? 'Inspeção Pro' : `${msg.autor}`,
-            body: msg.isSistema
-                ? (msg.texto || '').replace(/<[^>]*>/g, '').substring(0, 100)  // strip HTML
-                : (msg.texto || '').substring(0, 100)
-        };
+        // Montar corpo da notificação
+        const notifTitle = msg.isSistema ? 'Inspeção Pro' : (msg.autor || 'Inspeção Pro');
+        const notifBody = msg.isSistema
+            ? (msg.texto || '').replace(/<[^>]*>/g, '').substring(0, 100)  // strip HTML
+            : (msg.texto || '').substring(0, 100);
 
         // Remover tokens duplicados
         const uniqueTokens = [...new Set(tokens)];
 
-        // Montar payload multicast
+        // Montar payload multicast — APENAS campo 'data', SEM campo 'notification'.
+        // Isso força o browser a passar pelo Service Worker push handler,
+        // que monta a notificação com o conteúdo correto (autor + mensagem).
         const message = {
-            notification: notification,
             data: {
+                title: notifTitle,
+                body: notifBody,
                 tipo: msg.tipo || 'chat',
                 remetenteId: msg.remetenteId || '',
-                destino: msg.destino || 'todos'
+                destino: msg.destino || 'todos',
+                isSistema: msg.isSistema ? 'true' : 'false'
             },
             tokens: uniqueTokens
         };
