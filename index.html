@@ -54,7 +54,7 @@
           var messaging = firebase.messaging();
           window._fcmMessaging = messaging;
 
-          var VAPID_KEY = 'VAPID_KEY_PLACEHOLDER'; // Substituir pela chave real do Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+          var VAPID_KEY = 'BKCQqIm8OcXrZYApcY8TOJTeBua6Hjp6QiOx9WG0Bit57KyIpEzA8Dia7O5TVdEldJUq5pPtf8x4DOigRrl8Sb4'; // Substituir pela chave real do Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
 
           // Registrar token FCM e salvar no Firestore
           function registrarTokenFCM(swReg) {
@@ -14375,7 +14375,7 @@ function verificarCidadeEEstado(lng, lat) {
                     console.log('[FCM-SW] Registrado com scope:', swReg.scope);
                     // Passar o SW registration para getToken (evita conflito de scope)
                     if (window._fcmMessaging) {
-                        var VAPID_KEY = 'VAPID_KEY_PLACEHOLDER';
+                        var VAPID_KEY = 'BKCQqIm8OcXrZYApcY8TOJTeBua6Hjp6QiOx9WG0Bit57KyIpEzA8Dia7O5TVdEldJUq5pPtf8x4DOigRrl8Sb4';
                         window._fcmMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
                             .then(function(token) {
                                 if (token) {
