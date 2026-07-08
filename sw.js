@@ -45,13 +45,16 @@ self.addEventListener('push', function(event) {
     var tag = 'fcm-chat';
     if (!event.data) {
         event.waitUntil(
-            self.registration.showNotification(title, {
-                body: body,
-                icon: './icon.png',
-                badge: './icon-192.png',
-                tag: tag,
-                renotify: true,
-                requireInteraction: false
+            self.registration.getNotifications().then(function(existingNotifications) {
+                existingNotifications.forEach(function(n) { n.close(); });
+                return self.registration.showNotification(title, {
+                    body: body,
+                    icon: './icon.png',
+                    badge: './icon-192.png',
+                    tag: 'fcm-chat',
+                    renotify: true,
+                    requireInteraction: false
+                });
             })
         );
         return;
@@ -66,13 +69,16 @@ self.addEventListener('push', function(event) {
         try { body = event.data.text() || body; } catch(e2) {}
     }
     event.waitUntil(
-        self.registration.showNotification(title, {
-            body: body,
-            icon: './icon.png',
-            badge: './icon-192.png',
-            tag: tag,
-            renotify: true,
-            requireInteraction: false
+        self.registration.getNotifications().then(function(existingNotifications) {
+            existingNotifications.forEach(function(n) { n.close(); });
+            return self.registration.showNotification(title, {
+                body: body,
+                icon: './icon.png',
+                badge: './icon-192.png',
+                tag: 'fcm-chat',
+                renotify: true,
+                requireInteraction: false
+            });
         })
     );
 });
