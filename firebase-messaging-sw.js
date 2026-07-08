@@ -18,13 +18,21 @@ const messaging = firebase.messaging();
 
 // Receber mensagens em background (app fechado ou em segundo plano)
 messaging.onBackgroundMessage(function(payload) {
-    console.log('[FCM-SW] Mensagem em background recebida:', payload);
+    console.log('[FCM-SW] Mensagem em background recebida:', JSON.stringify(payload));
 
-    var notification = payload.notification || {};
-    var title = notification.title || 'Inspeção Pro';
-    var body  = notification.body  || '';
-    var icon  = notification.icon  || './icon.png';
-    var tag   = notification.tag   || 'fcm-default';
+    var notif = payload.notification || {};
+    var data  = payload.data || {};
+
+    // Suporte a mensagens data-only (sem campo notification)
+    var title = notif.title || data.title || 'Inspeção Pro';
+    var body  = notif.body  || data.body  || data.texto || '';
+    var icon  = notif.icon  || './icon.png';
+    var tag   = notif.tag   || data.tipo  || 'fcm-bg';
+
+    if (!body) {
+        console.log('[FCM-SW] Mensagem sem body — notificação suprimida.');
+        return;
+    }
 
     var options = {
         body: body,
@@ -32,8 +40,29 @@ messaging.onBackgroundMessage(function(payload) {
         badge: './icon-192.png',
         tag: tag,
         requireInteraction: false,
-        data: payload.data || {}
+        renotify: true,
+        data: data
     };
 
+    console.log('[FCM-SW] Exibindo notificação:', title, body);
     return self.registration.showNotification(title, options);
+});
+
+// Handler de clique na notificação background
+self.addEventListener('notificationclick', function(event) {
+    console.log('[FCM-SW] Notificação clicada:', event.notification.tag);
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+            for (var i = 0; i < clientList.length; i++) {
+                var client = clientList[i];
+                if (client.url.indexOf(self.registration.scope) === 0 && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow('./');
+            }
+        })
+    );
 });

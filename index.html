@@ -96,11 +96,17 @@
           window._registrarTokenFCM = function() {
             console.log('[FCM] _registrarTokenFCM chamado, meuID:', window.meuID);
             if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.getRegistration('./firebase-messaging-sw.js').then(function(swReg) {
-                registrarTokenFCM(swReg || null);
-              }).catch(function() {
-                registrarTokenFCM(null);
-              });
+              // Usar o SW já ativo (sw.js) que agora contém o código FCM integrado
+              // navigator.serviceWorker.ready retorna a registration do SW controlador ativo
+              navigator.serviceWorker.ready
+                .then(function(swReg) {
+                  console.log('[FCM] SW ativo obtido via ready, scope:', swReg.scope);
+                  registrarTokenFCM(swReg);
+                })
+                .catch(function(e) {
+                  console.warn('[FCM] Erro ao obter SW via ready:', e);
+                  registrarTokenFCM(null);
+                });
             } else {
               registrarTokenFCM(null);
             }
@@ -124,9 +130,58 @@
             console.warn('[FCM] Erro ao solicitar permissão:', e);
           });
 
-          // Receber mensagens em foreground — apenas logar (MQTT já trata a exibição)
+          // Receber mensagens em foreground — mostrar notificação nativa + toast
           messaging.onMessage(function(payload) {
             console.log('[FCM] Mensagem em foreground recebida:', payload);
+            try {
+              var notif = payload.notification || {};
+              var data  = payload.data || {};
+              var titulo = notif.title || 'Inspeção Pro';
+              var corpo  = notif.body  || '';
+              var tag    = notif.tag || data.tipo || 'fcm-foreground';
+
+              // Deduplicação: ignorar se a mensagem já está no chat (MQTT já exibiu)
+              var remetenteId = data.remetenteId || '';
+              var agora = Date.now();
+              var chave = 'fcm_fg_' + remetenteId + '_' + corpo.substring(0, 20);
+              if (window._fcmFgDedup && window._fcmFgDedup[chave] && (agora - window._fcmFgDedup[chave]) < 5000) {
+                console.log('[FCM] Foreground dedup — mensagem já exibida via MQTT, ignorando notificação nativa.');
+                return;
+              }
+              if (!window._fcmFgDedup) window._fcmFgDedup = {};
+              window._fcmFgDedup[chave] = agora;
+
+              // Toast visual dentro do app
+              if (typeof mostrarNotificacaoRealTime === 'function' && corpo) {
+                mostrarNotificacaoRealTime('<b>' + titulo + '</b>: ' + corpo, '#1565C0', true, 6000);
+              }
+
+              // Notificação nativa do browser (funciona mesmo com app em foco)
+              if (Notification.permission === 'granted' && corpo) {
+                if (navigator.serviceWorker) {
+                  navigator.serviceWorker.getRegistration().then(function(reg) {
+                    if (reg && reg.showNotification) {
+                      reg.showNotification(titulo, {
+                        body: corpo,
+                        icon: './icon.png',
+                        badge: './icon-192.png',
+                        tag: tag,
+                        requireInteraction: false,
+                        data: data
+                      });
+                    } else {
+                      try { new Notification(titulo, { body: corpo, icon: './icon.png', tag: tag }); } catch(e) {}
+                    }
+                  }).catch(function() {
+                    try { new Notification(titulo, { body: corpo, icon: './icon.png', tag: tag }); } catch(e) {}
+                  });
+                } else {
+                  try { new Notification(titulo, { body: corpo, icon: './icon.png', tag: tag }); } catch(e) {}
+                }
+              }
+            } catch(ex) {
+              console.warn('[FCM] Erro ao processar mensagem foreground:', ex);
+            }
           });
 
         } catch(e) {
@@ -3707,9 +3762,14 @@ window.addEventListener('load', () => {
                     const ehMinhaPrivada = d.destino === meuID || d.remetenteId === meuID;
                     if (!ehPublica && !ehSistema && !ehMinhaPrivada) return;
 
-                    // Deduplicação por remetenteId + timestampCliente
+                    // Deduplicação por remetenteId + timestampCliente (com fallback para mensagens sem timestampCliente)
+                    const _tsCliente = d.timestampCliente || 0;
                     const jaExiste = chatMessages.some(function(m) {
-                        return m.remetenteId === d.remetenteId && m.timestampCliente === d.timestampCliente;
+                        if (_tsCliente > 0) {
+                            return m.remetenteId === d.remetenteId && m.timestampCliente === _tsCliente;
+                        }
+                        // Fallback: dedup por autor + texto para mensagens sem timestampCliente
+                        return m.autor === (d.autor || '') && m.texto === (d.texto || '') && m.isSistema === (d.isSistema === true);
                     });
                     if (jaExiste) return;
 
@@ -3765,9 +3825,14 @@ window.addEventListener('load', () => {
                             const ehMinhaPrivada = d.destino === meuID || d.remetenteId === meuID;
                             if (!ehPublica && !ehSistema && !ehMinhaPrivada) return;
 
-                            // Deduplicação: já veio pelo MQTT?
+                            // Deduplicação: já veio pelo MQTT? (com fallback para mensagens sem timestampCliente)
+                            const _tsClienteSnap = d.timestampCliente || 0;
                             const jaExiste = chatMessages.some(function(m) {
-                                return m.remetenteId === d.remetenteId && m.timestampCliente === d.timestampCliente;
+                                if (_tsClienteSnap > 0) {
+                                    return m.remetenteId === d.remetenteId && m.timestampCliente === _tsClienteSnap;
+                                }
+                                // Fallback: dedup por autor + texto para mensagens sem timestampCliente
+                                return m.autor === (d.autor || '') && m.texto === (d.texto || '') && m.isSistema === (d.isSistema === true);
                             });
                             if (jaExiste) {
                                 console.log('[Chat-Firestore] Deduplicada (já recebida via MQTT)');
@@ -3868,7 +3933,10 @@ window.addEventListener('load', () => {
         }
 
         function enviarMensagemSistemaChat(textoHtml) {
-            const novaMensagem = { remetenteId: meuID, autor: '🤖 AVISO DO SISTEMA', texto: textoHtml, timestamp: Date.now(), destino: 'todos', isSistema: true };
+            const _remetenteIdSistema = window.meuID || meuID || 'sistema';
+            console.log('[Chat-Sistema] Enviando msg sistema, remetenteId:', _remetenteIdSistema, 'Firestore disponível:', !!window._kmlFirestore);
+            const _tsSistema = Date.now();
+            const novaMensagem = { remetenteId: _remetenteIdSistema, autor: '🤖 AVISO DO SISTEMA', texto: textoHtml, timestamp: _tsSistema, timestampCliente: _tsSistema, destino: 'todos', isSistema: true };
             chatMessages.push(novaMensagem); localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
             renderizarChat();
             if (clienteMQTT && clienteMQTT.connected) mqttPublish(TEMA_MQTT, { acao: "NOVA_MENSAGEM_CHAT", mensagem: novaMensagem });
@@ -8520,7 +8588,9 @@ async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numP
     _removerOverlayImportacao();
 
     // Reaplicar comentários salvos anteriormente (permite reimportar KML sem perder comentários)
-    StorageManager.loadFile('comentarios-' + fileName).then(function(comentariosSalvos) {
+    // Tenta primeiro baixar do Firebase Storage (versão mais recente compartilhada entre usuários)
+    // Se não houver no Firebase, usa a cópia local
+    function _aplicarComentarios(comentariosSalvos) {
         if (!comentariosSalvos || comentariosSalvos.length === 0) return;
         comentariosSalvos.forEach(function(c) {
             const fi = geoJsonGlobal.features.findIndex(function(f) {
@@ -8545,8 +8615,29 @@ async function _finalizarImportacaoKML(fileName, originalFile, onConcluido, numP
         // Re-salvar arquivo com comentários reaplicados
         const featsAtualizadas = geoJsonGlobal.features.filter(function(f) { return f.properties && f.properties.sourceFile === fileName; });
         StorageManager.saveFile(fileName, featsAtualizadas).catch(function(e) { console.error('[processarKML] Erro ao re-salvar com comentários:', e); });
+        // Atualizar cópia local com dados do Firebase
+        StorageManager.saveFile('comentarios-' + fileName, comentariosSalvos).catch(function(e) {});
         _renderizarSeNaoPendente();
-    }).catch(function(e) { /* sem comentários salvos, normal */ });
+    }
+    // Tentar baixar comentários do Firebase Storage (versão compartilhada/atualizada)
+    var _fbStorageComent = window._kmlStorage || (window.firebase && window.firebase.storage ? window.firebase.storage() : null);
+    if (_fbStorageComent) {
+        _fbStorageComent.ref('kml-compartilhados/comentarios-' + fileName).getDownloadURL()
+            .then(function(url) {
+                return fetch(url, { cache: 'no-store' });
+            })
+            .then(function(resp) { return resp.json(); })
+            .then(function(comentariosFirebase) {
+                console.log('[processarKML] comentários baixados do Firebase Storage:', comentariosFirebase.length, 'para', fileName);
+                _aplicarComentarios(comentariosFirebase);
+            })
+            .catch(function() {
+                // Não existe no Firebase Storage — usar cópia local
+                StorageManager.loadFile('comentarios-' + fileName).then(_aplicarComentarios).catch(function() {});
+            });
+    } else {
+        StorageManager.loadFile('comentarios-' + fileName).then(_aplicarComentarios).catch(function() {});
+    }
 
     if (originalFile && !_isMobile && StorageManager.hasHandle()) {
         StorageManager.saveOriginalFile(originalFile).catch(e => console.error('Erro ao copiar original:', e));
@@ -12743,6 +12834,37 @@ async function _salvarComentarioArquivo(sourceFile) {
     }
 }
 
+// Faz upload do arquivo de comentários atualizado para o Firebase Storage
+// para que outros usuários possam baixar a versão mais recente ao importar o KML
+async function _uploadComentariosFirebase(sourceFile) {
+    if (!sourceFile || sourceFile === 'INTERLIGACAO' || sourceFile === 'MANUAL') return;
+    try {
+        const st = window._kmlStorage || (window.firebase && window.firebase.storage ? window.firebase.storage() : null);
+        if (!st) { console.warn('[_uploadComentariosFirebase] Firebase Storage não disponível'); return; }
+        const chaves = geoJsonGlobal.features
+            .filter(f => f.properties && f.properties.sourceFile === sourceFile && f.properties.isPoint && f.properties.comentario)
+            .map(f => ({
+                id: f.properties.id || '',
+                name: f.properties.name || '',
+                comentario: f.properties.comentario || '',
+                autor: f.properties.comentarioAutor || '',
+                data: f.properties.comentarioData || Date.now(),
+                editado: f.properties.comentarioEditado || false,
+                lat: f.properties.comentarioLat || (f.geometry && f.geometry.coordinates ? f.geometry.coordinates[1] : 0),
+                lng: f.properties.comentarioLng || (f.geometry && f.geometry.coordinates ? f.geometry.coordinates[0] : 0),
+                cidade: _getCidadeUsuario() || '',
+                foto: f.properties.comentarioFoto || ''
+            }));
+        const jsonStr = JSON.stringify(chaves);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const storageRef = (st.ref ? st : window.firebase.storage()).ref('kml-compartilhados/comentarios-' + sourceFile);
+        await storageRef.put(blob);
+        console.log('[_uploadComentariosFirebase] upload concluído para comentarios-' + sourceFile, '(' + chaves.length + ' comentários)');
+    } catch(e) {
+        console.warn('[_uploadComentariosFirebase] erro ao fazer upload:', e && e.message ? e.message : e);
+    }
+}
+
 // Extrai cidade do nome do sourceFile (ex: alteracaoBEBEDOURO.kmz -> BEBEDOURO)
 function _extrairCidadeDeSourceFile(sourceFile) {
     if (!sourceFile) return '';
@@ -13155,6 +13277,7 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
         const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sourceFile);
         StorageManager.saveFile(sourceFile, featuresDoArquivo).catch(e => console.error('[salvarComentarioChave] erro ao salvar:', e));
         _salvarComentarioArquivo(sourceFile).catch(e => console.error('[salvarComentarioChave] erro ao salvar comentarios:', e));
+        _uploadComentariosFirebase(sourceFile).catch(e => console.error('[salvarComentarioChave] erro ao upload comentarios Firebase:', e));
         salvarTudoSeguro();
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             var _payloadComCriar = { acao: 'COMENTARIO_CHAVE', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, comentario: texto, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2, data: agora, foto: fotoStaged || '' };
@@ -13210,9 +13333,13 @@ window.apagarComentarioChave = function(chaveId, chaveNome, lat, lng) {
     const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sourceFile);
     StorageManager.saveFile(sourceFile, featuresDoArquivo).catch(e => console.error('[apagarComentarioChave] erro ao salvar:', e));
     _salvarComentarioArquivo(sourceFile).catch(e => console.error('[apagarComentarioChave] erro ao salvar comentarios:', e));
+    _uploadComentariosFirebase(sourceFile).catch(e => console.error('[apagarComentarioChave] erro ao upload comentarios Firebase:', e));
     salvarTudoSeguro();
 
     function _finalizarApagar(posLat2, posLng2) {
+        if (typeof enviarMensagemSistemaChat === 'function') {
+            enviarMensagemSistemaChat('🗑️ <b>COMENTÁRIO APAGADO</b><br>👤 <b>' + autor + '</b> removeu o comentário da chave <b style="color:#FF9800">' + chaveNome + '</b>');
+        }
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_REMOVIDO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
             // Tombstone com data: garante que delete tenha precedência temporal e seja propagado entre clientes
@@ -13281,6 +13408,7 @@ window.confirmarEdicaoComentario = function(uid, chaveId, chaveNome, lat, lng) {
         const featuresDoArquivo = geoJsonGlobal.features.filter(f => f.properties && f.properties.sourceFile === sourceFile);
         StorageManager.saveFile(sourceFile, featuresDoArquivo).catch(e => console.error('[confirmarEdicaoComentario] erro ao salvar:', e));
         _salvarComentarioArquivo(sourceFile).catch(e => console.error('[confirmarEdicaoComentario] erro ao salvar comentarios:', e));
+        _uploadComentariosFirebase(sourceFile).catch(e => console.error('[confirmarEdicaoComentario] erro ao upload comentarios Firebase:', e));
         salvarTudoSeguro();
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             var _fotoExistente = (geoJsonGlobal.features[idx].properties && geoJsonGlobal.features[idx].properties.comentarioFoto) || '';
@@ -14348,21 +14476,35 @@ function verificarCidadeEEstado(lng, lat) {
                     .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
                 
                 // Quando o SW novo assumiu o controle, recarregar a página automaticamente
+                // Usa sessionStorage para evitar loop infinito de reload
                 let _swRecarregando = false;
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     if (_swRecarregando) return;
+                    // Evita loop: se já recarregamos nesta sessão por causa do SW, não recarrega de novo
+                    if (sessionStorage.getItem('sw_reloaded')) {
+                        sessionStorage.removeItem('sw_reloaded');
+                        console.log('[SW] Reload já executado nesta sessão, ignorando novo controllerchange.');
+                        return;
+                    }
                     if (window.__bloqueiaReloadSW) {
                         // Poda manual em andamento — adiar reload para o próximo foco da aba
                         console.log('[SW] Reload adiado (poda em andamento). Será aplicado no próximo foco.');
                         window.addEventListener('focus', function _reloadAoFocar() {
                             if (window.__bloqueiaReloadSW) return; // ainda ocupado
                             window.removeEventListener('focus', _reloadAoFocar);
+                            if (sessionStorage.getItem('sw_reloaded')) {
+                                sessionStorage.removeItem('sw_reloaded');
+                                console.log('[SW] Reload adiado ignorado — já recarregado nesta sessão.');
+                                return;
+                            }
+                            sessionStorage.setItem('sw_reloaded', 'true');
                             console.log('[SW] Aplicando reload adiado...');
                             location.reload();
                         });
                         return;
                     }
                     _swRecarregando = true;
+                    sessionStorage.setItem('sw_reloaded', 'true');
                     console.log('[SW] Nova versão ativa, recarregando...');
                     location.reload();
                 });
@@ -14404,40 +14546,8 @@ function verificarCidadeEEstado(lng, lat) {
                 mostrarNotificacaoRealTime('📴 Modo OFFLINE - O app continua funcionando!', "#FF9800", true);
             });
 
-            // Registrar SW do Firebase Messaging (separado do SW principal)
-            // O FCM exige um SW dedicado na raiz para receber push em background
-            navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' })
-                .then(function(swReg) {
-                    console.log('[FCM-SW] Registrado com scope:', swReg.scope);
-                    // Passar o SW registration para getToken (evita conflito de scope)
-                    if (window._fcmMessaging) {
-                        var VAPID_KEY = 'BKCQqIm8OcXrZYApcY8TOJTeBua6Hjp6QiOx9WG0Bit57KyIpEzA8Dia7O5TVdEldJUq5pPtf8x4DOigRrl8Sb4';
-                        window._fcmMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
-                            .then(function(token) {
-                                if (token) {
-                                    console.log('[FCM] Token (via SW registrado):', token);
-                                    if (window._kmlFirestore && window.meuID) {
-                                        window._kmlFirestore.collection('fcm_tokens').doc(window.meuID).set({
-                                            token: token,
-                                            tokens: firebase.firestore.FieldValue.arrayUnion(token),
-                                            autor: localStorage.getItem('usuarioIdentificacao') || 'Desconhecido',
-                                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                        }, { merge: true }).catch(function(e) {
-                                            console.warn('[FCM] Erro ao salvar token (SW):', e);
-                                        });
-                                    }
-                                }
-                            })
-                            .catch(function(e) {
-                                // Silencioso se permissão não foi concedida ainda
-                                if (Notification.permission !== 'granted') return;
-                                console.warn('[FCM-SW] Erro ao obter token:', e);
-                            });
-                    }
-                })
-                .catch(function(e) {
-                    console.warn('[FCM-SW] Erro ao registrar SW de messaging:', e);
-                });
+            // O FCM agora roda dentro do sw.js principal (código integrado no final do SW)
+            // Não é necessário registrar firebase-messaging-sw.js separadamente
         }
         
         // Função para mostrar notificação de atualização disponível (fallback manual)
