@@ -3236,7 +3236,17 @@ function executarAtualizacaoForçada() {
         // ==========================================
         document.addEventListener("DOMContentLoaded", () => {
             _notifCarregarEstado();
-            if (_isMobile) { setTimeout(carregarChatLocal, 3000); } else { carregarChatLocal(); }
+            if (_isMobile) {
+                setTimeout(function() {
+                    carregarChatLocal();
+                    carregarHistoricoFirestore();
+                    iniciarListenerFirestoreChat();
+                }, 3000);
+            } else {
+                carregarChatLocal();
+                carregarHistoricoFirestore();
+                iniciarListenerFirestoreChat();
+            }
             // Mostrar btnNavGPS apenas em mobile
             const _btnNav = document.getElementById('btnNavGPS');
             if (_btnNav && _isMobile) { _btnNav.style.display = 'flex'; }
@@ -3584,6 +3594,119 @@ window.addEventListener('load', () => {
             const umDiaMs = 86400000;
             chatMessages = chatMessages.filter(m => (agora - m.timestamp) < umDiaMs);
             localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
+        }
+
+        // ---- Fase 3: Carregar histórico do Firestore (últimas 24h) ----
+        async function carregarHistoricoFirestore() {
+            try {
+                const db = firebase.firestore();
+                const agora = Date.now();
+                const umDiaMs = 86400000;
+                const limite24h = new Date(agora - umDiaMs);
+                const snapshot = await db.collection('chat_mensagens')
+                    .where('timestamp', '>', firebase.firestore.Timestamp.fromDate(limite24h))
+                    .orderBy('timestamp', 'asc')
+                    .get();
+
+                let novas = 0;
+                snapshot.forEach(function(doc) {
+                    const d = doc.data();
+                    // Filtro de visibilidade
+                    const ehPublica = !d.destino || d.destino === 'todos';
+                    const ehSistema = d.isSistema === true;
+                    const ehMinhaPrivada = d.destino === meuID || d.remetenteId === meuID;
+                    if (!ehPublica && !ehSistema && !ehMinhaPrivada) return;
+
+                    // Deduplicação por remetenteId + timestampCliente
+                    const jaExiste = chatMessages.some(function(m) {
+                        return m.remetenteId === d.remetenteId && m.timestampCliente === d.timestampCliente;
+                    });
+                    if (jaExiste) return;
+
+                    const msg = {
+                        remetenteId: d.remetenteId || '',
+                        autor: d.autor || '',
+                        texto: d.isSistema ? (d.texto || '') : _escHtml(d.texto || ''),
+                        timestamp: d.timestampCliente || (d.timestamp && d.timestamp.toMillis ? d.timestamp.toMillis() : agora),
+                        timestampCliente: d.timestampCliente || 0,
+                        destino: d.destino || 'todos',
+                        isSistema: d.isSistema === true,
+                        tipo: d.tipo || 'chat'
+                    };
+                    chatMessages.push(msg);
+                    novas++;
+                });
+
+                if (novas > 0) {
+                    chatMessages.sort(function(a, b) { return a.timestamp - b.timestamp; });
+                    localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
+                    const panelAberto = document.getElementById('panelChat') && document.getElementById('panelChat').style.display === 'flex';
+                    if (panelAberto) renderizarChat();
+                }
+                console.log('[Chat-Firestore] Histórico carregado:', novas, 'mensagens novas do Firestore');
+            } catch(e) {
+                console.warn('[Chat-Firestore] Erro ao carregar histórico:', e.message);
+            }
+        }
+
+        // ---- Fase 3: Listener onSnapshot em tempo real ----
+        let _chatFirestoreListener = null;
+        function iniciarListenerFirestoreChat() {
+            if (_chatFirestoreListener) return; // já iniciado
+            try {
+                const db = firebase.firestore();
+                const agora = Date.now();
+                const umDiaMs = 86400000;
+                const limite24h = new Date(agora - umDiaMs);
+                _chatFirestoreListener = db.collection('chat_mensagens')
+                    .where('timestamp', '>', firebase.firestore.Timestamp.fromDate(limite24h))
+                    .orderBy('timestamp', 'asc')
+                    .onSnapshot(function(snapshot) {
+                        snapshot.docChanges().forEach(function(change) {
+                            if (change.type !== 'added') return;
+                            const d = change.doc.data();
+
+                            // Ignorar próprias mensagens (já tenho local)
+                            if (d.remetenteId === meuID) return;
+
+                            // Ignorar mensagens privadas para outros
+                            const ehPublica = !d.destino || d.destino === 'todos';
+                            const ehSistema = d.isSistema === true;
+                            const ehMinhaPrivada = d.destino === meuID || d.remetenteId === meuID;
+                            if (!ehPublica && !ehSistema && !ehMinhaPrivada) return;
+
+                            // Deduplicação: já veio pelo MQTT?
+                            const jaExiste = chatMessages.some(function(m) {
+                                return m.remetenteId === d.remetenteId && m.timestampCliente === d.timestampCliente;
+                            });
+                            if (jaExiste) {
+                                console.log('[Chat-Firestore] Deduplicada (já recebida via MQTT)');
+                                return;
+                            }
+
+                            console.log('[Chat-Firestore] Nova mensagem via Firestore');
+                            const msg = {
+                                remetenteId: d.remetenteId || '',
+                                autor: d.autor || '',
+                                texto: d.isSistema ? (d.texto || '') : _escHtml(d.texto || ''),
+                                timestamp: d.timestampCliente || (d.timestamp && d.timestamp.toMillis ? d.timestamp.toMillis() : Date.now()),
+                                timestampCliente: d.timestampCliente || 0,
+                                destino: d.destino || 'todos',
+                                isSistema: d.isSistema === true,
+                                tipo: d.tipo || 'chat'
+                            };
+                            chatMessages.push(msg);
+                            chatMessages.sort(function(a, b) { return a.timestamp - b.timestamp; });
+                            localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
+                            const panelAberto = document.getElementById('panelChat') && document.getElementById('panelChat').style.display === 'flex';
+                            if (panelAberto) renderizarChat();
+                        });
+                    }, function(err) {
+                        console.warn('[Chat-Firestore] Erro no listener onSnapshot:', err.message);
+                    });
+            } catch(e) {
+                console.warn('[Chat-Firestore] Erro ao iniciar listener:', e.message);
+            }
         }
 
         function _escHtml(s) { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; }
@@ -4529,6 +4652,14 @@ window.addEventListener('load', () => {
                 // 2. SALVA NO HISTÓRICO (sanitiza campos de texto vindos da rede)
                 const msgSegura = Object.assign({}, msg.mensagem);
                 if (!msgSegura.isSistema) { msgSegura.texto = _escHtml(msgSegura.texto); msgSegura.autor = _escHtml(msgSegura.autor); }
+                // Deduplicação MQTT vs Firestore: ignora se já chegou pelo onSnapshot
+                const _jaDedupMQTT = chatMessages.some(function(m) {
+                    return m.remetenteId === msgSegura.remetenteId && m.timestampCliente === msgSegura.timestampCliente;
+                });
+                if (_jaDedupMQTT) {
+                    console.log('[Chat-Firestore] Deduplicada (MQTT ignorado, já recebida via Firestore)');
+                    return;
+                }
                 chatMessages.push(msgSegura); 
                 localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages)); 
                 
