@@ -3634,6 +3634,21 @@ window.addEventListener('load', () => {
             chatMessages.push(novaMensagem); localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
             renderizarChat();
             if (clienteMQTT && clienteMQTT.connected) mqttPublish(TEMA_MQTT, { acao: "NOVA_MENSAGEM_CHAT", mensagem: novaMensagem });
+            // INTEGRAÇÃO FIRESTORE — salvar mensagem na nuvem
+            if (window._kmlFirestore) {
+                window._kmlFirestore.collection('chat_mensagens').add({
+                    remetenteId: novaMensagem.remetenteId,
+                    autor: novaMensagem.autor,
+                    texto: novaMensagem.texto,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    timestampCliente: novaMensagem.timestamp,
+                    destino: novaMensagem.destino,
+                    isSistema: false,
+                    tipo: novaMensagem.destino === 'todos' ? 'chat' : 'privada',
+                    mqttDedupeKey: novaMensagem.remetenteId + '_' + novaMensagem.timestamp
+                }).then(function() { console.log('[Chat-Firestore] mensagem salva'); })
+                  .catch(function(e) { console.warn('[Chat-Firestore] erro ao salvar:', e); });
+            }
             input.value = '';
             input.style.height = 'auto';
         }
@@ -3643,6 +3658,21 @@ window.addEventListener('load', () => {
             chatMessages.push(novaMensagem); localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
             renderizarChat();
             if (clienteMQTT && clienteMQTT.connected) mqttPublish(TEMA_MQTT, { acao: "NOVA_MENSAGEM_CHAT", mensagem: novaMensagem });
+            // INTEGRAÇÃO FIRESTORE — salvar aviso de sistema na nuvem
+            if (window._kmlFirestore) {
+                window._kmlFirestore.collection('chat_mensagens').add({
+                    remetenteId: novaMensagem.remetenteId,
+                    autor: novaMensagem.autor,
+                    texto: novaMensagem.texto,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    timestampCliente: novaMensagem.timestamp,
+                    destino: 'todos',
+                    isSistema: true,
+                    tipo: 'sistema',
+                    mqttDedupeKey: novaMensagem.remetenteId + '_' + novaMensagem.timestamp
+                }).then(function() { console.log('[Chat-Firestore] mensagem salva'); })
+                  .catch(function(e) { console.warn('[Chat-Firestore] erro ao salvar sistema:', e); });
+            }
         }
 
         function limparChat() {
@@ -7138,6 +7168,52 @@ function _mostrarModalArquivoExistente(fileName, qtdExistente, totalArquivos, in
     });
 }
 
+// ── Auto-detectar extensão KML/KMZ por magic bytes ──────────────────────────
+async function _corrigirExtensaoKmlKmz(file) {
+    const nome = file.name || '';
+    const nomeLower = nome.toLowerCase();
+    // Se já tem extensão correta, não faz nada
+    if (nomeLower.endsWith('.kml') || nomeLower.endsWith('.kmz')) return file;
+
+    // Lê os primeiros 8 bytes para detectar o tipo real
+    let header;
+    try {
+        const slice = file.slice(0, 8);
+        const buf = await slice.arrayBuffer();
+        header = new Uint8Array(buf);
+    } catch(e) {
+        console.warn('[auto-ext] falha ao ler magic bytes de "' + nome + '":', e);
+        // Fallback: tenta como .kml
+        const novoNome = nome + '.kml';
+        console.log('[auto-ext] sem extensão e sem leitura — renomeando para:', novoNome);
+        return new File([file], novoNome, { type: 'application/vnd.google-earth.kml+xml' });
+    }
+
+    // KMZ = ZIP: magic bytes PK (0x50 0x4B)
+    if (header[0] === 0x50 && header[1] === 0x4B) {
+        const novoNome = nome + '.kmz';
+        console.log('[auto-ext] detectado ZIP/KMZ — renomeando "' + nome + '" para "' + novoNome + '"');
+        return new File([file], novoNome, { type: 'application/vnd.google-earth.kmz' });
+    }
+
+    // KML = XML texto: começa com <?xml ou <kml (com possível BOM UTF-8: EF BB BF)
+    const isBomUtf8 = header[0] === 0xEF && header[1] === 0xBB && header[2] === 0xBF;
+    const offset = isBomUtf8 ? 3 : 0;
+    const isXml = header[offset] === 0x3C && header[offset + 1] === 0x3F; // <?
+    const isKml = header[offset] === 0x3C && header[offset + 1] === 0x6B; // <k
+    if (isXml || isKml) {
+        const novoNome = nome + '.kml';
+        console.log('[auto-ext] detectado XML/KML — renomeando "' + nome + '" para "' + novoNome + '"');
+        return new File([file], novoNome, { type: 'application/vnd.google-earth.kml+xml' });
+    }
+
+    // Tipo desconhecido — tenta como .kml por padrão
+    const novoNome = nome + '.kml';
+    console.warn('[auto-ext] tipo desconhecido para "' + nome + '" — assumindo .kml');
+    return new File([file], novoNome, { type: 'application/vnd.google-earth.kml+xml' });
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 document.getElementById('arquivoUpload').addEventListener('change', async function(e) {
     // Processar arquivos UM POR VEZ (sequencial) para evitar race condition no geoJsonGlobal
     const files = Array.from(e.target.files);
@@ -7147,7 +7223,9 @@ document.getElementById('arquivoUpload').addEventListener('change', async functi
     let _aplicarParaTodos = null; // 'substituir' | 'adicionar' | 'pular' | null
 
     for (let _idx = 0; _idx < files.length; _idx++) {
-        const file = files[_idx];
+        let file = files[_idx];
+        // Auto-detectar e corrigir extensão ausente por magic bytes
+        file = await _corrigirExtensaoKmlKmz(file);
         // v8.54: detectar drag-drop manual de bancocap.kmz (já embutido)
         if (file.name.toLowerCase() === 'bancocap.kmz') {
           const jaCarregadoBC = geoJsonGlobal && geoJsonGlobal.features &&
@@ -24838,6 +24916,21 @@ if ('launchQueue' in window) {
         isSistema: true
       };
       window.clienteMQTT.publish(temaMQTT, JSON.stringify({ acao: 'NOVA_MENSAGEM_CHAT', mensagem: msgChat }), { qos: 1 }, function(){});
+      // INTEGRAÇÃO FIRESTORE — salvar aviso de defeito apagado na nuvem
+      if (window._kmlFirestore) {
+        window._kmlFirestore.collection('chat_mensagens').add({
+          remetenteId: msgChat.remetenteId,
+          autor: msgChat.autor,
+          texto: msgChat.texto,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          timestampCliente: msgChat.timestamp,
+          destino: 'todos',
+          isSistema: true,
+          tipo: 'sistema',
+          mqttDedupeKey: msgChat.remetenteId + '_' + msgChat.timestamp
+        }).then(function() { console.log('[Chat-Firestore] mensagem salva'); })
+          .catch(function(e) { console.warn('[Chat-Firestore] erro defeito:', e); });
+      }
     }
     window.__defeitoRede_remover(defeitoId);
     // Remover o click listener do podaManualLayer (registrado para o criador)
@@ -24986,6 +25079,21 @@ if ('launchQueue' in window) {
         isSistema: true
       };
       window.clienteMQTT.publish(temaMQTT, JSON.stringify({ acao: 'NOVA_MENSAGEM_CHAT', mensagem: msgChat }), { qos: 1 }, function(){});
+      // INTEGRAÇÃO FIRESTORE — salvar aviso de defeito marcado na nuvem
+      if (window._kmlFirestore) {
+        window._kmlFirestore.collection('chat_mensagens').add({
+          remetenteId: msgChat.remetenteId,
+          autor: msgChat.autor,
+          texto: msgChat.texto,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+          timestampCliente: msgChat.timestamp,
+          destino: 'todos',
+          isSistema: true,
+          tipo: 'sistema',
+          mqttDedupeKey: msgChat.remetenteId + '_' + msgChat.timestamp
+        }).then(function() { console.log('[Chat-Firestore] mensagem salva'); })
+          .catch(function(e) { console.warn('[Chat-Firestore] erro defeito:', e); });
+      }
     }
 
     _toast('Defeito marcado ✅', '#2E7D32');
@@ -25301,8 +25409,11 @@ if ('launchQueue' in window) {
     input.addEventListener('change', function(e) {
       var files = Array.from(e.target.files || []);
       files.forEach(function(file) {
-        if (file.name.toLowerCase() === 'bancocap.kmz') return; // arquivo protegido
-        _uploadKmlFirebase(file);
+        // Auto-detectar extensão antes do upload Firebase
+        Promise.resolve(_corrigirExtensaoKmlKmz(file)).then(function(fileCorrigido) {
+          if (fileCorrigido.name.toLowerCase() === 'bancocap.kmz') return; // arquivo protegido
+          _uploadKmlFirebase(fileCorrigido);
+        });
       });
     });
     console.log('[KML-Firebase] hook de upload registrado');
