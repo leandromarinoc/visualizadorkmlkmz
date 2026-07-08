@@ -27,6 +27,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js"></script>
     <script>
       (function() {
         var firebaseConfig = {
@@ -45,6 +46,71 @@
         console.log('[KML-Firebase] inicializado');
       })();
     </script>
+
+    <!-- FCM: inicialização do Firebase Messaging -->
+    <script>
+      (function _initFCM() {
+        try {
+          var messaging = firebase.messaging();
+          window._fcmMessaging = messaging;
+
+          var VAPID_KEY = 'VAPID_KEY_PLACEHOLDER'; // Substituir pela chave real do Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+
+          // Registrar token FCM e salvar no Firestore
+          function registrarTokenFCM(swReg) {
+            var opts = { vapidKey: VAPID_KEY };
+            if (swReg) opts.serviceWorkerRegistration = swReg;
+            messaging.getToken(opts).then(function(token) {
+              if (token) {
+                console.log('[FCM] Token registrado:', token);
+                if (window._kmlFirestore && window.meuID) {
+                  window._kmlFirestore.collection('fcm_tokens').doc(window.meuID).set({
+                    token: token,
+                    tokens: firebase.firestore.FieldValue.arrayUnion(token),
+                    autor: localStorage.getItem('usuarioIdentificacao') || 'Desconhecido',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                  }, { merge: true }).catch(function(e) {
+                    console.warn('[FCM] Erro ao salvar token no Firestore:', e);
+                  });
+                }
+              } else {
+                console.warn('[FCM] Nenhum token obtido — verifique VAPID key e permissão.');
+              }
+            }).catch(function(e) {
+              console.warn('[FCM] Erro ao obter token:', e);
+            });
+          }
+
+          // Solicitar permissão de notificação e registrar token
+          Notification.requestPermission().then(function(permission) {
+            console.log('[FCM] Permissão de notificação:', permission);
+            if (permission === 'granted') {
+              // Aguardar SW de messaging estar registrado antes de obter token
+              if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistration('./firebase-messaging-sw.js').then(function(swReg) {
+                  registrarTokenFCM(swReg || null);
+                }).catch(function() {
+                  registrarTokenFCM(null);
+                });
+              } else {
+                registrarTokenFCM(null);
+              }
+            }
+          }).catch(function(e) {
+            console.warn('[FCM] Erro ao solicitar permissão:', e);
+          });
+
+          // Receber mensagens em foreground — apenas logar (MQTT já trata a exibição)
+          messaging.onMessage(function(payload) {
+            console.log('[FCM] Mensagem em foreground recebida:', payload);
+          });
+
+        } catch(e) {
+          console.warn('[FCM] Firebase Messaging indisponível:', e.message);
+        }
+      })();
+    </script>
+
     <!-- Captura beforeinstallprompt o mais cedo possível para não perder o evento -->
      
     <script>
@@ -14301,6 +14367,41 @@ function verificarCidadeEEstado(lng, lat) {
             window.addEventListener('offline', () => {
                 mostrarNotificacaoRealTime('📴 Modo OFFLINE - O app continua funcionando!', "#FF9800", true);
             });
+
+            // Registrar SW do Firebase Messaging (separado do SW principal)
+            // O FCM exige um SW dedicado na raiz para receber push em background
+            navigator.serviceWorker.register('./firebase-messaging-sw.js', { scope: './' })
+                .then(function(swReg) {
+                    console.log('[FCM-SW] Registrado com scope:', swReg.scope);
+                    // Passar o SW registration para getToken (evita conflito de scope)
+                    if (window._fcmMessaging) {
+                        var VAPID_KEY = 'VAPID_KEY_PLACEHOLDER';
+                        window._fcmMessaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg })
+                            .then(function(token) {
+                                if (token) {
+                                    console.log('[FCM] Token (via SW registrado):', token);
+                                    if (window._kmlFirestore && window.meuID) {
+                                        window._kmlFirestore.collection('fcm_tokens').doc(window.meuID).set({
+                                            token: token,
+                                            tokens: firebase.firestore.FieldValue.arrayUnion(token),
+                                            autor: localStorage.getItem('usuarioIdentificacao') || 'Desconhecido',
+                                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                        }, { merge: true }).catch(function(e) {
+                                            console.warn('[FCM] Erro ao salvar token (SW):', e);
+                                        });
+                                    }
+                                }
+                            })
+                            .catch(function(e) {
+                                // Silencioso se permissão não foi concedida ainda
+                                if (Notification.permission !== 'granted') return;
+                                console.warn('[FCM-SW] Erro ao obter token:', e);
+                            });
+                    }
+                })
+                .catch(function(e) {
+                    console.warn('[FCM-SW] Erro ao registrar SW de messaging:', e);
+                });
         }
         
         // Função para mostrar notificação de atualização disponível (fallback manual)
