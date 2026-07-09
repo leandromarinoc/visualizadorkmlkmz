@@ -11,22 +11,38 @@ exports.onChatMessage = functions.firestore
     .onCreate(async (snap, context) => {
         const msg = snap.data();
 
+        // Normalizar destino: se ausente/undefined, tratar como 'todos'
+        const destino = msg.destino || 'todos';
+        const remetenteId = msg.remetenteId || '';
+
+        console.log(`[FCM] Nova mensagem — remetenteId: "${remetenteId}", destino: "${destino}", autor: "${msg.autor || ''}"`);
+
         // Buscar todos os tokens FCM registrados
         const tokensSnap = await admin.firestore().collection('fcm_tokens').get();
+        console.log(`[FCM] Total de docs em fcm_tokens: ${tokensSnap.size}`);
 
         // Determinar destinatários e coletar tokens
         const tokens = [];
         tokensSnap.forEach(doc => {
             const data = doc.data();
             // Pular o remetente (não notificar quem enviou)
-            if (doc.id === msg.remetenteId) return;
-            // Se mensagem privada, só enviar pro destinatário específico
-            if (msg.destino !== 'todos' && doc.id !== msg.destino) return;
-            // Coletar token(s) do documento
-            if (data.token) tokens.push(data.token);
-            if (data.tokens && Array.isArray(data.tokens)) {
-                tokens.push(...data.tokens);
+            if (doc.id === remetenteId) {
+                console.log(`[FCM] Pulando remetente: ${doc.id}`);
+                return;
             }
+            // Se mensagem privada, só enviar pro destinatário específico
+            if (destino !== 'todos' && doc.id !== destino) {
+                console.log(`[FCM] Pulando ${doc.id} — mensagem privada para ${destino}`);
+                return;
+            }
+            // Coletar token(s) do documento
+            const docTokens = [];
+            if (data.token) docTokens.push(data.token);
+            if (data.tokens && Array.isArray(data.tokens)) {
+                data.tokens.forEach(t => { if (t && !docTokens.includes(t)) docTokens.push(t); });
+            }
+            console.log(`[FCM] Destinatário ${doc.id} (${data.autor || '?'}): ${docTokens.length} token(s)`);
+            tokens.push(...docTokens);
         });
 
         if (tokens.length === 0) {

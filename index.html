@@ -134,11 +134,12 @@
           messaging.onMessage(function(payload) {
             console.log('[FCM] Mensagem em foreground recebida:', payload);
             try {
-              var notif = payload.notification || {};
+              // Payload é data-only (sem campo 'notification'): ler title/body de payload.data
               var data  = payload.data || {};
-              var titulo = notif.title || 'Inspeção Pro';
-              var corpo  = notif.body  || '';
-              var tag    = notif.tag || data.tipo || 'fcm-foreground';
+              var notif = payload.notification || {};
+              var titulo = data.title || notif.title || 'Inspeção Pro';
+              var corpo  = data.body  || notif.body  || '';
+              var tag    = data.tipo || notif.tag || 'fcm-foreground';
 
               // Deduplicação: ignorar se a mensagem já está no chat (MQTT já exibiu)
               var remetenteId = data.remetenteId || '';
