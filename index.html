@@ -633,6 +633,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             #btn3D        { top: 228px !important; right: 10px !important; }
             #btnClima     { top: 290px !important; right: 10px !important; }
             #btnKmlCompartilhado { top: 344px !important; right: 10px !important; background: #111 !important; }
+            #btnConsulta { top: 398px !important; right: 10px !important; }
             /* Cores distintas por botão */
             .btn-kml            { background: #E65100 !important; }
             .btn-circular[onclick*="apagarTudo"]  { background: #C62828 !important; }
@@ -812,6 +813,8 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         /* v8.67 KML/KMZ COMPARTILHADOS */
         #btnKmlCompartilhado { position: absolute; top: 310px; right: 10px; z-index: 1000; background: #111 !important; display: flex; box-shadow: inset 3px 0 0 #333, 0 4px 12px rgba(0,0,0,0.35); }
         body.modo-celular #btnKmlCompartilhado { background: #111 !important; }
+        /* CONSULTA — barra lateral direita, abaixo do KML/KMZ */
+        #btnConsulta { position: absolute; top: 360px; right: 10px; z-index: 1000; display: flex; }
         #kmlCompartOverlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9100; align-items:center; justify-content:center; }
         #kmlCompartOverlay.aberto { display:flex; }
         #kmlCompartCard { background:#fff; border-radius:14px; box-shadow:0 6px 28px rgba(0,0,0,0.35); padding:14px 16px; width:340px; max-width:92vw; max-height:80vh; overflow-y:auto; font-family:inherit; position:relative; }
@@ -2378,6 +2381,24 @@ document.onkeydown = function(e) {
         <!-- v8.67 BOTÃO KML/KMZ COMPARTILHADOS -->
         <button id="btnKmlCompartilhado" class="btn-circular" onclick="abrirKmlCompartilhados()" title="KML/KMZ compartilhados">📂<span style="font-size:7px; font-weight:900;">KML/KMZ</span></button>
 
+        <!-- BOTÃO CONSULTA -->
+        <button id="btnConsulta" class="btn-circular" onclick="abrirModalConsulta()" title="Consulta — Chat bot de apoio técnico" style="background: linear-gradient(135deg, #7B1FA2, #AB47BC); border: 2px solid #CE93D8; box-shadow: inset 3px 0 0 #6A1B9A, 0 4px 12px rgba(123,31,162,0.45);"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="white" style="display:block;flex-shrink:0;"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span style="font-size:7px; font-weight:900;">CONSULTA</span></button>
+
+        <!-- MODAL CONSULTA -->
+        <div id="consultaModalOverlay" class="modal-overlay" onclick="if(event.target===this)fecharModalConsulta()" style="z-index:10006;">
+            <div class="modal-box" style="border: 3px solid #7B1FA2; max-width: 400px;">
+                <div style="margin-bottom:10px;display:flex;justify-content:center;"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="#7B1FA2"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></div>
+                <h2 style="color:#7B1FA2; margin-top:0; font-size:18px;">Apoio Técnico — Telegram</h2>
+                <p style="font-size:13px; color:#444; line-height:1.6; margin-bottom:20px;">
+                    Nesta opção te redirecionaremos para o chat bot de apoio técnico do Telegram, caso você não tenha o Telegram instalado, instale o mesmo para usufruir de um chat que te traz informações precisas e objetivas. Acessar chat?
+                </p>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn-fechar-modal" onclick="fecharModalConsulta()" style="flex:1; background:#e0e0e0; color:#555;">Cancelar</button>
+                    <button class="btn-fechar-modal" onclick="window.open('https://t.me/Leancord_bot','_blank'); fecharModalConsulta();" style="flex:1; background:linear-gradient(135deg,#7B1FA2,#AB47BC); color:#fff;">OK</button>
+                </div>
+            </div>
+        </div>
+
         <!-- v8.67 MODAL KML/KMZ COMPARTILHADOS -->
         <div id="kmlCompartOverlay" onclick="if(event.target===this)fecharKmlCompartilhados()">
             <div id="kmlCompartCard">
@@ -3933,7 +3954,7 @@ window.addEventListener('load', () => {
             input.style.height = 'auto';
         }
 
-        function enviarMensagemSistemaChat(textoHtml) {
+        function enviarMensagemSistemaChat(textoHtml, notifTitle, notifBody) {
             const _remetenteIdSistema = window.meuID || meuID || 'sistema';
             console.log('[Chat-Sistema] Enviando msg sistema, remetenteId:', _remetenteIdSistema, 'Firestore disponível:', !!window._kmlFirestore);
             const _tsSistema = Date.now();
@@ -3943,7 +3964,7 @@ window.addEventListener('load', () => {
             if (clienteMQTT && clienteMQTT.connected) mqttPublish(TEMA_MQTT, { acao: "NOVA_MENSAGEM_CHAT", mensagem: novaMensagem });
             // INTEGRAÇÃO FIRESTORE — salvar aviso de sistema na nuvem
             if (window._kmlFirestore) {
-                window._kmlFirestore.collection('chat_mensagens').add({
+                var _docData = {
                     remetenteId: novaMensagem.remetenteId,
                     autor: novaMensagem.autor,
                     texto: novaMensagem.texto,
@@ -3953,7 +3974,11 @@ window.addEventListener('load', () => {
                     isSistema: true,
                     tipo: 'sistema',
                     mqttDedupeKey: novaMensagem.remetenteId + '_' + novaMensagem.timestamp
-                }).then(function() { console.log('[Chat-Firestore] mensagem salva'); })
+                };
+                if (notifTitle) _docData.notifTitle = notifTitle;
+                if (notifBody) _docData.notifBody = notifBody;
+                window._kmlFirestore.collection('chat_mensagens').add(_docData)
+                  .then(function() { console.log('[Chat-Firestore] mensagem salva'); })
                   .catch(function(e) { console.warn('[Chat-Firestore] erro ao salvar sistema:', e); });
             }
         }
@@ -5408,7 +5433,7 @@ window.addEventListener('load', () => {
             if (document.getElementById('panelListaPoda')?.style.display === 'flex') renderizarListaPoda();
             const obsStr = observacao ? `<br>📝 <i>${observacao}</i>` : '';
             const msgChat = `🚨 <b>NOVA PODA MARCADA</b><br>👤 <b>${autorDaAcao}</b> | 📍 Cidade: <b style="color:#FF9800;">${cidade}</b><br>Trecho: <b style="color:#FF5252;">${trechoIdentificado}</b>${obsStr}`;
-            enviarMensagemSistemaChat(msgChat);
+            enviarMensagemSistemaChat(msgChat, "🌳 Nova Poda Registrada", `${autorDaAcao} marcou poda em ${cidade}: ${trechoIdentificado}`);
             enviarNotificacaoSistemaForcada("🌳 Nova Poda Registrada", `${autorDaAcao} marcou poda em ${cidade}: ${trechoIdentificado}`, 'poda-nova');
             if (clienteMQTT?.connected) {
                 const payload = { acao: "NOVA_PODA_V2", remetente: meuID, autor: autorDaAcao, trecho: trechoIdentificado, cidade: cidade, features: podaFeatures };
@@ -5517,7 +5542,7 @@ window.addEventListener('load', () => {
             const dataHora = new Date().toLocaleString('pt-BR');
             const cidadeStr = cidadeRetirada ? ` | 📍 <b>${cidadeRetirada}</b>` : '';
             const obsStr = obsRetirar ? `<br>📝 <i>${obsRetirar}</i>` : '';
-            enviarMensagemSistemaChat(`✅ <b>PODA RESOLVIDA</b>${cidadeStr}<br>A <b>${nomeRemetente}</b> retirou a pendência nas chaves <b style="color:#4CAF50;">${trechoReal}</b>!<br>🕐 ${dataHora}${obsStr}`);
+            enviarMensagemSistemaChat(`✅ <b>PODA RESOLVIDA</b>${cidadeStr}<br>A <b>${nomeRemetente}</b> retirou a pendência nas chaves <b style="color:#4CAF50;">${trechoReal}</b>!<br>🕐 ${dataHora}${obsStr}`, "✅ Poda Resolvida", `${nomeRemetente} retirou pendência em ${trechoReal}${cidadeRetirada ? ' (' + cidadeRetirada + ')' : ''}`);
             enviarNotificacaoSistemaForcada("✅ Poda Resolvida", `${nomeRemetente} retirou pendência em ${trechoReal}${cidadeRetirada ? ' (' + cidadeRetirada + ')' : ''}`, 'poda-retirada');
             if (clienteMQTT && clienteMQTT.connected) {
                 idsParaRemover.forEach(idEncontrado => {
@@ -5575,7 +5600,7 @@ window.addEventListener('load', () => {
                 geoJsonGlobal.features = geoJsonGlobal.features.filter(f => f && f.properties && f.properties.id !== podaAtualParaResolver);
                 renderizarMapa(); salvarTudoSeguro();
                 if (document.getElementById('panelListaPoda') && document.getElementById('panelListaPoda').style.display === 'flex') renderizarListaPoda();
-                enviarMensagemSistemaChat(`✅ <b>PODA RESOLVIDA</b><br>A pendência do trecho <b style="color:#4CAF50;">${trecho}</b> foi removida pela equipa/utilizador <b>${autorDaAcao}</b>!`);
+                enviarMensagemSistemaChat(`✅ <b>PODA RESOLVIDA</b><br>A pendência do trecho <b style="color:#4CAF50;">${trecho}</b> foi removida pela equipa/utilizador <b>${autorDaAcao}</b>!`, "✅ Poda Resolvida", `${autorDaAcao} resolveu a pendência do trecho ${trecho}`);
                 if (clienteMQTT && clienteMQTT.connected) {
                     const payload = { acao: "RESOLVER_PODA", remetente: meuID, autor: autorDaAcao, podaId: podaAtualParaResolver };
                     mqttPublish(TEMA_MQTT, payload);
@@ -11395,7 +11420,7 @@ function salvarEdicaoChavePorNumero() {
     salvarTudoSeguro();
     
     document.getElementById('chaveEditNumeroModalOverlay').style.display = 'none';
-    enviarMensagemSistemaChat(msgChat);
+    enviarMensagemSistemaChat(msgChat, "✏️ Chave Atualizada", `${autor}: ${numAntigo} → ${numNovo} (${tipoDesc}) - ${alimRef}`);
     enviarNotificacaoSistemaForcada("✏️ Chave Atualizada", `${autor}: ${numAntigo} → ${numNovo} (${tipoDesc}) - ${alimRef}`, 'chave-edit');
     mqttPublish(TEMA_MQTT, { acao: "EDITAR_CHAVE", remetente: meuID, feature: featureAtualizada, msgChat: msgChat });
     mqttPublish(TEMA_MQTT + '/chave/' + featureAtualizada.properties.id, { acao: "EDITAR_CHAVE", remetente: meuID, feature: featureAtualizada, msgChat: msgChat }, { retain: true, qos: 1 });
@@ -11433,7 +11458,7 @@ function salvarEdicaoChavePorNumero() {
             document.getElementById('chaveApagarModalOverlay').style.display = 'none';
             atualizarPainelArquivos();
             const msgChat = `🗑️ <b>CHAVE REMOVIDA</b><br>👤 <b>${autor}</b> removeu a chave <b style="color:#FF5252;">${num}</b> do circuito <b style="color:#9C27B0;">${alimRef}</b>`;
-            enviarMensagemSistemaChat(msgChat);
+            enviarMensagemSistemaChat(msgChat, "🗑️ Chave Removida", `${autor} removeu a chave ${num} do circuito ${alimRef}`);
             enviarNotificacaoSistemaForcada("🗑️ Chave Removida", `${autor} removeu a chave ${num} do circuito ${alimRef}`, 'chave-remove');
             mqttPublish(TEMA_MQTT, { acao: "REMOVER_CHAVE", remetente: meuID, nome: num, chaveId: chaveId, alimRef: alimRef, msgChat: msgChat });
             if (chaveId) mqttPublish(TEMA_MQTT + '/chave/' + chaveId, '', { retain: true, qos: 1 });
@@ -11688,7 +11713,9 @@ window.salvarChave = function() {
     salvarTudoSeguro();
     document.getElementById('chaveModalOverlay').style.display = 'none';
 
-    enviarMensagemSistemaChat(msgChat);
+    enviarMensagemSistemaChat(msgChat,
+        acaoMqtt === 'NOVA_CHAVE' ? '➕ Nova Chave Cadastrada' : '✏️ Chave Atualizada',
+        acaoMqtt === 'NOVA_CHAVE' ? `${autor} cadastrou a chave ${nome}` : `${autor} atualizou a chave ${nome}`);
     if (featureAtualizada) {
         mqttPublish(TEMA_MQTT, { acao: acaoMqtt, remetente: meuID, feature: featureAtualizada, msgChat: msgChat });
         const topicoChave = TEMA_MQTT + '/chave/' + featureAtualizada.properties.id;
@@ -11740,7 +11767,7 @@ window.apagarChaveAtual = function() {
   try {
     var autorNome = typeof getAutorFormatado === 'function' ? getAutorFormatado() : (window.meuNome || 'Usuário');
   var msgChat = '🗑️ <b>CHAVE APAGADA</b><br>👤 <b>' + autorNome + '</b> apagou a chave <b style="color:#FF5252;">' + nomeChave + '</b>';
-    if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
+    if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat, '🗑️ Chave Apagada', autorNome + ' apagou a chave ' + nomeChave);
     if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
       mqttPublish(TEMA_MQTT, {
         acao: 'APAGAR_CHAVE',
@@ -13282,7 +13309,7 @@ window.salvarComentarioChave = function(uid, chaveId, chaveNome, lat, lng) {
             if (chaveNome) mqttPublish(TEMA_MQTT + '/comentario/' + (window._topicoNomeChave ? window._topicoNomeChave(chaveNome) : chaveId), _payloadComCriar, { retain: true, qos: 1 });
         }
         if (typeof enviarMensagemSistemaChat === 'function') {
-            enviarMensagemSistemaChat(`💬 <b>${autor}</b> comentou na chave <b style="color:#FF9800;">${chaveNome || chaveId}</b>`);
+            enviarMensagemSistemaChat(`💬 <b>${autor}</b> comentou na chave <b style="color:#FF9800;">${chaveNome || chaveId}</b>`, '💬 Novo Comentário', `${autor} comentou na chave ${chaveNome || chaveId}`);
         }
         if (typeof __wppCompartilharAcao === 'function') {
             __wppCompartilharAcao({
@@ -13335,7 +13362,7 @@ window.apagarComentarioChave = function(chaveId, chaveNome, lat, lng) {
 
     function _finalizarApagar(posLat2, posLng2) {
         if (typeof enviarMensagemSistemaChat === 'function') {
-            enviarMensagemSistemaChat('🗑️ <b>COMENTÁRIO APAGADO</b><br>👤 <b>' + autor + '</b> removeu o comentário da chave <b style="color:#FF9800">' + chaveNome + '</b>');
+            enviarMensagemSistemaChat('🗑️ <b>COMENTÁRIO APAGADO</b><br>👤 <b>' + autor + '</b> removeu o comentário da chave <b style="color:#FF9800">' + chaveNome + '</b>', '🗑️ Comentário Removido', autor + ' removeu o comentário da chave ' + chaveNome);
         }
         if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
             mqttPublish(TEMA_MQTT, { acao: 'COMENTARIO_REMOVIDO', remetente: meuID, chaveId: chaveId, chaveNome: chaveNome, autor: autor, cidade: _getCidadeUsuario(), lat: posLat2, lng: posLng2 });
@@ -13616,7 +13643,7 @@ window.confirmarInterligacao = function() {
             mqttPublish(TEMA_MQTT, { acao: "NOVA_INTERLIGACAO", remetente: window.meuID, autor: autor, feature: novaLinha, featuresPontos: [], msgChat: msgChat });
             // Publica retained pra usuários offline também receberem ao reconectar
             mqttPublish(TEMA_MQTT + '/interligacao/' + novoId, { acao: "NOVA_INTERLIGACAO", remetente: window.meuID, autor: autor, features: [novaLinha], msgChat: msgChat, data: Date.now() }, { retain: true, qos: 1 });
-            if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
+            if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat, '🔗 Nova Interligação de Rede', `${autor} conectou ${_il.nome1} ⇄ ${_il.nome2}`);
             if (typeof __wppCompartilharAcao === 'function') {
                 __wppCompartilharAcao({
                     titulo: '🔗 Nova Interligação',
@@ -13675,7 +13702,7 @@ window.apagarInterligacao = function(featId) {
         // Tombstone retained: limpa do broker pra usuários offline não receberem versão antiga
     mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "REMOVER_INTERLIGACAO", remetente: window.meuID, autor: autor, featId: featId, msgChat: msgChat, data: Date.now() }, { retain: false, qos: 1 });
     mqttPublish(TEMA_MQTT + '/interligacao/' + featId, '', { retain: true, qos: 1 });
-        if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
+        if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat, '🗑️ Interligação Removida', `${autor} removeu a interligação: ${nome}`);
     }
 };
 
@@ -13728,7 +13755,7 @@ window._aplicarCorInterlig = function(featId, novaCor) {
         const msgChat = `🎨 <b>${autor}</b> mudou a cor da interligação <b>${nome}</b> para <span style="color:${novaCor};font-weight:900;">●</span> ${novaCor}`;
         mqttPublish(TEMA_MQTT + '/interligacao/' + featId, { acao: "EDITAR_INTERLIGACAO_COR", remetente: window.meuID, autor: autor, features: [feat], msgChat: msgChat, data: Date.now() }, { retain: true, qos: 1 });
         mqttPublish(TEMA_MQTT, { acao: "EDITAR_INTERLIGACAO_COR", remetente: window.meuID, autor: autor, featId: featId, novaCor: novaCor, msgChat: msgChat });
-        if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat);
+        if (typeof enviarMensagemSistemaChat === 'function') enviarMensagemSistemaChat(msgChat, '🎨 Cor de Interligação Alterada', `${autor} mudou a cor da interligação ${nome} para ${novaCor}`);
     }
 };
 
@@ -14526,10 +14553,46 @@ function verificarCidadeEEstado(lng, lat) {
                             break;
                             
                         case 'NOTIFICATION_CLICK':
+                            // Abrir chat quando notificação clicada com app já aberto
+                            if (typeof toggleChat === 'function') {
+                                var pChat = document.getElementById('panelChat');
+                                if (!pChat || pChat.style.display !== 'flex') toggleChat();
+                            }
                             break;
                     }
                 }
             });
+
+            // Detectar ?openChat=1 na URL (app aberto via clique em notificação push)
+            // O SW adiciona este parâmetro ao abrir o app quando estava fechado.
+            (function _verificarAbrirChatPorURL() {
+                function _tentarAbrirChat() {
+                    var params = new URLSearchParams(window.location.search);
+                    if (params.get('openChat') === '1') {
+                        // Limpar o parâmetro da URL sem recarregar a página
+                        var novaURL = window.location.pathname + window.location.hash;
+                        history.replaceState(null, '', novaURL);
+                        // Abrir o chat — aguardar o DOM estar pronto e toggleChat disponível
+                        var tentativas = 0;
+                        var intervalo = setInterval(function() {
+                            tentativas++;
+                            if (typeof toggleChat === 'function' && document.getElementById('panelChat')) {
+                                clearInterval(intervalo);
+                                var pChat = document.getElementById('panelChat');
+                                if (pChat.style.display !== 'flex') toggleChat();
+                            } else if (tentativas > 40) {
+                                clearInterval(intervalo); // desistir após 4s
+                            }
+                        }, 100);
+                    }
+                }
+                // Executar após o load para garantir que toggleChat está definido
+                if (document.readyState === 'complete') {
+                    _tentarAbrirChat();
+                } else {
+                    window.addEventListener('load', _tentarAbrirChat);
+                }
+            })();
             
             // Solicita sincronização em background quando online
             window.addEventListener('online', () => {
@@ -25900,6 +25963,16 @@ if ('launchQueue' in window) {
     if (overlay) overlay.classList.remove('aberto');
   };
 
+  // ── CONSULTA — Chat bot Telegram ─────────────────────────────────────────
+  window.abrirModalConsulta = function() {
+    var overlay = document.getElementById('consultaModalOverlay');
+    if (overlay) overlay.style.display = 'flex';
+  };
+  window.fecharModalConsulta = function() {
+    var overlay = document.getElementById('consultaModalOverlay');
+    if (overlay) overlay.style.display = 'none';
+  };
+
   // ── Cache de itens da lista (evita passar URL/nome em onclick inline) ────
   var _kmlcItems = [];
 
@@ -26153,7 +26226,7 @@ if ('launchQueue' in window) {
 
         // Mensagem no chat
         if (typeof enviarMensagemSistemaChat === 'function' && typeof getAutorFormatado === 'function') {
-          enviarMensagemSistemaChat('🗑️ ' + getAutorFormatado() + ' apagou o arquivo compartilhado: ' + nome);
+          enviarMensagemSistemaChat('🗑️ ' + getAutorFormatado() + ' apagou o arquivo compartilhado: ' + nome, '🗑️ Arquivo Removido', getAutorFormatado() + ' apagou o arquivo: ' + nome);
         }
 
         // Toast de confirmação

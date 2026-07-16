@@ -50,11 +50,11 @@ exports.onChatMessage = functions.firestore
             return null;
         }
 
-        // Montar corpo da notificação
-        const notifTitle = msg.isSistema ? 'Inspeção Pro' : (msg.autor || 'Inspeção Pro');
-        const notifBody = msg.isSistema
-            ? (msg.texto || '').replace(/<[^>]*>/g, '').substring(0, 100)  // strip HTML
-            : (msg.texto || '').substring(0, 100);
+        // Montar corpo da notificação — preferir notifTitle/notifBody salvos no doc (mensagens de sistema)
+        const notifTitle = msg.notifTitle || (msg.isSistema ? 'Inspeção Pro' : (msg.autor || 'Inspeção Pro'));
+        const notifBody = msg.notifBody || (msg.isSistema
+            ? (msg.texto || '').replace(/<[^>]*>/g, '').substring(0, 150)  // strip HTML
+            : (msg.texto || '').substring(0, 150));
 
         // Remover tokens duplicados
         const uniqueTokens = [...new Set(tokens)];

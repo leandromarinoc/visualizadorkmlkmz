@@ -85,3 +85,29 @@ self.addEventListener('push', function(event) {
     );
 });
 console.log('[FCM-SW] Push handler explícito registrado');
+
+// === notificationclick — abre o app e sinaliza para abrir o chat ===
+// Este handler sobrescreve o notificationclick do SW minificado acima.
+// Quando o usuário clica na notificação push:
+//   - Se o app já está aberto: foca a aba e envia mensagem FOCUS_CHAT
+//   - Se o app está fechado: abre com ?openChat=1 para o index.html detectar
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+            var appUrl = self.registration.scope;
+            for (var i = 0; i < clientList.length; i++) {
+                var client = clientList[i];
+                if (client.url.startsWith(appUrl) && 'focus' in client) {
+                    client.focus();
+                    client.postMessage({ type: 'FOCUS_CHAT', action: event.action, tag: event.notification.tag });
+                    return;
+                }
+            }
+            // App fechado: abre com parâmetro para abrir o chat automaticamente
+            if (clients.openWindow) {
+                return clients.openWindow('./?openChat=1');
+            }
+        })
+    );
+});
