@@ -44,6 +44,12 @@
         window._kmlFirestore = firebase.firestore();
         window._kmlStorage  = firebase.storage();
         console.log('[KML-Firebase] inicializado');
+        // Verificar alertas de árvores 15 segundos após inicialização (para não atrasar o carregamento)
+        setTimeout(function() {
+            if (typeof verificarAlertasArvores === 'function') {
+                verificarAlertasArvores();
+            }
+        }, 15000);
       })();
     </script>
 
@@ -589,6 +595,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             body.modo-celular .btn-config         { background: #455A64 !important; }
             body.modo-celular .btn-reset          { background: #B71C1C !important; }
             body.modo-celular .btn-arquivos       { background: #6A1B9A !important; }
+            body.modo-celular .btn-arvore         { background: #2E7D32 !important; }
             body.modo-celular #btnApontarMelhorias { background: #4527A0 !important; }
             body.modo-celular #btnTela            { background: #FF8F00 !important; color: #FFFFFF !important; }
             body.modo-celular #btnTela span       { color: #FFFFFF !important; }
@@ -651,6 +658,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             .btn-config         { background: #455A64 !important; }
             .btn-reset          { background: #B71C1C !important; }
             .btn-arquivos       { background: #6A1B9A !important; }
+            .btn-arvore         { background: #2E7D32 !important; }
             #btnApontarMelhorias { background: #4527A0 !important; }
             #btnVersao          { background: #4A148C !important; }
             #btnTela            { background: #FF8F00 !important; color: #FFFFFF !important; }
@@ -743,6 +751,10 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .btn-sview      { box-shadow: inset 3px 0 0 #FFC107, 0 4px 12px rgba(0,0,0,0.35); }
         .btn-reset      { box-shadow: inset 3px 0 0 #EF5350, 0 4px 12px rgba(0,0,0,0.35); }
         .btn-arquivos   { box-shadow: inset 3px 0 0 #CE93D8, 0 4px 12px rgba(0,0,0,0.35); }
+        .btn-arvore     { box-shadow: inset 3px 0 0 #81C784, 0 4px 12px rgba(0,0,0,0.35); }
+        @media (max-width: 768px) {
+            #panelArvore { left: 0 !important; width: 100% !important; }
+        }
         .btn-poda       { box-shadow: inset 3px 0 0 #FF7043, 0 4px 12px rgba(0,0,0,0.35); }
         .btn-lista-poda { box-shadow: inset 3px 0 0 #9CCC65, 0 4px 12px rgba(0,0,0,0.35); }
         .btn-chat       { box-shadow: inset 3px 0 0 #26C6DA, 0 4px 12px rgba(0,0,0,0.35); }
@@ -1000,8 +1012,8 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .confirm-cidade-box .btns { display: flex; gap: 6px; margin-top: 8px; }
         .confirm-cidade-box button { flex: 1; padding: 6px; border: none; border-radius: 8px; font-weight: 900; font-size: 12px; cursor: pointer; }
 
-        #liveToast { position: fixed; top: -150px; left: 50%; transform: translateX(-50%); background: rgba(15,15,25,0.96); color: #fff; padding: 14px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.15); font-weight: bold; z-index: 10005; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 35px rgba(0,0,0,0.6); text-align: center; width: min(88%, 400px); backdrop-filter: blur(16px); font-size: 14px; pointer-events: none; }
-        #liveToast.show { top: 30px; pointer-events: auto; }
+        #liveToast { position: fixed; top: 30px; left: 50%; transform: translateX(-50%) translateY(calc(-100% - 60px)); background: rgba(15,15,25,0.96); color: #fff; padding: 14px 20px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.15); font-weight: bold; z-index: 10005; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease; box-shadow: 0 10px 35px rgba(0,0,0,0.6); text-align: center; width: min(88%, 400px); backdrop-filter: blur(16px); font-size: 14px; pointer-events: none; opacity: 0; }
+        #liveToast.show { transform: translateX(-50%) translateY(0); pointer-events: auto; opacity: 1; }
 
         /* MODAIS — RESPONSIVOS PARA QUALQUER TELA */
         .modal-overlay { 
@@ -1517,6 +1529,12 @@ document.onkeydown = function(e) {
     if (modo === 'celular') document.body.classList.add('modo-celular');
     else if (modo === 'computador') { document.body.classList.add('modo-computador'); document.body.classList.add('modo-computador-forcado'); }
 })();
+
+// Plant.id API key para identificação de espécies de árvores
+// Free tier: 100 identificações/dia
+// Obtenha sua chave em: https://plant.id/
+window._plantIdApiKey = 'ioWO5RUqiAzsfa743YqZ7GrKo4clJLdlBAHyaXsaeorsDQLzp2';
+window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
 </script>
 
     <!-- SCRIPT DE VERIFICACAO DE VERSAO - EXECUTA IMEDIATAMENTE -->
@@ -1801,6 +1819,21 @@ document.onkeydown = function(e) {
             <input type="hidden" id="retirarGpsLat">
             <input type="hidden" id="retirarGpsLng">
             <textarea id="retirarObservacao" class="input-form" placeholder="Observação sobre a retirada (opcional)" rows="2" style="resize:none; font-family:inherit; font-size:14px;"></textarea>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:bold; color:#4CAF50; display:block; margin-bottom:4px;">🗓️ Defina um tempo para voltar a visitar a árvore podada <span style="color:#FF5252;">*</span></label>
+                <input type="text" id="retirarTempoRevisita" class="input-form" placeholder="Ex: 6 meses, 1 ano, 45 dias" oninput="validarCamposRetirada()">
+                <span style="font-size:10px; color:#888;">Campo obrigatório — informe quando revisitar (ex: 6 meses, 1 ano, 45 dias)</span>
+            </div>
+            <div style="margin-bottom:10px;">
+                <label style="font-size:12px; font-weight:bold; color:#4CAF50; display:block; margin-bottom:4px;">🌳 Defina a espécie da árvore</label>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="text" id="retirarEspecieArvore" class="input-form" placeholder="Ex: Sibipiruna, Ipê Amarelo..." style="flex:1; margin-bottom:0;">
+                    <button type="button" id="btnCameraEspecie" onclick="abrirModalCameraEspecie()" style="width:44px; height:44px; border-radius:10px; border:2px solid #4CAF50; background:#e8f5e9; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Tirar foto para identificar espécie">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#4CAF50"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2 7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+                    </button>
+                </div>
+                <span style="font-size:10px; color:#888;">Opcional — digite manualmente ou use a câmera 📷 para identificação automática</span>
+            </div>
             <p style="font-size: 11px; color: #FF5252; font-weight: bold; margin-bottom: 8px;">📸 Foto do local é obrigatória para retirar a pendência.</p>
             <div style="margin-bottom:10px;">
                 <button type="button" onclick="capturarFotoPoda('retirar')" style="width:100%; padding:10px; background:#4CAF50; color:white; border:none; border-radius:10px; font-weight:bold; cursor:pointer; font-size:14px;">📷 Tirar Foto do Local</button>
@@ -1808,8 +1841,34 @@ document.onkeydown = function(e) {
                 <div id="dataHoraFotoRetirar" style="display:none; font-size:11px; color:#4CAF50; font-weight:bold; text-align:center; margin-top:4px;"></div>
                 <input type="hidden" id="fotoRetirarBase64">
             </div>
-            <button class="btn-salvar" style="background: #4CAF50; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4); margin-bottom: 10px;" onclick="removerPodaManualmente()">Concluir e Avisar Todos</button>
+            <button class="btn-salvar" style="background: #4CAF50; box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4); margin-bottom: 10px; opacity: 0.5; cursor: not-allowed;" onclick="removerPodaManualmente()" disabled>Concluir e Avisar Todos</button>
             <button class="btn-fechar-modal" onclick="document.getElementById('retirarPodaModalOverlay').style.display='none'">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL CÂMERA ESPÉCIE -->
+    <div id="cameraEspecieOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:10010; flex-direction:column; align-items:center; justify-content:center;">
+        <!-- Step 1: Choose action -->
+        <div id="cameraEspecieStep1" style="text-align:center; color:white;">
+            <h3 style="color:#4CAF50; font-size:20px;">🌳 Identificar Espécie da Árvore</h3>
+            <p style="color:#ccc; font-size:14px; margin-bottom:20px;">Tire uma foto da árvore para identificação automática por IA</p>
+            <button onclick="iniciarCameraEspecie()" style="padding:14px 30px; background:#4CAF50; color:white; border:none; border-radius:12px; font-size:16px; font-weight:bold; cursor:pointer; margin:8px;">📷 Tirar foto e identificar espécie</button>
+            <br>
+            <button onclick="fecharCameraEspecie()" style="padding:14px 30px; background:#666; color:white; border:none; border-radius:12px; font-size:16px; cursor:pointer; margin:8px;">Cancelar</button>
+        </div>
+        <!-- Step 2: Camera viewfinder -->
+        <div id="cameraEspecieStep2" style="display:none; width:100%; height:100%; position:relative;">
+            <video id="cameraEspecieVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+            <button onclick="capturarFotoEspecie()" style="position:absolute; bottom:30px; left:50%; transform:translateX(-50%); width:70px; height:70px; border-radius:50%; border:4px solid white; background:rgba(76,175,80,0.8); cursor:pointer;"></button>
+        </div>
+        <!-- Step 3: Photo preview with action buttons -->
+        <div id="cameraEspecieStep3" style="display:none; width:100%; height:100%; position:relative;">
+            <canvas id="cameraEspecieCanvas" style="width:100%; height:100%; object-fit:contain;"></canvas>
+            <div style="position:absolute; bottom:30px; left:0; width:100%; display:flex; justify-content:center; gap:15px; padding:0 20px;">
+                <button onclick="pesquisarEspecieArvore()" style="padding:14px 24px; background:#4CAF50; color:white; border:none; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; flex:1; max-width:220px;">🔍 Pesquisar espécie</button>
+                <button onclick="fecharCameraEspecie()" style="padding:14px 24px; background:#FF5252; color:white; border:none; border-radius:12px; font-size:15px; font-weight:bold; cursor:pointer; flex:1; max-width:220px;">❌ Cancelar e sair</button>
+            </div>
+            <div id="cameraEspecieLoading" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,0.8); padding:20px 30px; border-radius:15px; color:white; font-size:16px;">🔍 Identificando espécie...</div>
         </div>
     </div>
 
@@ -2364,9 +2423,23 @@ document.onkeydown = function(e) {
         <button class="btn-circular btn-sview" onclick="abrirStreetViewCentro()">🚶<span>S.VIEW</span></button>
         <button class="btn-circular btn-reset" onclick="resetGeral()">🔄<span>ATUALIZAR</span></button>
         <button class="btn-circular btn-arquivos" id="btnAbreArq" onclick="togglePanelArquivos()">📄<span>ARQUIVOS</span></button>
+        <button class="btn-circular btn-arvore" id="btnArvore" onclick="togglePanelArvore()" style="background: #2E7D32;">🌳<span>ÁRVORE</span></button>
         <button id="btnVersao" class="btn-circular" onclick="mostrarVersaoAtual()" style="background: #673AB7; font-size: 10px;">🔖<span>VERSAO</span></button>
     </div>
     
+    <!-- PAINEL ÁRVORE -->
+    <div id="panelArvore" style="display:none; position:fixed; top:0; left:60px; width:380px; height:100%; background:rgba(10,10,10,0.96); z-index:1050; padding:15px; box-shadow: 4px 0 20px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
+        <div style="flex-shrink:0; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="color:#4CAF50; margin:0; font-size:18px;">🌳 Árvores para Revisitar</h3>
+            <button onclick="togglePanelArvore()" style="background:none; border:none; color:white; font-size:22px; cursor:pointer;">✕</button>
+        </div>
+        <div style="flex-shrink:0; margin-bottom:12px;">
+            <input id="arvoreSearchCidade" type="text" placeholder="🔍 Pesquisar por cidade..." oninput="filtrarArvoresPorCidade(this.value)" style="width:100%; box-sizing:border-box; background:#333; color:white; border:1px solid #555; border-radius:8px; padding:9px 12px; font-size:14px; outline:none;">
+        </div>
+        <div id="arvoreListaContainer" style="color:white; flex:1; overflow-y:auto; padding-right:4px;">
+            <p style="color:#888; text-align:center;">Carregando...</p>
+        </div>
+    </div>
 
         <button id="btnMapaMaior" onclick="toggleStyle()" title="Mudar para Imagem de Satélite">🛰️<span>MAPA</span></button>
 
@@ -2436,7 +2509,7 @@ document.onkeydown = function(e) {
         <div id="panelListaPoda">
             <div class="panel-header">📋 Pendências de Poda <button onclick="togglePanelListaPoda()" style="border:none; background:none; cursor:pointer; font-size:16px;">×</button></div>
             <div style="padding: 8px 10px;">
-                <input type="text" id="filtroCidadePoda" placeholder="🔍 Filtrar por cidade..." oninput="renderizarListaPoda()" onblur="this.value=''; renderizarListaPoda();" style="width:100%; box-sizing:border-box; padding:7px 10px; border-radius:8px; border:1px solid #ccc; font-size:12px; outline:none;">
+                <input type="text" id="filtroCidadePoda" placeholder="🔍 Filtrar por cidade..." oninput="renderizarListaPoda()" style="width:100%; box-sizing:border-box; padding:7px 10px; border-radius:8px; border:1px solid #ccc; font-size:12px; outline:none;">
             </div>
             <div class="panel-content" id="conteudoListaPoda"></div>
             <div style="padding: 10px; border-top: 1px solid rgba(0,0,0,0.1); background: rgba(255,255,255,0.8);">
@@ -3899,9 +3972,9 @@ window.addEventListener('load', () => {
                             const appEmSegundoPlano = document.hidden;
 
                             if (msg.isSistema) {
-                                // System messages: always show orange top toast
+                                // System messages: always show orange top toast with 8s auto-hide
                                 if (!appEmSegundoPlano) {
-                                    mostrarNotificacaoRealTime(`🤖 <b>AVISO DO SISTEMA</b><br>${d.texto || ''}`, "#FF9800", true);
+                                    mostrarNotificacaoRealTime(`🤖 <b>AVISO DO SISTEMA</b><br>${d.texto || ''}`, "#FF9800", true, 8000);
                                 }
                                 if (panelAberto) renderizarChat();
                             } else {
@@ -4424,10 +4497,9 @@ window.addEventListener('load', () => {
             if (!ehChat && _notifIsSuppressed()) return;
             _tocarSomNotificacao();
             const toast = document.getElementById('liveToast');
-            const temBotaoFechar = duracaoMs === 0;
-            toast.innerHTML = mensagemHTML + (temBotaoFechar
-                ? `<div style="margin-top:10px;"><button onclick="document.getElementById('liveToast').classList.remove('show')" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:5px 18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">✕ Fechar</button></div>`
-                : '');
+            // Sempre mostrar botão fechar para garantir que o usuário possa dispensar manualmente
+            const botaoFechar = `<div style="margin-top:10px;"><button onclick="event.stopPropagation();clearTimeout(window._liveToastTimeout);document.getElementById('liveToast').classList.remove('show')" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:5px 18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">✕ Fechar</button></div>`;
+            toast.innerHTML = mensagemHTML + botaoFechar;
             toast.style.borderColor = corBorda;
             toast.classList.add('show');
             if (ehChat) {
@@ -4437,9 +4509,11 @@ window.addEventListener('load', () => {
                 toast.onclick = null; toast.style.cursor = 'default';
             }
             clearTimeout(liveToastTimeout);
-            if (duracaoMs > 0) {
-                liveToastTimeout = setTimeout(() => { toast.classList.remove('show'); }, duracaoMs);
-            }
+            clearTimeout(window._liveToastTimeout);
+            // Garantir auto-hide: mínimo 5s, padrão 6s; se duracaoMs=0 usar 8s como fallback
+            const duracao = duracaoMs > 0 ? duracaoMs : 8000;
+            liveToastTimeout = setTimeout(() => { toast.classList.remove('show'); }, duracao);
+            window._liveToastTimeout = liveToastTimeout;
         }
 
         // ==========================================
@@ -4918,7 +4992,7 @@ window.addEventListener('load', () => {
                     // --- LÓGICA PARA AVISOS DE SISTEMA (CHAVES E PODAS) ---
                     // Estes avisos SEMPRE aparecem na tela (Top Toast) em laranja, mesmo com chat OFF
                     if (!appEmSegundoPlano) {
-                        mostrarNotificacaoRealTime(`🤖 <b>AVISO DO SISTEMA</b><br>${msg.mensagem.texto}`, "#FF9800", true);
+                        mostrarNotificacaoRealTime(`🤖 <b>AVISO DO SISTEMA</b><br>${msg.mensagem.texto}`, "#FF9800", true, 8000);
                     }
                     // Se o painel estiver aberto, atualiza a lista visual
                     if (panelAberto) renderizarChat();
@@ -5522,6 +5596,9 @@ window.addEventListener('load', () => {
 
             if (!equipe || !de || !ate) { alert("Por favor, preencha o número da equipe e os IDs das duas chaves (De / Até)."); return; }
             if (!fotoBase64) { alert("📸 Foto obrigatória! Tire uma foto do local antes de retirar a pendência."); return; }
+            const tempoRevisita = document.getElementById('retirarTempoRevisita').value.trim();
+            if (!tempoRevisita) { alert("🗓️ Por favor, defina o tempo para voltar a visitar a árvore podada."); return; }
+            const especieArvore = document.getElementById('retirarEspecieArvore').value.trim();
 
             const podasAtivas = geoJsonGlobal.features.filter(f => f && f.properties && (f.properties.name === "🚨 PODA PENDENTE" || f.properties.name === "🌳 PODA DE ÁRVORE"));
             let idsParaRemover = []; let trechoReal = ""; let podaRef = null;
@@ -5595,6 +5672,39 @@ window.addEventListener('load', () => {
             const cidadeStr = cidadeRetirada ? ` | 📍 <b>${cidadeRetirada}</b>` : '';
             const obsStr = obsRetirar ? `<br>📝 <i>${obsRetirar}</i>` : '';
             enviarMensagemSistemaChat(`✅ <b>PODA RESOLVIDA</b>${cidadeStr}<br>A <b>${nomeRemetente}</b> retirou a pendência nas chaves <b style="color:#4CAF50;">${trechoReal}</b>!<br>🕐 ${dataHora}${obsStr}`, "✅ Poda Resolvida", `${nomeRemetente} retirou pendência em ${trechoReal}${cidadeRetirada ? ' (' + cidadeRetirada + ')' : ''}`);
+            // Salvar árvore para revisita no Firebase
+            try {
+                var diasRevisita = converterTempoParaDias(tempoRevisita);
+                var dataProximaVisita = new Date();
+                dataProximaVisita.setDate(dataProximaVisita.getDate() + diasRevisita);
+                
+                window._kmlFirestore.collection('arvores_revisita').add({
+                    cidade: cidadeRetirada || '',
+                    especie: especieArvore || 'Não definida',
+                    tempoRevisita: tempoRevisita,
+                    tempoRevisitaDias: diasRevisita,
+                    dataRetirada: firebase.firestore.FieldValue.serverTimestamp(),
+                    dataProximaVisita: firebase.firestore.Timestamp.fromDate(dataProximaVisita),
+                    localizacao: { lat: retirarLat, lng: retirarLng },
+                    trechoPoda: trechoReal || '',
+                    autor: (typeof getAutorFormatado === 'function' ? getAutorFormatado() : 'Usuário'),
+                    status: 'pendente',
+                    alimentador: (podaRef && podaRef.alimentadorPoda) || ''
+                });
+                console.log('[Árvore] Salva no Firebase para revisita');
+                // Notificar no chat sobre revisita da árvore
+                var msgArvore = '<div style="background:linear-gradient(135deg,#2E7D32,#4CAF50); padding:12px; border-radius:10px; color:white;">' +
+                    '<b>🌳 REVISITA DE ÁRVORE DEFINIDA</b><br>' +
+                    '<b>Espécie:</b> ' + (especieArvore || 'Não definida') + '<br>' +
+                    '<b>Cidade:</b> ' + (cidadeRetirada || '?') + '<br>' +
+                    '<b>Trecho:</b> ' + (trechoReal || '?') + '<br>' +
+                    '<b>Tempo para revisita:</b> ' + tempoRevisita + '<br>' +
+                    '<b>Próxima visita:</b> ' + dataProximaVisita.toLocaleDateString('pt-BR') +
+                    '</div>';
+                enviarMensagemSistemaChat(msgArvore, '🌳 Revisita de Árvore Definida', (typeof getAutorFormatado === 'function' ? getAutorFormatado() : 'Usuário') + ' definiu revisita: ' + (especieArvore || 'árvore') + ' em ' + tempoRevisita);
+            } catch(e) {
+                console.error('[Árvore] Erro ao salvar:', e);
+            }
             enviarNotificacaoSistemaForcada("✅ Poda Resolvida", `${nomeRemetente} retirou pendência em ${trechoReal}${cidadeRetirada ? ' (' + cidadeRetirada + ')' : ''}`, 'poda-retirada');
             if (clienteMQTT && clienteMQTT.connected) {
                 idsParaRemover.forEach(idEncontrado => {
@@ -5619,6 +5729,166 @@ window.addEventListener('load', () => {
                 });
             }
             alert(`✅ Pendência retirada com sucesso!\nO trecho ${trechoReal} está limpo e todo o grupo foi avisado no chat.`);
+        }
+
+        function validarCamposRetirada() {
+            var tempo = document.getElementById('retirarTempoRevisita');
+            var btnConcluir = document.querySelector('#retirarPodaModalOverlay .btn-salvar');
+            if (tempo && btnConcluir) {
+                if (tempo.value.trim().length > 0) {
+                    btnConcluir.disabled = false;
+                    btnConcluir.style.opacity = '1';
+                    btnConcluir.style.cursor = 'pointer';
+                } else {
+                    btnConcluir.disabled = true;
+                    btnConcluir.style.opacity = '0.5';
+                    btnConcluir.style.cursor = 'not-allowed';
+                }
+            }
+        }
+
+        function abrirModalCameraEspecie() {
+            var overlay = document.getElementById('cameraEspecieOverlay');
+            if (!overlay) return;
+            // Reset to step 1
+            document.getElementById('cameraEspecieStep1').style.display = 'block';
+            document.getElementById('cameraEspecieStep2').style.display = 'none';
+            document.getElementById('cameraEspecieStep3').style.display = 'none';
+            document.getElementById('cameraEspecieLoading').style.display = 'none';
+            overlay.style.display = 'flex';
+        }
+
+        function iniciarCameraEspecie() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Câmera não disponível neste dispositivo ou navegador.');
+                return;
+            }
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+            }).then(function(stream) {
+                window._cameraEspecieStream = stream;
+                var video = document.getElementById('cameraEspecieVideo');
+                video.srcObject = stream;
+                document.getElementById('cameraEspecieStep1').style.display = 'none';
+                document.getElementById('cameraEspecieStep2').style.display = 'block';
+            }).catch(function(err) {
+                console.error('[Camera] Erro ao acessar câmera:', err);
+                alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+            });
+        }
+
+        function capturarFotoEspecie() {
+            var video = document.getElementById('cameraEspecieVideo');
+            var canvas = document.getElementById('cameraEspecieCanvas');
+            // Capture at full video resolution
+            canvas.width = video.videoWidth || 1920;
+            canvas.height = video.videoHeight || 1080;
+            var ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Stop the stream
+            if (window._cameraEspecieStream) {
+                window._cameraEspecieStream.getTracks().forEach(function(t) { t.stop(); });
+                window._cameraEspecieStream = null;
+            }
+            video.srcObject = null;
+            document.getElementById('cameraEspecieStep2').style.display = 'none';
+            document.getElementById('cameraEspecieStep3').style.display = 'block';
+        }
+
+        async function pesquisarEspecieArvore() {
+            var canvas = document.getElementById('cameraEspecieCanvas');
+            var loading = document.getElementById('cameraEspecieLoading');
+            loading.style.display = 'block';
+            // Get base64 image from canvas
+            var imageBase64 = canvas.toDataURL('image/jpeg', 0.92);
+            var plantIdKey = window._plantIdApiKey || '';
+
+            // --- Tentativa 1: Plant.id API v3 ---
+            if (plantIdKey) {
+                try {
+                    var response = await fetch('https://plant.id/api/v3/identification', {
+                        method: 'POST',
+                        headers: {
+                            'Api-Key': plantIdKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            images: [imageBase64],
+                            similar_images: true
+                        })
+                    });
+                    if (response.ok) {
+                        var data = await response.json();
+                        if (data.result && data.result.classification && data.result.classification.suggestions && data.result.classification.suggestions.length > 0) {
+                            var especie = data.result.classification.suggestions[0].name + ' (via Plant.id)';
+                            document.getElementById('retirarEspecieArvore').value = especie;
+                            loading.style.display = 'none';
+                            fecharCameraEspecie();
+                            return;
+                        }
+                    } else {
+                        console.warn('[Plant.id] Status:', response.status);
+                    }
+                } catch(e) {
+                    console.error('[Plant.id] Erro:', e);
+                }
+            }
+
+            // --- Tentativa 2: Pl@ntNet fallback ---
+            var plantNetKey = window._plantNetApiKey || '';
+            if (plantNetKey) {
+                try {
+                    // Converter base64 para Blob para enviar via FormData
+                    var base64Data = imageBase64.split(',')[1];
+                    var byteChars = atob(base64Data);
+                    var byteArr = new Uint8Array(byteChars.length);
+                    for (var i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+                    var blob = new Blob([byteArr], { type: 'image/jpeg' });
+
+                    var formData = new FormData();
+                    formData.append('images', blob, 'especie.jpg');
+
+                    var pnUrl = 'https://my-api.plantnet.org/v2/identify/all?include-related-images=false&no-reject=false&lang=pt&api-key=' + plantNetKey;
+                    var pnResponse = await fetch(pnUrl, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (pnResponse.ok) {
+                        var pnData = await pnResponse.json();
+                        if (pnData.results && pnData.results.length > 0) {
+                            var top = pnData.results[0].species;
+                            var nomeComum = (top.commonNames && top.commonNames.length > 0) ? top.commonNames[0] : top.scientificNameWithoutAuthor;
+                            var especiePn = nomeComum + ' (' + top.scientificNameWithoutAuthor + ') (via Pl@ntNet)';
+                            document.getElementById('retirarEspecieArvore').value = especiePn;
+                            loading.style.display = 'none';
+                            fecharCameraEspecie();
+                            return;
+                        }
+                    } else {
+                        console.warn('[Pl@ntNet] Status:', pnResponse.status);
+                    }
+                } catch(e) {
+                    console.error('[Pl@ntNet] Erro:', e);
+                }
+            }
+
+            // --- Fallback final: entrada manual ---
+            loading.style.display = 'none';
+            var manual = prompt('🌳 IA indisponível - digite a espécie manualmente\n\nDigite a espécie da árvore:');
+            if (manual && manual.trim()) document.getElementById('retirarEspecieArvore').value = manual.trim();
+            fecharCameraEspecie();
+        }
+
+        function fecharCameraEspecie() {
+            // Stop camera stream if still running
+            if (window._cameraEspecieStream) {
+                window._cameraEspecieStream.getTracks().forEach(function(t) { t.stop(); });
+                window._cameraEspecieStream = null;
+            }
+            var video = document.getElementById('cameraEspecieVideo');
+            if (video) video.srcObject = null;
+            var overlay = document.getElementById('cameraEspecieOverlay');
+            if (overlay) overlay.style.display = 'none';
         }
 
         let podasAvisadas = {}; let podaAtualParaResolver = null;
@@ -5672,6 +5942,8 @@ window.addEventListener('load', () => {
                 p.style.display = 'none';
             } else {
                 p.style.display = 'flex';
+                const fc = document.getElementById('filtroCidadePoda');
+                if (fc) fc.value = '';
                 renderizarListaPoda();
             }
         }
@@ -5791,6 +6063,9 @@ window.addEventListener('load', () => {
                 box.style.display = 'none'; img.src = '';
             }
             document.getElementById('retirarPodaModalOverlay').style.display = 'flex';
+            document.getElementById('retirarTempoRevisita').value = '';
+            document.getElementById('retirarEspecieArvore').value = '';
+            validarCamposRetirada();
             setTimeout(() => document.getElementById('retirarEquipe').focus(), 100);
         }
 
@@ -10512,6 +10787,281 @@ function togglePanelArquivos() {
         if (typeof __atualizarBotaoPodasRetiradas === 'function') __atualizarBotaoPodasRetiradas();
     }
 }
+
+// ========== ÁRVORE REVISITA ==========
+function _abrirPanelArvoreReal() {
+    var panel = document.getElementById('panelArvore');
+    if (!panel) return;
+    panel.style.display = 'flex';
+    var searchInput = document.getElementById('arvoreSearchCidade');
+    if (searchInput) searchInput.value = '';
+    carregarListaArvores();
+}
+
+function _mostrarHomenagemLucas(callback) {
+    // Remove modal anterior se existir
+    var existing = document.getElementById('modalHomenagemLucas');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'modalHomenagemLucas';
+    overlay.style.cssText = [
+        'position:fixed', 'inset:0', 'z-index:99999',
+        'background:rgba(0,0,0,0.75)',
+        'display:flex', 'align-items:center', 'justify-content:center',
+        'padding:16px', 'box-sizing:border-box'
+    ].join(';');
+
+    var card = document.createElement('div');
+    card.style.cssText = [
+        'background:linear-gradient(160deg,#1B5E20 0%,#2E7D32 60%,#388E3C 100%)',
+        'border-radius:16px', 'padding:30px 28px 24px',
+        'max-width:420px', 'width:100%',
+        'box-shadow:0 8px 40px rgba(0,0,0,0.6)',
+        'color:#fff', 'font-family:inherit',
+        'border:1.5px solid rgba(255,255,255,0.15)'
+    ].join(';');
+
+    card.innerHTML = [
+        '<div style="text-align:center;font-size:22px;font-weight:700;margin-bottom:16px;line-height:1.3;">',
+        '  🚨 Agradecimento Especial — Inspeção Pro 🚨',
+        '</div>',
+        '<p style="font-size:15px;line-height:1.7;margin:0 0 20px;text-align:justify;">',
+        '  Gostaria de deixar um agradecimento ao nosso colega <strong>Lucas</strong>, da cidade de <strong>Marília-SP</strong>.',
+        '  Ele trouxe uma excelente ideia de melhoria para o sistema Inspeção Pro que vai contribuir demais para o dia a dia de todos nós em campo.',
+        '</p>',
+        '<p style="font-size:16px;line-height:1.6;margin:0 0 24px;text-align:center;font-weight:600;">',
+        '  Obrigado pela visão, Lucas! Tamo junto! 🤝⚡️',
+        '</p>',
+        '<label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;margin-bottom:20px;user-select:none;">',
+        '  <input type="checkbox" id="checkNaoMostrarHomenagem" style="width:18px;height:18px;cursor:pointer;accent-color:#4CAF50;">',
+        '  Não mostrar novamente',
+        '</label>',
+        '<div style="text-align:center;">',
+        '  <button id="btnContinuarHomenagem" style="',
+        '    background:#4CAF50;color:#fff;border:none;border-radius:24px;',
+        '    padding:12px 36px;font-size:16px;font-weight:700;cursor:pointer;',
+        '    box-shadow:0 4px 14px rgba(0,0,0,0.3);letter-spacing:0.5px;',
+        '  ">Continuar</button>',
+        '</div>'
+    ].join('');
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    document.getElementById('btnContinuarHomenagem').addEventListener('click', function() {
+        var naoMostrar = document.getElementById('checkNaoMostrarHomenagem');
+        if (naoMostrar && naoMostrar.checked) {
+            localStorage.setItem('homenagem_arvore_oculta', 'true');
+        }
+        overlay.remove();
+        if (typeof callback === 'function') callback();
+    });
+}
+
+function togglePanelArvore() {
+    var panel = document.getElementById('panelArvore');
+    if (!panel) return;
+    if (panel.style.display === 'none' || !panel.style.display) {
+        // Verificar se deve mostrar homenagem
+        var oculta = localStorage.getItem('homenagem_arvore_oculta');
+        if (oculta === 'true') {
+            _abrirPanelArvoreReal();
+        } else {
+            _mostrarHomenagemLucas(function() {
+                _abrirPanelArvoreReal();
+            });
+        }
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function filtrarArvoresPorCidade(termo) {
+    var container = document.getElementById('arvoreListaContainer');
+    if (!container) return;
+    var cards = container.querySelectorAll('[data-cidade]');
+    var termoLower = termo.toLowerCase().trim();
+    cards.forEach(function(card) {
+        var cidade = (card.getAttribute('data-cidade') || '').toLowerCase();
+        card.style.display = (!termoLower || cidade.includes(termoLower)) ? '' : 'none';
+    });
+}
+
+async function carregarListaArvores() {
+    var container = document.getElementById('arvoreListaContainer');
+    if (!container) return;
+    container.innerHTML = '<p style="color:#888; text-align:center;">🔄 Carregando árvores...</p>';
+    
+    try {
+        var snapshot = await window._kmlFirestore.collection('arvores_revisita').orderBy('dataProximaVisita', 'asc').get();
+        if (snapshot.empty) {
+            container.innerHTML = '<p style="color:#888; text-align:center;">Nenhuma árvore cadastrada para revisita.</p>';
+            return;
+        }
+        var html = '';
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            var id = doc.id;
+            var dataProxima = d.dataProximaVisita ? new Date(d.dataProximaVisita.seconds * 1000) : null;
+            var hoje = new Date();
+            var diasRestantes = dataProxima ? Math.ceil((dataProxima - hoje) / (1000*60*60*24)) : '?';
+            var corTempo = diasRestantes <= 0 ? '#FF5252' : diasRestantes <= 10 ? '#FF9800' : '#4CAF50';
+            var statusTexto = diasRestantes <= 0 ? '⚠️ VENCIDO' : diasRestantes <= 10 ? '⏰ Vence em ' + diasRestantes + ' dias' : '✅ ' + diasRestantes + ' dias restantes';
+            var cidadeCard = (d.cidade || '').toLowerCase();
+            
+            var googleMapsLink = 'https://www.google.com/maps?q=' + (d.localizacao ? d.localizacao.lat + ',' + d.localizacao.lng : '');
+            
+            html += '<div data-cidade="' + cidadeCard + '" style="background:rgba(255,255,255,0.08); border-radius:12px; padding:12px; margin-bottom:10px; border-left:4px solid ' + corTempo + ';">';
+            html += '<div style="font-size:14px; font-weight:bold; color:#4CAF50;">🌳 ' + (d.especie || 'Espécie não definida') + '</div>';
+            html += '<div style="font-size:12px; color:#ccc; margin-top:4px;">📍 ' + (d.cidade || '?') + '</div>';
+            html += '<div style="font-size:12px; color:#ccc; margin-top:2px;">🗓️ Tempo: ' + (d.tempoRevisita || '?') + '</div>';
+            html += '<div style="font-size:12px; color:' + corTempo + '; margin-top:2px; font-weight:bold;">' + statusTexto + '</div>';
+            html += '<div style="font-size:11px; color:#888; margin-top:2px;">Retirada por: ' + (d.autor || '?') + ' em ' + (d.dataRetirada ? new Date(d.dataRetirada.seconds * 1000).toLocaleDateString('pt-BR') : '?') + '</div>';
+            html += '<div style="font-size:11px; color:#888; margin-top:2px;">Trecho: ' + (d.trechoPoda || '?') + '</div>';
+            html += '<div style="display:flex; gap:8px; margin-top:8px;">';
+            html += '<a href="' + googleMapsLink + '" target="_blank" rel="noopener" style="flex:1; padding:8px; background:#1565C0; color:white; text-align:center; border-radius:8px; text-decoration:none; font-size:12px; font-weight:bold;">📍 Abrir no Maps</a>';
+            html += '<button onclick="atualizarTempoArvore(\'' + id + '\', \'' + (d.tempoRevisita || '') + '\')" style="flex:1; padding:8px; background:#FF9800; color:white; border:none; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">🔄 Atualizar tempo</button>';
+            html += '</div>';
+            html += '</div>';
+        });
+        container.innerHTML = html;
+    } catch(e) {
+        console.error('[Árvore] Erro ao carregar:', e);
+        container.innerHTML = '<p style="color:#FF5252; text-align:center;">Erro ao carregar árvores.</p>';
+    }
+}
+
+async function atualizarTempoArvore(docId, tempoAtual) {
+    var regexTempo = /^\d+\s*(mes(es)?|m[eê]s|dia(s)?|ano(s)?|semana(s)?)$/i;
+    var novoTempo = null;
+    while (true) {
+        novoTempo = prompt('🔄 Atualizar tempo de revisita\n\nTempo atual: ' + tempoAtual + '\n\nDigite o novo tempo (ex: 6 meses, 1 ano, 45 dias):', tempoAtual);
+        if (novoTempo === null) return;
+        novoTempo = novoTempo.trim();
+        if (!novoTempo) return;
+        if (regexTempo.test(novoTempo)) break;
+        alert('⚠️ Informe o tempo completo (ex: 6 meses, 45 dias, 1 ano)\n\nNão use apenas números. Inclua a unidade de tempo.');
+    }
+    
+    var diasNovo = converterTempoParaDias(novoTempo);
+    var novaDataVisita = new Date();
+    novaDataVisita.setDate(novaDataVisita.getDate() + diasNovo);
+    
+    try {
+        // Ler dados da árvore antes de atualizar para usar na notificação
+        var docSnap = await window._kmlFirestore.collection('arvores_revisita').doc(docId).get();
+        var dadosArvore = docSnap.exists ? docSnap.data() : {};
+        var especieArvore = dadosArvore.especie || 'Espécie desconhecida';
+        var cidadeArvore = dadosArvore.cidade || 'Cidade desconhecida';
+
+        await window._kmlFirestore.collection('arvores_revisita').doc(docId).update({
+            tempoRevisita: novoTempo,
+            tempoRevisitaDias: diasNovo,
+            dataProximaVisita: firebase.firestore.Timestamp.fromDate(novaDataVisita),
+            ultimaAtualizacao: firebase.firestore.FieldValue.serverTimestamp(),
+            atualizadoPor: (typeof getAutorFormatado === 'function' ? getAutorFormatado() : 'Usuário')
+        });
+
+        // Notificar no chat sobre atualização do tempo de revisita
+        var autor = (typeof getAutorFormatado === 'function' ? getAutorFormatado() : 'Usuário');
+        var novaDataFormatada = novaDataVisita.toLocaleDateString('pt-BR');
+        var msgChat = '<div style="background:linear-gradient(135deg,#2E7D32,#4CAF50); padding:12px; border-radius:10px; color:white;">' +
+            '<b>🌳 TEMPO DE REVISITA ATUALIZADO</b><br>' +
+            '👤 <b>' + autor + '</b> revisitou a árvore e verificou a poda.<br>' +
+            '📍 <b>Espécie:</b> ' + especieArvore + '<br>' +
+            '🏙️ <b>Cidade:</b> ' + cidadeArvore + '<br>' +
+            '🕐 <b>Novo tempo:</b> ' + novoTempo + '<br>' +
+            '📅 <b>Próxima revisita:</b> ' + novaDataFormatada +
+            '</div>';
+        if (typeof enviarMensagemSistemaChat === 'function') {
+            enviarMensagemSistemaChat(
+                msgChat,
+                '🌳 Revisita de Árvore',
+                autor + ' revisitou a árvore ' + especieArvore + ' e atualizou o tempo para ' + novoTempo
+            );
+        }
+
+        alert('✅ Tempo atualizado para: ' + novoTempo);
+        carregarListaArvores();
+    } catch(e) {
+        console.error('[Árvore] Erro ao atualizar:', e);
+        alert('❌ Erro ao atualizar tempo. Tente novamente.');
+    }
+}
+
+function converterTempoParaDias(texto) {
+    texto = texto.toLowerCase().trim();
+    var match = texto.match(/(\d+)/);
+    if (!match) return 180;
+    var num = parseInt(match[1]);
+    
+    if (texto.includes('ano') || texto.includes('year')) return num * 365;
+    if (texto.includes('mes') || texto.includes('mês') || texto.includes('meses') || texto.includes('month')) return num * 30;
+    if (texto.includes('semana') || texto.includes('week')) return num * 7;
+    if (texto.includes('dia') || texto.includes('day')) return num;
+    
+    return num;
+}
+async function verificarAlertasArvores() {
+    console.log('[Árvore] Verificando alertas de revisita...');
+    if (!window._kmlFirestore) {
+        console.warn('[Árvore] Firestore não disponível, alertas ignorados.');
+        return;
+    }
+    try {
+        var snapshot = await window._kmlFirestore.collection('arvores_revisita')
+            .where('status', '==', 'pendente')
+            .get();
+        var hoje = new Date().toISOString().split('T')[0];
+        var agora = new Date();
+        var alertasEnviados = 0;
+        snapshot.forEach(function(doc) {
+            var docId = doc.id;
+            var data = doc.data();
+            var especie = data.especie || 'Espécie desconhecida';
+            var cidade = data.cidade || 'Cidade desconhecida';
+            var trecho = data.trechoPoda || data.localizacao || 'Trecho não informado';
+            var dataProximaVisita = data.dataProximaVisita;
+            if (!dataProximaVisita) return;
+            var dataVisita = dataProximaVisita.toDate ? dataProximaVisita.toDate() : new Date(dataProximaVisita);
+            var diffMs = dataVisita.getTime() - agora.getTime();
+            var diasRestantes = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+            if (diasRestantes > 10) return;
+            var dedupKey = 'alertaArvore_' + docId + '_' + hoje;
+            if (localStorage.getItem(dedupKey)) return;
+            var dataFormatada = dataVisita.toLocaleDateString('pt-BR');
+            if (diasRestantes > 0) {
+                var msgAlerta = '<div style="background:linear-gradient(135deg,#E65100,#FF9800); padding:12px; border-radius:10px; color:white;">' +
+                    '<b>⏰ REVISITA DE ÁRVORE PRÓXIMA</b><br>' +
+                    '<b>Espécie:</b> ' + especie + '<br>' +
+                    '<b>Cidade:</b> ' + cidade + '<br>' +
+                    '<b>Trecho:</b> ' + trecho + '<br>' +
+                    '<b>Vence em:</b> ' + diasRestantes + ' dias (' + dataFormatada + ')' +
+                    '</div>';
+                enviarMensagemSistemaChat(msgAlerta, '⏰ Revisita Vencendo', especie + ' em ' + cidade + ' — vence em ' + diasRestantes + ' dias');
+            } else {
+                var msgVencido = '<div style="background:linear-gradient(135deg,#B71C1C,#FF5252); padding:12px; border-radius:10px; color:white;">' +
+                    '<b>⚠️ REVISITA DE ÁRVORE VENCIDA!</b><br>' +
+                    '<b>Espécie:</b> ' + especie + '<br>' +
+                    '<b>Cidade:</b> ' + cidade + '<br>' +
+                    '<b>Trecho:</b> ' + trecho + '<br>' +
+                    '<b>Venceu há:</b> ' + Math.abs(diasRestantes) + ' dias' +
+                    '</div>';
+                enviarMensagemSistemaChat(msgVencido, '⚠️ Revisita Vencida!', especie + ' em ' + cidade + ' — venceu há ' + Math.abs(diasRestantes) + ' dias');
+            }
+            localStorage.setItem(dedupKey, '1');
+            alertasEnviados++;
+        });
+        console.log('[Árvore] ' + snapshot.size + ' árvores encontradas, ' + alertasEnviados + ' alertas enviados');
+    } catch(e) {
+        console.error('[Árvore] Erro ao verificar alertas de revisita:', e);
+    }
+}
+
+// ========== FIM ÁRVORE REVISITA ==========
+
+
 
 function togglePanelFerram() {
     document.getElementById('panelAlim').style.display = 'none';
