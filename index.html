@@ -1850,9 +1850,9 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                 <span style="font-size:10px; color:#888;">Campo obrigatório — informe quando revisitar (ex: 6 meses, 1 ano, 45 dias)</span>
             </div>
             <div style="margin-bottom:10px;">
-                <label style="font-size:12px; font-weight:bold; color:#4CAF50; display:block; margin-bottom:4px;">🌳 Defina a espécie da árvore</label>
+                <label style="font-size:12px; font-weight:bold; color:#4CAF50; display:block; margin-bottom:4px;">🌳 Defina a espécie da árvore <span style="color:#FF5252;">*</span></label>
                 <div style="display:flex; gap:6px; align-items:center;">
-                    <input type="text" id="retirarEspecieArvore" class="input-form" placeholder="Ex: Sibipiruna, Ipê Amarelo..." style="flex:1; margin-bottom:0;">
+                    <input type="text" id="retirarEspecieArvore" class="input-form" placeholder="Ex: Sibipiruna, Ipê Amarelo... (obrigatório)" style="flex:1; margin-bottom:0;" oninput="validarCamposRetirada()">
                     <button type="button" id="btnCameraEspecie" onclick="abrirModalCameraEspecie()" style="width:44px; height:44px; border-radius:10px; border:2px solid #4CAF50; background:#e8f5e9; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0;" title="Tirar foto para identificar espécie">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="#4CAF50"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/><path d="M9 2 7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
                     </button>
@@ -5758,9 +5758,12 @@ window.addEventListener('load', () => {
 
         function validarCamposRetirada() {
             var tempo = document.getElementById('retirarTempoRevisita');
+            var especie = document.getElementById('retirarEspecieArvore');
             var btnConcluir = document.querySelector('#retirarPodaModalOverlay .btn-salvar');
-            if (tempo && btnConcluir) {
-                if (tempo.value.trim().length > 0) {
+            if (tempo && especie && btnConcluir) {
+                var tempoOk = tempo.value.trim().length > 0;
+                var especieOk = especie.value.trim().length > 0;
+                if (tempoOk && especieOk) {
                     btnConcluir.disabled = false;
                     btnConcluir.style.opacity = '1';
                     btnConcluir.style.cursor = 'pointer';
@@ -5877,6 +5880,8 @@ window.addEventListener('load', () => {
                 campoTempo.value = tempo;
                 campoTempo.dispatchEvent(new Event('input', { bubbles: true }));
             }
+            // Garante que a validação rode após o preenchimento automático da espécie
+            validarCamposRetirada();
         }
 
         async function pesquisarEspecieArvore() {
