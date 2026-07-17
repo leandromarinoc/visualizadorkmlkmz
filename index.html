@@ -2394,7 +2394,7 @@ document.onkeydown = function(e) {
                 </p>
                 <div style="display:flex; gap:10px;">
                     <button class="btn-fechar-modal" onclick="fecharModalConsulta()" style="flex:1; background:#e0e0e0; color:#555;">Cancelar</button>
-                    <button class="btn-fechar-modal" onclick="window.open('https://t.me/Leancord_bot','_blank'); fecharModalConsulta();" style="flex:1; background:linear-gradient(135deg,#7B1FA2,#AB47BC); color:#fff;">OK</button>
+                    <button class="btn-fechar-modal" onclick="fecharModalConsulta(); var a=document.createElement('a'); a.href='https://t.me/Leancord_bot'; a.target='_blank'; a.rel='noopener noreferrer'; document.body.appendChild(a); a.click(); document.body.removeChild(a);" style="flex:1; background:linear-gradient(135deg,#7B1FA2,#AB47BC); color:#fff;">OK</button>
                 </div>
             </div>
         </div>
