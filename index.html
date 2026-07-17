@@ -1845,7 +1845,7 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
             <input type="hidden" id="retirarGpsLng">
             <textarea id="retirarObservacao" class="input-form" placeholder="Observação sobre a retirada (opcional)" rows="2" style="resize:none; font-family:inherit; font-size:14px;"></textarea>
             <div style="margin-bottom:10px;">
-                <label style="font-size:12px; font-weight:bold; color:#4CAF50; display:block; margin-bottom:4px;">🗓️ Defina um tempo para voltar a visitar a árvore podada <span style="color:#FF5252;">*</span></label>
+                <label style="font-size:12px; font-weight:bold; color:#4CAF50; display:block; margin-bottom:4px;">🗓️ Defina um tempo manual para voltar a visitar a árvore podada ou após retirar a foto da espécie o sistema mesmo preenche o tempo correto <span style="color:#FF5252;">*</span></label>
                 <input type="text" id="retirarTempoRevisita" class="input-form" placeholder="Ex: 6 meses, 1 ano, 45 dias" oninput="validarCamposRetirada()">
                 <span style="font-size:10px; color:#888;">Campo obrigatório — informe quando revisitar (ex: 6 meses, 1 ano, 45 dias)</span>
             </div>
@@ -5820,6 +5820,65 @@ window.addEventListener('load', () => {
             document.getElementById('cameraEspecieStep3').style.display = 'block';
         }
 
+        // Mapeamento espécie → tempo de revisita recomendado após poda
+        const TEMPO_REVISITA_POR_ESPECIE = {
+            // Crescimento rápido (4-6 meses)
+            'leucena': '4 meses', 'leucaena': '4 meses',
+            'monguba': '4 meses', 'pachira': '4 meses',
+            'tipuana': '5 meses',
+            'flamboyant': '5 meses', 'delonix': '5 meses',
+            'abacateiro': '5 meses', 'persea': '5 meses',
+            'mangueira': '6 meses', 'mangifera': '6 meses',
+            'ficus': '4 meses', 'figueira': '4 meses',
+            'amendoeira': '5 meses', 'terminalia': '5 meses',
+            'eucalipto': '5 meses', 'eucalyptus': '5 meses',
+            // Crescimento médio (6-10 meses)
+            'sibipiruna': '6 meses', 'caesalpinia': '6 meses', 'poincianella': '6 meses',
+            'ipê': '8 meses', 'ipe': '8 meses', 'handroanthus': '8 meses', 'tabebuia': '8 meses',
+            'jacarandá': '8 meses', 'jacaranda': '8 meses',
+            'oiti': '8 meses', 'licania': '8 meses',
+            'quaresmeira': '7 meses', 'tibouchina': '7 meses',
+            'paineira': '8 meses', 'ceiba': '8 meses',
+            'aroeira': '7 meses', 'schinus': '7 meses',
+            'canelinha': '7 meses', 'nectandra': '7 meses',
+            'resedá': '6 meses', 'lagerstroemia': '6 meses',
+            'alfeneiro': '6 meses', 'ligustrum': '6 meses',
+            'chapéu-de-sol': '7 meses',
+            'palmeira': '10 meses', 'palm': '10 meses', 'roystonea': '10 meses',
+            'coqueiro': '10 meses', 'cocos': '10 meses',
+            // Crescimento lento (10-12 meses)
+            'pau-brasil': '10 meses', 'paubrasilia': '10 meses',
+            'jequitibá': '12 meses', 'cariniana': '12 meses',
+            'peroba': '10 meses', 'aspidosperma': '10 meses',
+            'araucária': '12 meses', 'araucaria': '12 meses',
+            'cedro': '10 meses', 'cedrela': '10 meses',
+            'pinheiro': '12 meses', 'pinus': '12 meses',
+        };
+        const TEMPO_REVISITA_PADRAO = '6 meses';
+
+        function obterTempoRevisitaPorEspecie(nomeEspecie) {
+            if (!nomeEspecie) return TEMPO_REVISITA_PADRAO;
+            var nomeLower = nomeEspecie.toLowerCase();
+            // Normaliza removendo acentos para comparação mais robusta
+            var nomeNorm = nomeLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            for (var key in TEMPO_REVISITA_POR_ESPECIE) {
+                var keyNorm = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                if (nomeLower.includes(key) || nomeNorm.includes(keyNorm)) {
+                    return TEMPO_REVISITA_POR_ESPECIE[key];
+                }
+            }
+            return TEMPO_REVISITA_PADRAO;
+        }
+
+        function preencherTempoRevisita(nomeEspecie) {
+            var tempo = obterTempoRevisitaPorEspecie(nomeEspecie);
+            var campoTempo = document.getElementById('retirarTempoRevisita');
+            if (campoTempo) {
+                campoTempo.value = tempo;
+                campoTempo.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }
+
         async function pesquisarEspecieArvore() {
             var canvas = document.getElementById('cameraEspecieCanvas');
             var loading = document.getElementById('cameraEspecieLoading');
@@ -5847,6 +5906,7 @@ window.addEventListener('load', () => {
                         if (data.result && data.result.classification && data.result.classification.suggestions && data.result.classification.suggestions.length > 0) {
                             var especie = data.result.classification.suggestions[0].name + ' (via Plant.id)';
                             document.getElementById('retirarEspecieArvore').value = especie;
+                            preencherTempoRevisita(especie);
                             loading.style.display = 'none';
                             fecharCameraEspecie();
                             return;
@@ -5885,6 +5945,7 @@ window.addEventListener('load', () => {
                             var nomeComum = (top.commonNames && top.commonNames.length > 0) ? top.commonNames[0] : top.scientificNameWithoutAuthor;
                             var especiePn = nomeComum + ' (' + top.scientificNameWithoutAuthor + ') (via Pl@ntNet)';
                             document.getElementById('retirarEspecieArvore').value = especiePn;
+                            preencherTempoRevisita(especiePn);
                             loading.style.display = 'none';
                             fecharCameraEspecie();
                             return;
@@ -5900,7 +5961,10 @@ window.addEventListener('load', () => {
             // --- Fallback final: entrada manual ---
             loading.style.display = 'none';
             var manual = prompt('🌳 IA indisponível - digite a espécie manualmente\n\nDigite a espécie da árvore:');
-            if (manual && manual.trim()) document.getElementById('retirarEspecieArvore').value = manual.trim();
+            if (manual && manual.trim()) {
+                document.getElementById('retirarEspecieArvore').value = manual.trim();
+                preencherTempoRevisita(manual.trim());
+            }
             fecharCameraEspecie();
         }
 
