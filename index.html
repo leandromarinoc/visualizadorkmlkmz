@@ -12,15 +12,47 @@
   </script>
 
     <meta charset="UTF-8">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>⚡</text></svg>" type="image/svg+xml">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Inspeção Pro - Visualizador Online</title>
-    
-    <link rel="manifest" href="./manifest.json?v=3">
+    <meta name="description" content="Visualizador offline de KML/KMZ para inspeção de redes elétricas. Suporte a mapas, relatórios e controle de podas.">
+
+    <!-- PWA / Manifest -->
+    <link rel="manifest" href="./manifest.json?v=4">
     <meta name="theme-color" content="#300050">
+    <meta name="msapplication-TileColor" content="#300050">
+
+    <!-- Android / Chrome PWA -->
     <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- iOS / Safari PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="./icon.png">
+    <meta name="apple-mobile-web-app-title" content="Inspeção Pro">
+
+    <!-- Ícones -->
+    <link rel="icon" href="./icon-192.png" type="image/png" sizes="192x192">
+    <link rel="icon" href="./icon-512.png" type="image/png" sizes="512x512">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>⚡</text></svg>" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="./icon-512.png">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Inspeção Pro - Visualizador Online">
+    <meta property="og:description" content="Visualizador offline de KML/KMZ para inspeção de redes elétricas.">
+    <meta property="og:url" content="https://leandromarinoc.github.io/visualizadorkmlkmz/">
+    <meta property="og:image" content="https://leandromarinoc.github.io/visualizadorkmlkmz/icon-512.png">
+    <meta property="og:image:width" content="512">
+    <meta property="og:image:height" content="512">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:site_name" content="Inspeção Pro">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Inspeção Pro - Visualizador Online">
+    <meta name="twitter:description" content="Visualizador offline de KML/KMZ para inspeção de redes elétricas.">
+    <meta name="twitter:image" content="https://leandromarinoc.github.io/visualizadorkmlkmz/icon-512.png">
     <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <!-- Firebase CDN (compat) — KML/KMZ compartilhados -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -12702,10 +12734,10 @@ window.apagarChaveAtual = function() {
             if (!navigator.geolocation) return;
             if (_watchId !== null) navigator.geolocation.clearWatch(_watchId);
             // Mobile: atualização rápida (maximumAge 0 = sempre fresco, timeout curto)
-            // Desktop: padrão normal
+            // Desktop: alta precisão com timeout generoso; maximumAge:0 = sempre fresco
             const gpsOpts = _isMobile 
-                ? { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-                : { enableHighAccuracy: true };
+                ? { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+                : { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 };
             _watchId = navigator.geolocation.watchPosition(pos => {
                 const lng = pos.coords.longitude; const lat = pos.coords.latitude;
                 localStorage.setItem('lastUserPos', JSON.stringify([lng, lat]));
@@ -12767,6 +12799,15 @@ window.apagarChaveAtual = function() {
                         }
                     }
                 
+                // ── Feedback de precisão ruim (>500m) ────────────────────────────
+                if (!_isMobile && accuracy > 500) {
+                    const precKm = (accuracy / 1000).toFixed(1);
+                    if (!window._gpsPrecisaoAvisoTs || Date.now() - window._gpsPrecisaoAvisoTs > 30000) {
+                        window._gpsPrecisaoAvisoTs = Date.now();
+                        mostrarNotificacaoRealTime(`📍 <b>Localização aproximada</b><br>Precisão: ~${precKm}km (sem GPS de hardware). Resultado pode variar.`, '#FF9800', false);
+                    }
+                }
+
                 verificarProximidadePodas(lng, lat);
 
                 const agora = Date.now();
@@ -12775,6 +12816,48 @@ window.apagarChaveAtual = function() {
                     clienteMQTT.publish(TEMA_MQTT, JSON.stringify({acao: "ATUALIZAR_GPS", remetente: meuID, autor: getAutorFormatado(), lng: lng, lat: lat}), { qos: 0 });
                 }
             }, erro => { 
+                // Desktop: se timeout na alta precisão, retry com baixa precisão
+                if (!_isMobile && erro.code === 3 /* TIMEOUT */ && !window._gpsRetryBaixaPrecisao) {
+                    window._gpsRetryBaixaPrecisao = true;
+                    if (_watchId !== null) navigator.geolocation.clearWatch(_watchId);
+                    _watchId = navigator.geolocation.watchPosition(pos => {
+                        window._gpsRetryBaixaPrecisao = false;
+                        // reusar o mesmo callback de sucesso chamando o bloco externo
+                        const lng = pos.coords.longitude; const lat = pos.coords.latitude;
+                        localStorage.setItem('lastUserPos', JSON.stringify([lng, lat]));
+                        if (!userMarker) {
+                            function _criarElMarkerRetry() {
+                                const wrapper = document.createElement('div'); wrapper.className = 'user-location-wrapper';
+                                const dot = document.createElement('div'); dot.className = 'user-location-marker-mobile';
+                                const arrow = document.createElement('div'); arrow.className = 'user-direction-arrow';
+                                wrapper.appendChild(arrow); wrapper.appendChild(dot); return wrapper;
+                            }
+                            const el = _criarElMarkerRetry();
+                            userMarker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
+                            _animLast = { lng, lat };
+                        } else { _animateMarker(lng, lat); }
+                        const accuracy = pos.coords.accuracy || 9999;
+                        if (accuracy > 500) {
+                            const precKm = (accuracy / 1000).toFixed(1);
+                            if (!window._gpsPrecisaoAvisoTs || Date.now() - window._gpsPrecisaoAvisoTs > 30000) {
+                                window._gpsPrecisaoAvisoTs = Date.now();
+                                mostrarNotificacaoRealTime(`📍 <b>Localização aproximada</b><br>Precisão: ~${precKm}km (sem GPS de hardware). Resultado pode variar.`, '#FF9800', false);
+                            }
+                        }
+                        verificarProximidadePodas(lng, lat);
+                        const agora = Date.now();
+                        if (agora - ultimoEnvioGPS > 800 && clienteMQTT && clienteMQTT.connected) {
+                            ultimoEnvioGPS = agora;
+                            clienteMQTT.publish(TEMA_MQTT, JSON.stringify({acao: "ATUALIZAR_GPS", remetente: meuID, autor: getAutorFormatado(), lng: lng, lat: lat}), { qos: 0 });
+                        }
+                    }, erroRetry => {
+                        window._gpsRetryBaixaPrecisao = false;
+                        if (!gpsAvisoErro) {
+                            mostrarNotificacaoRealTime(`⚠️ <b>Aviso de GPS</b><br>Sua localização foi bloqueada pelo navegador. Você não aparecerá no radar.`, "#FF5252", false); gpsAvisoErro = true;
+                        }
+                    }, { enableHighAccuracy: false, maximumAge: 0, timeout: 8000 });
+                    return;
+                }
                 if (!gpsAvisoErro) { 
                     mostrarNotificacaoRealTime(`⚠️ <b>Aviso de GPS</b><br>Sua localização foi bloqueada pelo navegador. Você não aparecerá no radar.`, "#FF5252", false); gpsAvisoErro = true;
                 }
@@ -12786,8 +12869,10 @@ window.apagarChaveAtual = function() {
     if (!userMarker) {
         // Se não tem marker ainda, pedir GPS agora
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
+            // Tenta com alta precisão primeiro; se falhar/timeout, faz retry com baixa precisão
+            function _aplicarPosicao(pos) {
                 const lng = pos.coords.longitude; const lat = pos.coords.latitude;
+                const accuracy = pos.coords.accuracy || 9999;
                 localStorage.setItem('lastUserPos', JSON.stringify([lng, lat]));
                 const wrapper = document.createElement('div'); wrapper.className = 'user-location-wrapper';
                 const dot = document.createElement('div'); dot.className = 'user-location-marker-mobile';
@@ -12796,11 +12881,29 @@ window.apagarChaveAtual = function() {
                 userMarker = new maplibregl.Marker({ element: wrapper, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
                 _animLast = { lng, lat };
                 map.flyTo({ center: [lng, lat], zoom: 16 });
+                // Feedback de precisão ruim em desktop
+                if (!_isMobile && accuracy > 500) {
+                    const precKm = (accuracy / 1000).toFixed(1);
+                    mostrarNotificacaoRealTime(`📍 <b>Localização aproximada</b><br>Precisão: ~${precKm}km (sem GPS de hardware). Resultado pode variar.`, '#FF9800', false);
+                }
                 // Ativar watchPosition se gpsPermitido não foi recusado
                 if (localStorage.getItem('gpsPermitido') !== 'false') { atualizarLocalizacao(); }
-            }, () => {
+            }
+            function _erroFallback() {
                 mostrarNotificacaoRealTime('⚠️ <b>GPS bloqueado</b><br>Ative a localização nas configurações do navegador.', '#FF5252', false);
-            }, { enableHighAccuracy: true, timeout: 5000 });
+            }
+            function _tentarBaixaPrecisao() {
+                navigator.geolocation.getCurrentPosition(
+                    _aplicarPosicao,
+                    _erroFallback,
+                    { enableHighAccuracy: false, maximumAge: 0, timeout: 8000 }
+                );
+            }
+            navigator.geolocation.getCurrentPosition(
+                _aplicarPosicao,
+                _tentarBaixaPrecisao,
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
+            );
         }
         return;
     }
@@ -15165,7 +15268,7 @@ function verificarCidadeEEstado(lng, lat) {
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 const swFile = _isMobile ? './sw-mobile.js' : './sw.js';
-                navigator.serviceWorker.register(swFile, { updateViaCache: 'none' })
+                navigator.serviceWorker.register(swFile, { updateViaCache: 'none', scope: './' })
                     .then(reg => {
                         
                         // Verifica atualizações do SW a cada 60 segundos (antes era 1 hora)

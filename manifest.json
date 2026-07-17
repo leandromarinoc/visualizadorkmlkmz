@@ -1,19 +1,64 @@
 {
-  "id": "inspecao-pro-v1",
+  "id": "./",
   "name": "Inspeção Pro - Visualizador",
   "short_name": "Inspeção Pro",
-  "description": "Visualizador offline de KML/KMZ para inspeção de redes elétricas.",
+  "description": "Visualizador offline de KML/KMZ para inspeção de redes elétricas. Suporte a mapas, relatórios e controle de podas.",
   "start_url": "./",
-  "scope": "/",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#300050",
   "orientation": "any",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "prefer_related_applications": false,
+  "categories": ["utilities", "productivity", "navigation"],
   "icons": [
+    {
+      "src": "icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "icon-192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
@@ -22,6 +67,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Abrir Mapa",
+      "short_name": "Mapa",
+      "description": "Abre o visualizador de mapa KML/KMZ",
+      "url": "./",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Relatório de Podas",
+      "short_name": "Podas",
+      "description": "Acessa o controle de tempo de rebrota e podas",
+      "url": "./?section=podas",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Inspeção de Rede",
+      "short_name": "Inspeção",
+      "description": "Inicia uma nova inspeção de rede elétrica",
+      "url": "./?section=inspecao",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "file_handlers": [
@@ -35,15 +103,6 @@
         "text/xml": [".kml"],
         "application/xml": [".kml"]
       }
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "print1.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Interface do Mapa"
     }
   ]
 }
