@@ -3872,11 +3872,51 @@ window.addEventListener('load', () => {
                                 isSistema: d.isSistema === true,
                                 tipo: d.tipo || 'chat'
                             };
+
+                            // Skip own messages
+                            if (msg.remetenteId === (window.meuID || meuID)) {
+                                chatMessages.push(msg);
+                                chatMessages.sort(function(a, b) { return a.timestamp - b.timestamp; });
+                                localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
+                                const panelAberto0 = document.getElementById('panelChat') && document.getElementById('panelChat').style.display === 'flex';
+                                if (panelAberto0) renderizarChat();
+                                return;
+                            }
+                            // Skip private messages not addressed to me
+                            if (msg.destino && msg.destino !== 'todos' && msg.destino !== (window.meuID || meuID)) {
+                                return;
+                            }
+
                             chatMessages.push(msg);
                             chatMessages.sort(function(a, b) { return a.timestamp - b.timestamp; });
                             localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
+
+                            // Mark this message as already handled by Firestore (to suppress MQTT duplicate toast)
+                            if (!window._firestoreMsgShown) window._firestoreMsgShown = {};
+                            window._firestoreMsgShown[msg.remetenteId + '_' + msg.timestampCliente] = Date.now();
+
                             const panelAberto = document.getElementById('panelChat') && document.getElementById('panelChat').style.display === 'flex';
-                            if (panelAberto) renderizarChat();
+                            const appEmSegundoPlano = document.hidden;
+
+                            if (msg.isSistema) {
+                                // System messages: always show orange top toast
+                                if (!appEmSegundoPlano) {
+                                    mostrarNotificacaoRealTime(`🤖 <b>AVISO DO SISTEMA</b><br>${d.texto || ''}`, "#FF9800", true);
+                                }
+                                if (panelAberto) renderizarChat();
+                            } else {
+                                // Regular chat messages
+                                tocarAlerta();
+                                if (panelAberto) {
+                                    renderizarChat();
+                                } else {
+                                    const avisoP = (msg.destino && msg.destino !== 'todos') ? "[PRIVADO] " : "";
+                                    if (!appEmSegundoPlano) {
+                                        mostrarNotificacaoRealTime(`💬 <b>Nova Mensagem de ${msg.autor}</b><br><span style="color:#FF5252">${avisoP}</span>"${d.texto || ''}"<br><small style="color:#FFEB3B; font-weight:900;">(Toque para abrir)</small>`, "#00BCD4", true);
+                                    }
+                                    enviarNotificacaoSistema(`💬 Nova Mensagem de ${msg.autor}`, d.texto || '');
+                                }
+                            }
                         });
                     }, function(err) {
                         console.warn('[Chat-Firestore] Erro no listener onSnapshot:', err.message);
@@ -4856,6 +4896,18 @@ window.addEventListener('load', () => {
                     console.log('[Chat-Firestore] Deduplicada (MQTT ignorado, já recebida via Firestore)');
                     return;
                 }
+
+                // Skip toast/sound if Firestore already handled this message notification
+                var _fsKey = msgSegura.remetenteId + '_' + msgSegura.timestampCliente;
+                if (window._firestoreMsgShown && window._firestoreMsgShown[_fsKey] && (Date.now() - window._firestoreMsgShown[_fsKey]) < 10000) {
+                    console.log('[Chat-MQTT] Firestore já exibiu notificação, adicionando silenciosamente');
+                    chatMessages.push(msgSegura);
+                    localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages));
+                    const panelAbertoSilent = document.getElementById('panelChat').style.display === 'flex';
+                    if (panelAbertoSilent) renderizarChat();
+                    return;
+                }
+
                 chatMessages.push(msgSegura); 
                 localStorage.setItem('inspecao_chat_historico', JSON.stringify(chatMessages)); 
                 
