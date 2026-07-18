@@ -6592,12 +6592,14 @@ window.addEventListener('load', () => {
             async function _saveHandle(handle) {
                 try {
                     const db = await _openDB();
-                    return new Promise((resolve) => {
+                    await new Promise((resolve) => {
                         const tx = db.transaction(_STORE_HANDLES, 'readwrite');
                         tx.objectStore(_STORE_HANDLES).put(handle, 'rootDir');
                         tx.oncomplete = resolve;
                         tx.onerror = resolve;
                     });
+                    // BUG 1 FIX: sinaliza que a pasta já foi autorizada anteriormente
+                    localStorage.setItem('fsDirHandle', 'true');
                 } catch(e) {}
             }
 
@@ -6703,7 +6705,21 @@ window.addEventListener('load', () => {
                     const db = await _openDB();
                     const savedHandle = await _getSavedHandle(db);
                     if (savedHandle) {
-                        const perm = await savedHandle.requestPermission({ mode: 'readwrite' });
+                        // BUG 2 FIX: queryPermission primeiro para evitar SecurityError desnecessário
+                        let perm = 'prompt';
+                        try {
+                            perm = await savedHandle.queryPermission({ mode: 'readwrite' });
+                        } catch(qe) {
+                            console.warn('StorageManager.init: queryPermission falhou, tentando requestPermission.', qe);
+                        }
+                        if (perm !== 'granted') {
+                            try {
+                                perm = await savedHandle.requestPermission({ mode: 'readwrite' });
+                            } catch(re) {
+                                console.warn('StorageManager.init: requestPermission falhou (possível SecurityError sem gesto).', re);
+                                perm = 'denied';
+                            }
+                        }
                         if (perm === 'granted') {
                             _dirHandle = savedHandle;
                         } else {
@@ -7452,15 +7468,60 @@ window.addEventListener('load', () => {
                     if (perm === 'granted') {
                         StorageManager.setHandle(savedHandle);
                         await _recarregarDadosDaPasta();
+                        console.log('[StorageManager] Reconectado silenciosamente (requestPermission direto).');
                         return; // Reconectou silenciosamente!
                     }
                 } catch(e) {}
 
-                // Último recurso: navegador exige gesto do usuário, mostrar botão
-                _bloquearSistema(
-                    'Clique para reconectar sua pasta de arquivos.',
-                    true /* isReauth */
-                );
+                // Navegador exige gesto do usuário (SecurityError).
+                // Em vez de mostrar modal, registrar listener silencioso no primeiro clique/toque.
+                console.log('[StorageManager] Aguardando primeiro gesto do usuário para reconectar silenciosamente...');
+                let _reconectarTentativas = 0;
+                const _MAX_TENTATIVAS_RECONECTAR = 3;
+
+                async function _tentarReconectarComGesto() {
+                    _reconectarTentativas++;
+                    try {
+                        const perm = await savedHandle.requestPermission({ mode: 'readwrite' });
+                        if (perm === 'granted') {
+                            StorageManager.setHandle(savedHandle);
+                            await _recarregarDadosDaPasta();
+                            console.log('[StorageManager] Reconectado silenciosamente no gesto #' + _reconectarTentativas + '.');
+                            return; // Sucesso — não registrar mais listeners
+                        }
+                    } catch(e) {
+                        console.warn('[StorageManager] Falha ao reconectar no gesto #' + _reconectarTentativas + ':', e && e.message);
+                    }
+                    // Permissão negada ou erro — tentar novamente no próximo clique (até o limite)
+                    if (_reconectarTentativas < _MAX_TENTATIVAS_RECONECTAR) {
+                        document.addEventListener('click', _tentarReconectarComGesto, { once: true, capture: true });
+                        document.addEventListener('touchstart', _tentarReconectarComGesto, { once: true, capture: true });
+                    } else {
+                        // Esgotou tentativas: mostrar toast discreto (não modal)
+                        console.warn('[StorageManager] Esgotadas tentativas de reconexão silenciosa. Mostrando toast.');
+                        const toast = document.createElement('div');
+                        toast.id = 'toastReconectarPasta';
+                        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1565c0;color:#fff;padding:14px 20px;border-radius:12px;font-size:14px;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.4);display:flex;align-items:center;gap:12px;max-width:90vw;cursor:pointer;';
+                        toast.innerHTML = '<span style="font-size:20px;">📂</span><span>Toque aqui para reconectar sua pasta de arquivos.</span>';
+                        document.body.appendChild(toast);
+                        toast.addEventListener('click', async () => {
+                            toast.remove();
+                            const ok = await StorageManager.requestFolder();
+                            if (ok) {
+                                await _recarregarDadosDaPasta();
+                                const notif = document.createElement('div');
+                                notif.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2e7d32;color:#fff;padding:14px 24px;border-radius:12px;font-size:14px;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+                                notif.textContent = '✅ Pasta reconectada com sucesso!';
+                                document.body.appendChild(notif);
+                                setTimeout(() => notif.remove(), 4000);
+                            }
+                        });
+                    }
+                }
+
+                // Registrar listener para o primeiro clique/toque em qualquer lugar da tela
+                document.addEventListener('click', _tentarReconectarComGesto, { once: true, capture: true });
+                document.addEventListener('touchstart', _tentarReconectarComGesto, { once: true, capture: true });
                 return;
             }
             
@@ -15298,38 +15359,48 @@ function verificarCidadeEEstado(lng, lat) {
                     })
                     .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
                 
-                // Quando o SW novo assumiu o controle, recarregar a página automaticamente
-                // Usa sessionStorage para evitar loop infinito de reload
+                // BUG 3 FIX: Em vez de reload automático (que reseta permissão do FileSystemHandle),
+                // mostrar toast discreto para o usuário decidir quando atualizar.
                 let _swRecarregando = false;
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     if (_swRecarregando) return;
-                    // Evita loop: se já recarregamos nesta sessão por causa do SW, não recarrega de novo
                     if (sessionStorage.getItem('sw_reloaded')) {
                         sessionStorage.removeItem('sw_reloaded');
                         console.log('[SW] Reload já executado nesta sessão, ignorando novo controllerchange.');
                         return;
                     }
-                    if (window.__bloqueiaReloadSW) {
-                        // Poda manual em andamento — adiar reload para o próximo foco da aba
-                        console.log('[SW] Reload adiado (poda em andamento). Será aplicado no próximo foco.');
-                        window.addEventListener('focus', function _reloadAoFocar() {
-                            if (window.__bloqueiaReloadSW) return; // ainda ocupado
-                            window.removeEventListener('focus', _reloadAoFocar);
-                            if (sessionStorage.getItem('sw_reloaded')) {
-                                sessionStorage.removeItem('sw_reloaded');
-                                console.log('[SW] Reload adiado ignorado — já recarregado nesta sessão.');
-                                return;
-                            }
+                    _swRecarregando = true;
+                    console.log('[SW] Nova versão disponível — aguardando ação do usuário.');
+
+                    // Mostrar toast discreto em vez de reload imediato
+                    (function _mostrarToastSW() {
+                        // Evita duplicar o toast
+                        if (document.getElementById('sw-update-toast')) return;
+                        const toast = document.createElement('div');
+                        toast.id = 'sw-update-toast';
+                        toast.style.cssText = [
+                            'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+                            'background:#323232', 'color:#fff', 'padding:12px 20px',
+                            'border-radius:8px', 'box-shadow:0 4px 12px rgba(0,0,0,0.3)',
+                            'display:flex', 'align-items:center', 'gap:12px',
+                            'z-index:99999', 'font-size:14px', 'max-width:90vw'
+                        ].join(';');
+                        toast.innerHTML = '<span>Nova vers\u00e3o dispon\u00edvel</span>'
+                            + '<button id="sw-update-btn" style="background:#4fc3f7;color:#000;border:none;'
+                            + 'border-radius:4px;padding:6px 14px;cursor:pointer;font-weight:600;white-space:nowrap">'
+                            + 'Atualizar agora</button>'
+                            + '<button id="sw-dismiss-btn" style="background:transparent;color:#aaa;border:none;'
+                            + 'cursor:pointer;font-size:18px;line-height:1;padding:0 4px">&times;</button>';
+                        document.body.appendChild(toast);
+                        document.getElementById('sw-update-btn').addEventListener('click', function() {
                             sessionStorage.setItem('sw_reloaded', 'true');
-                            console.log('[SW] Aplicando reload adiado...');
                             location.reload();
                         });
-                        return;
-                    }
-                    _swRecarregando = true;
-                    sessionStorage.setItem('sw_reloaded', 'true');
-                    console.log('[SW] Nova versão ativa, recarregando...');
-                    location.reload();
+                        document.getElementById('sw-dismiss-btn').addEventListener('click', function() {
+                            toast.remove();
+                            _swRecarregando = false;
+                        });
+                    })();
                 });
             });
             
