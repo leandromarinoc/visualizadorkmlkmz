@@ -629,6 +629,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             body.modo-celular .btn-arquivos       { background: #6A1B9A !important; }
             body.modo-celular .btn-arvore         { background: #2E7D32 !important; }
             body.modo-celular #btnApontarMelhorias { background: #4527A0 !important; }
+            body.modo-celular #btnAdmin            { background: #E65100 !important; }
             body.modo-celular #btnTela            { background: #FF8F00 !important; color: #FFFFFF !important; }
             body.modo-celular #btnTela span       { color: #FFFFFF !important; }
             body.modo-celular #btnToggleUI        { background: #1565C0 !important; }
@@ -673,6 +674,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             #btnClima     { top: 290px !important; right: 10px !important; }
             #btnKmlCompartilhado { top: 344px !important; right: 10px !important; background: #111 !important; }
             #btnConsulta { top: 398px !important; right: 10px !important; }
+            #btnAdmin    { top: 452px !important; right: 10px !important; }
             /* Cores distintas por botão */
             .btn-kml            { background: #E65100 !important; }
             .btn-circular[onclick*="apagarTudo"]  { background: #C62828 !important; }
@@ -906,7 +908,521 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .kmlc-search-wrap input { width:100%; box-sizing:border-box; padding:7px 10px 7px 32px; border:1px solid #ccc; border-radius:20px; font-size:13px; outline:none; background:#f9f9f9 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E") no-repeat 9px center; }
         .kmlc-search-wrap input:focus { border-color:#1565C0; background-color:#fff; }
         #btnToggleUI  { position: absolute; top: 12px; right: 10px; z-index: 10001; }
-        
+
+        /* ===== BOTÃO ADMIN ===== */
+        #btnAdmin {
+            position: absolute; top: 410px; right: 10px; z-index: 10001;
+            display: none; /* controlado por JS */
+            box-shadow: inset 3px 0 0 #FF9800, 0 4px 12px rgba(0,0,0,0.35);
+            background: #E65100 !important;
+        }
+
+        /* ===== PAINEL ADMIN ===== */
+        #panelAdmin {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(10,10,10,0.97);
+            z-index: 10003;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        /* ── Toggle Modo Invisível ── */
+        .admin-invisivel-row {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+        }
+        .admin-invisivel-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ccc;
+            user-select: none;
+        }
+        .admin-invisivel-label span { font-size: 15px; }
+        /* Pill toggle */
+        .admin-toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .admin-toggle-txt {
+            font-size: 11px;
+            font-weight: 900;
+            color: #aaa;
+            min-width: 70px;
+            text-align: right;
+            transition: color 0.25s;
+        }
+        .admin-toggle-txt.visivel { color: #4CAF50; }
+        .admin-toggle-txt.invisivel { color: #9C27B0; }
+        .admin-toggle-pill {
+            position: relative;
+            width: 46px;
+            height: 26px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .admin-toggle-pill input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+        .admin-toggle-slider {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            background: #4CAF50;
+            transition: background 0.3s;
+        }
+        .admin-toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            top: 3px;
+            border-radius: 50%;
+            background: white;
+            transition: transform 0.3s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+        .admin-toggle-pill input:checked + .admin-toggle-slider {
+            background: #7B1FA2;
+        }
+        .admin-toggle-pill input:checked + .admin-toggle-slider::before {
+            transform: translateX(20px);
+        }
+        @media (min-width: 769px) {
+            #panelAdmin {
+                left: 60px;
+                width: 420px;
+                box-shadow: 4px 0 20px rgba(0,0,0,0.6);
+            }
+        }
+        #panelAdmin.aberto { display: flex; }
+
+        /* ── Seção Configurações Admin (Step 4-1 / 4-2) ── */
+        .admin-config-secao {
+            flex-shrink: 0;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.02);
+        }
+        .admin-config-titulo {
+            font-size: 11px;
+            font-weight: 900;
+            color: #FF9800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        .admin-config-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+        .admin-config-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .admin-config-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ccc;
+            user-select: none;
+        }
+        .admin-config-label span { font-size: 15px; }
+        .admin-config-toggle-txt {
+            font-size: 11px;
+            font-weight: 900;
+            min-width: 30px;
+            text-align: right;
+            transition: color 0.25s;
+        }
+        .admin-config-toggle-txt.on { color: #f44336; }
+        .admin-config-toggle-txt.off { color: #4CAF50; }
+        .admin-config-toggle-txt.aviso-on { color: #FF9800; }
+        .admin-config-toggle-txt.aviso-off { color: #aaa; }
+        .admin-config-pill {
+            position: relative;
+            width: 46px;
+            height: 26px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .admin-config-pill input {
+            opacity: 0; width: 0; height: 0; position: absolute;
+        }
+        .admin-config-slider {
+            position: absolute;
+            inset: 0;
+            border-radius: 26px;
+            background: #4CAF50;
+            transition: background 0.3s;
+        }
+        .admin-config-slider::before {
+            content: '';
+            position: absolute;
+            width: 20px; height: 20px;
+            left: 3px; top: 3px;
+            border-radius: 50%;
+            background: white;
+            transition: transform 0.3s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+        .admin-config-pill input:checked + .admin-config-slider { background: #f44336; }
+        .admin-config-pill input:checked + .admin-config-slider::before { transform: translateX(20px); }
+        .admin-config-pill.aviso input:checked + .admin-config-slider { background: #FF9800; }
+        .admin-config-textarea {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255,255,255,0.07);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 13px;
+            resize: vertical;
+            margin-top: 8px;
+            outline: none;
+            font-family: inherit;
+        }
+        .admin-config-textarea:focus { border-color: #FF9800; }
+        .admin-config-btn-salvar {
+            width: 100%;
+            margin-top: 8px;
+            padding: 9px;
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .admin-config-btn-salvar:hover { opacity: 0.85; }
+        .admin-aviso-btn-enviar {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #FF6F00, #FF9800);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 14px rgba(255,152,0,0.35);
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .admin-aviso-btn-enviar:hover { opacity: 0.9; }
+        .admin-aviso-btn-enviar:active { transform: scale(0.98); }
+        /* Banner de manutenção / aviso global */
+        #adminBannerManutencao {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 99999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            text-align: center;
+            padding: 30px;
+        }
+        #adminBannerManutencao.ativo { display: flex; }
+        #adminBannerManutencao h2 { font-size: 28px; color: #FF9800; margin-bottom: 12px; }
+        #adminBannerManutencao p { font-size: 16px; color: #ccc; max-width: 340px; }
+        #adminBannerAvisoGlobal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #FF6F00, #FF9800);
+            color: #fff;
+            padding: 12px 16px;
+            z-index: 99998;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(255,152,0,0.5);
+            cursor: pointer;
+        }
+        #adminBannerAvisoGlobal.ativo { display: block; }
+        #adminBannerAvisoGlobal .aviso-fechar {
+            position: absolute;
+            right: 12px; top: 50%;
+            transform: translateY(-50%);
+            background: none; border: none;
+            color: #fff; font-size: 18px;
+            cursor: pointer; padding: 4px 8px;
+        }
+
+        .admin-header {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px 10px 16px;
+            border-bottom: 1px solid rgba(255,152,0,0.3);
+        }
+        .admin-header h3 {
+            color: #FF9800;
+            margin: 0;
+            font-size: 17px;
+            font-weight: 900;
+        }
+        .admin-btn-fechar {
+            background: none; border: none; color: white; font-size: 26px;
+            cursor: pointer; min-width: 40px; min-height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px; padding: 4px 8px; flex-shrink: 0;
+            transition: background 0.2s;
+        }
+        .admin-btn-fechar:hover { background: rgba(255,255,255,0.12); }
+
+        .admin-contadores {
+            flex-shrink: 0;
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .admin-contador-card {
+            flex: 1;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 8px 6px;
+            text-align: center;
+        }
+        .admin-contador-num {
+            font-size: 22px;
+            font-weight: 900;
+            color: #FF9800;
+            line-height: 1;
+        }
+        .admin-contador-num.online { color: #4CAF50; }
+        .admin-contador-num.bloqueado { color: #f44336; }
+        .admin-contador-label {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 3px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .admin-search-row {
+            flex-shrink: 0;
+            display: flex;
+            gap: 8px;
+            padding: 10px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .admin-search-row input {
+            flex: 1;
+            background: #222;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .admin-search-row input:focus { border-color: #FF9800; }
+        .admin-btn-atualizar {
+            background: #1565C0;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .admin-btn-atualizar:hover { background: #1976D2; }
+        .admin-btn-atualizar:active { background: #0D47A1; }
+
+        #adminListaContainer {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 16px 20px 16px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,152,0,0.4) rgba(0,0,0,0.2);
+        }
+        #adminListaContainer::-webkit-scrollbar { width: 5px; }
+        #adminListaContainer::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 3px; }
+        #adminListaContainer::-webkit-scrollbar-thumb { background: rgba(255,152,0,0.4); border-radius: 3px; }
+
+        .admin-user-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 11px 13px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .admin-user-card:hover { background: rgba(255,152,0,0.08); border-color: rgba(255,152,0,0.35); }
+        .admin-user-card.bloqueado { border-color: rgba(244,67,54,0.4); background: rgba(244,67,54,0.06); }
+
+        .admin-user-avatar {
+            font-size: 26px;
+            flex-shrink: 0;
+            width: 36px;
+            text-align: center;
+        }
+        .admin-user-info { flex: 1; min-width: 0; }
+        .admin-user-nome {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .admin-user-meta {
+            font-size: 11px;
+            color: #aaa;
+            margin-top: 2px;
+        }
+        .admin-user-status {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 3px;
+        }
+        .admin-status-dot {
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .admin-status-dot.online { color: #4CAF50; }
+        .admin-status-dot.offline { color: #f44336; }
+        .admin-badge-bloqueado {
+            font-size: 10px;
+            background: rgba(244,67,54,0.2);
+            color: #f44336;
+            border: 1px solid rgba(244,67,54,0.4);
+            border-radius: 6px;
+            padding: 1px 5px;
+            font-weight: 700;
+        }
+        .admin-loading {
+            color: #888;
+            text-align: center;
+            padding: 30px 0;
+            font-size: 14px;
+        }
+
+        /* ===== MODAL AÇÕES USUÁRIO ADMIN ===== */
+        #adminModalAcoes {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 10004;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        #adminModalAcoes.aberto { display: flex; }
+        .admin-modal-box {
+            background: #1a1a1a;
+            border: 1px solid rgba(255,152,0,0.35);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+        }
+        .admin-modal-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 16px 12px 16px;
+            border-bottom: 1px solid rgba(255,152,0,0.2);
+            flex-shrink: 0;
+        }
+        .admin-modal-avatar { font-size: 32px; flex-shrink: 0; }
+        .admin-modal-info { flex: 1; min-width: 0; }
+        .admin-modal-nome {
+            font-size: 16px; font-weight: 900; color: #fff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .admin-modal-role { font-size: 12px; color: #FF9800; font-weight: 700; margin-top: 2px; }
+        .admin-modal-fechar {
+            background: none; border: none; color: #aaa; font-size: 22px; cursor: pointer;
+            min-width: 36px; min-height: 36px; display: flex; align-items: center;
+            justify-content: center; border-radius: 8px; flex-shrink: 0; transition: background 0.2s, color 0.2s;
+        }
+        .admin-modal-fechar:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .admin-modal-body { padding: 14px 16px 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+        .admin-modal-secao-titulo {
+            font-size: 10px; font-weight: 900; color: #888;
+            text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;
+        }
+        .admin-modal-btn {
+            width: 100%; padding: 13px 16px; border: none; border-radius: 10px;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            display: flex; align-items: center; justify-content: center; gap: 8px; box-sizing: border-box;
+        }
+        .admin-modal-btn:active { transform: scale(0.97); }
+        .admin-modal-btn.vermelho { background: #c62828; color: #fff; }
+        .admin-modal-btn.vermelho:hover { background: #d32f2f; }
+        .admin-modal-btn.verde { background: #2e7d32; color: #fff; }
+        .admin-modal-btn.verde:hover { background: #388e3c; }
+        .admin-role-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .admin-role-btn {
+            padding: 10px 6px; border: 2px solid rgba(255,255,255,0.15); border-radius: 10px;
+            background: rgba(255,255,255,0.05); color: #ccc; font-size: 12px; font-weight: 700;
+            cursor: pointer; text-align: center; transition: all 0.15s;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        .admin-role-btn .role-icon { font-size: 20px; }
+        .admin-role-btn:hover { background: rgba(255,152,0,0.12); border-color: rgba(255,152,0,0.5); color: #fff; }
+        .admin-role-btn.ativo { border-color: #FF9800; background: rgba(255,152,0,0.18); color: #FF9800; }
+        .admin-msg-row { display: flex; gap: 8px; }
+        .admin-msg-input {
+            flex: 1; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px;
+            padding: 10px 12px; font-size: 13px; outline: none; box-sizing: border-box;
+            resize: none; min-height: 42px; max-height: 100px; font-family: inherit;
+        }
+        .admin-msg-input:focus { border-color: #FF9800; }
+        .admin-msg-enviar {
+            background: #1565C0; color: #fff; border: none; border-radius: 8px;
+            padding: 10px 14px; font-size: 18px; cursor: pointer; flex-shrink: 0;
+            transition: background 0.15s; align-self: flex-end;
+        }
+        .admin-msg-enviar:hover { background: #1976D2; }
+        .admin-modal-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 2px 0; }
+
         /* Modo Computador em Celular - TODOS os botões 120×120px */
         body.modo-computador-forcado .btn-circular,
         body.modo-computador-forcado #btnToggleUI,
@@ -2498,6 +3014,149 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         </div>
     </div>
 
+    <!-- BANNER MANUTENÇÃO (Step 4-1) -->
+    <div id="adminBannerManutencao">
+        <div style="font-size:56px; margin-bottom:16px;">🔧</div>
+        <h2>Sistema em Manutenção</h2>
+        <p>O sistema está temporariamente indisponível. Tente novamente mais tarde.</p>
+    </div>
+
+    <!-- BANNER AVISO GLOBAL (Step 4-1) -->
+    <div id="adminBannerAvisoGlobal">
+        <span id="adminBannerAvisoTexto"></span>
+        <button class="aviso-fechar" onclick="document.getElementById('adminBannerAvisoGlobal').classList.remove('ativo')" title="Fechar">✕</button>
+    </div>
+
+    <!-- PAINEL ADMIN -->
+    <div id="panelAdmin">
+        <div class="admin-header">
+            <h3>⚙️ Painel Administrativo</h3>
+            <button class="admin-btn-fechar" onclick="fecharPainelAdmin()" title="Fechar">✕</button>
+        </div>
+        <div class="admin-contadores">
+            <div class="admin-contador-card">
+                <div class="admin-contador-num" id="adminCtTotal">—</div>
+                <div class="admin-contador-label">Total</div>
+            </div>
+            <div class="admin-contador-card">
+                <div class="admin-contador-num online" id="adminCtOnline">—</div>
+                <div class="admin-contador-label">Online</div>
+            </div>
+            <div class="admin-contador-card">
+                <div class="admin-contador-num bloqueado" id="adminCtBloqueado">—</div>
+                <div class="admin-contador-label">Bloqueados</div>
+            </div>
+        </div>
+        <!-- STEP 3-2: Toggle Modo Invisível no Radar -->
+        <div class="admin-invisivel-row" id="adminInvisivelRow">
+            <div class="admin-invisivel-label"><span>👁️</span> Visível no Radar</div>
+            <div class="admin-toggle-wrap">
+                <span class="admin-toggle-txt visivel" id="adminInvisivelTxt">VISÍVEL</span>
+                <label class="admin-toggle-pill" title="Alternar visibilidade no radar">
+                    <input type="checkbox" id="adminInvisivelCheck" onchange="_adminToggleInvisivel(this.checked)">
+                    <span class="admin-toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- STEP 4-1 / 4-2: Seção Configurações -->
+        <div class="admin-config-secao" id="adminConfigSecao" style="overflow-y:auto; max-height:45vh;">
+            <div class="admin-config-titulo">⚙️ Configurações do Sistema</div>
+
+            <!-- Card: Modo Manutenção -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🔧</span> Modo Manutenção</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt off" id="adminManutencaoTxt">OFF</span>
+                        <label class="admin-config-pill" title="Bloquear acesso de não-admins">
+                            <input type="checkbox" id="adminManutencaoCheck" onchange="_adminToggleManutencao(this.checked)">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div style="font-size:11px; color:#888; margin-top:6px;">Quando ativo, bloqueia todos os usuários exceto admins.</div>
+            </div>
+
+            <!-- Card: Mensagem Global -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📢</span> Aviso Global (Banner)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt aviso-off" id="adminAvisoAtivoTxt">OFF</span>
+                        <label class="admin-config-pill aviso" title="Ativar/desativar banner de aviso">
+                            <input type="checkbox" id="adminAvisoAtivoCheck" onchange="_adminToggleAvisoAtivo(this.checked)">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <textarea class="admin-config-textarea" id="adminMensagemGlobalInput" rows="2" placeholder="Mensagem que aparece no topo para todos os usuários..."></textarea>
+                <button class="admin-config-btn-salvar" onclick="_adminSalvarConfig()">💾 Salvar Configurações</button>
+            </div>
+
+            <!-- Card: Enviar Aviso Push para Todos -->
+            <div class="admin-config-card">
+                <div class="admin-config-titulo" style="margin-bottom:8px;">📣 Enviar Aviso para Todos</div>
+                <div style="font-size:11px; color:#888; margin-bottom:8px;">Envia uma mensagem de sistema no chat para todos os usuários (com push notification via Cloud Function).</div>
+                <textarea class="admin-config-textarea" id="adminAvisoGlobalInput" rows="3" placeholder="Digite o aviso que será enviado para todos..."></textarea>
+                <button class="admin-aviso-btn-enviar" onclick="_adminEnviarAvisoGlobal()" style="margin-top:8px;">📣 Enviar Aviso para Todos</button>
+            </div>
+        </div>
+        <div class="admin-search-row">
+            <input type="text" id="adminSearchInput" placeholder="🔍 Pesquisar por nome ou cidade..." oninput="_adminFiltrar(this.value)">
+            <button class="admin-btn-atualizar" onclick="_adminCarregarUsuarios()">🔄 Atualizar</button>
+        </div>
+        <div id="adminListaContainer">
+            <div class="admin-loading">⏳ Carregando usuários...</div>
+        </div>
+    </div>
+
+    <!-- MODAL AÇÕES USUÁRIO ADMIN -->
+    <div id="adminModalAcoes" onclick="if(event.target===this)_adminFecharModal()">
+        <div class="admin-modal-box">
+            <div class="admin-modal-header">
+                <div class="admin-modal-avatar" id="adminModalAvatar">👤</div>
+                <div class="admin-modal-info">
+                    <div class="admin-modal-nome" id="adminModalNome">—</div>
+                    <div class="admin-modal-role" id="adminModalRole">—</div>
+                </div>
+                <button class="admin-modal-fechar" onclick="_adminFecharModal()">✕</button>
+            </div>
+            <div class="admin-modal-body">
+                <!-- BLOQUEAR / DESBLOQUEAR -->
+                <div>
+                    <div class="admin-modal-secao-titulo">Acesso</div>
+                    <button class="admin-modal-btn" id="adminBtnBloquear" onclick="_adminAcaoBloquear()">🚫 Bloquear Usuário</button>
+                </div>
+                <div class="admin-modal-divider"></div>
+                <!-- PROMOVER / REBAIXAR (só admin) -->
+                <div id="adminSecaoRole">
+                    <div class="admin-modal-secao-titulo">Alterar Função</div>
+                    <div class="admin-role-grid">
+                        <button class="admin-role-btn" id="adminRoleBtnAdmin" onclick="_adminAcaoRole('admin')">
+                            <span class="role-icon">👑</span>Admin
+                        </button>
+                        <button class="admin-role-btn" id="adminRoleBtnSupervisor" onclick="_adminAcaoRole('supervisor')">
+                            <span class="role-icon">🛡️</span>Supervisor
+                        </button>
+                        <button class="admin-role-btn" id="adminRoleBtnUsuario" onclick="_adminAcaoRole('usuario')">
+                            <span class="role-icon">👤</span>Usuário
+                        </button>
+                    </div>
+                </div>
+                <div class="admin-modal-divider" id="adminDividerRole"></div>
+                <!-- MENSAGEM DIRETA -->
+                <div>
+                    <div class="admin-modal-secao-titulo">Mensagem Direta</div>
+                    <div class="admin-msg-row">
+                        <textarea class="admin-msg-input" id="adminMsgInput" placeholder="Digite uma mensagem para este usuário..." rows="2"></textarea>
+                        <button class="admin-msg-enviar" onclick="_adminAcaoMensagem()" title="Enviar mensagem">📤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
         <button id="btnMapaMaior" onclick="toggleStyle()" title="Mudar para Imagem de Satélite">🛰️<span>MAPA</span></button>
 
         <button id="btnStilo" class="btn-circular" onclick="toggleModalStilo()" title="Trocar estilo do mapa">🎨<span>STILO</span></button>
@@ -2507,6 +3166,9 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         <button id="btn3D" class="btn-circular" onclick="toggle3D()" title="Alternar vista 2D / 3D"><span style="font-size:8px; font-weight:900;">3D</span></button>
 
         <button id="btnClima" class="btn-circular" onclick="toggleClimaCard()" title="Clima">🌦️<span style="font-size:8px; font-weight:900;">CLIMA</span></button>
+
+        <!-- BOTÃO ADMIN (visível só para admin/supervisor) -->
+        <button id="btnAdmin" class="btn-circular" onclick="abrirPainelAdmin()" title="Painel Administrativo">⚙️<span style="font-size:7px; font-weight:900;">ADMIN</span></button>
 
         <!-- v8.67 BOTÃO KML/KMZ COMPARTILHADOS -->
         <button id="btnKmlCompartilhado" class="btn-circular" onclick="abrirKmlCompartilhados()" title="KML/KMZ compartilhados">📂<span style="font-size:7px; font-weight:900;">KML/KMZ</span></button>
@@ -3605,6 +4267,89 @@ function salvarCadastro() {
     localStorage.setItem("usuarioIdentificacao", identUpper);
     localStorage.setItem("modoTrabalho", modo);
 
+    // ── REGISTRO NO FIRESTORE ──────────────────────────────────────────────
+    (async function _registrarUsuarioFirestore() {
+        try {
+            const uid = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
+            if (!uid) {
+                console.warn('[Admin] UID ainda não disponível, aguardando Auth...');
+                // Aguarda até 5s pelo UID
+                await new Promise(function(resolve) {
+                    let tentativas = 0;
+                    const t = setInterval(function() {
+                        tentativas++;
+                        const u = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
+                        if (u || tentativas >= 50) { clearInterval(t); resolve(); }
+                    }, 100);
+                });
+            }
+            const uidFinal = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
+            if (!uidFinal) { console.warn('[Admin] UID indisponível, pulando registro Firestore.'); return; }
+
+            const db = firebase.firestore();
+            const docRef = db.collection('usuarios').doc(uidFinal);
+
+            // Verifica se o doc já existe para decidir se inclui criadoEm
+            const snap = await docRef.get();
+            const jaExiste = snap.exists;
+
+            const dadosSalvar = {
+                nome: identUpper,
+                cidade: _getCidadeUsuario() || '',
+                ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (!jaExiste) {
+                // Primeiro acesso: define campos padrão
+                dadosSalvar.role = 'usuario';
+                dadosSalvar.bloqueado = false;
+                dadosSalvar.invisivel = false;
+                dadosSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            await docRef.set(dadosSalvar, { merge: true });
+            console.log('[Admin] Registro usuario salvo. UID:', uidFinal, '| Nome:', identUpper);
+
+            // ── VERIFICAR SE É O PRIMEIRO ADMIN ──────────────────────────
+            if (!jaExiste) {
+                try {
+                    const adminsSnap = await db.collection('usuarios')
+                        .where('role', '==', 'admin')
+                        .limit(1)
+                        .get();
+                    if (adminsSnap.empty) {
+                        await docRef.update({ role: 'admin' });
+                        console.log('[Admin] Nenhum admin encontrado. Usuário atual promovido a ADMIN:', identUpper);
+                    }
+                } catch(eAdmin) {
+                    console.warn('[Admin] Não foi possível verificar admins existentes:', eAdmin.message);
+                }
+            }
+
+            // ── LER DOC COMPLETO PARA OBTER ROLE ATUAL ───────────────────
+            const docAtual = await docRef.get();
+            if (docAtual.exists) {
+                const dados = docAtual.data();
+                window._meuRole = dados.role || 'usuario';
+                window._meuNomeUsuario = dados.nome || identUpper;
+                console.log('[Admin] Role:', window._meuRole);
+                console.log('[Admin] Bloqueado:', dados.bloqueado === true);
+
+                // Atualizar visibilidade do botão admin
+                if (typeof window._adminVerificarBotao === 'function') window._adminVerificarBotao();
+
+                // ── CHECAR BLOQUEIO ───────────────────────────────────────
+                if (dados.bloqueado === true) {
+                    _mostrarTelaBloqueio();
+                    return; // Interrompe o fluxo normal
+                }
+            }
+        } catch(e) {
+            console.error('[Admin] Erro ao registrar usuário no Firestore:', e.message, e);
+        }
+    })();
+    // ── FIM REGISTRO FIRESTORE ─────────────────────────────────────────────
+
     // Escondendo o modal (troque pelo ID correto se necessário)
     const modalCadastro = document.getElementById('trotroModalOverlay');
     if (modalCadastro) modalCadastro.style.display = 'none';
@@ -4599,6 +5344,71 @@ window.addEventListener('load', () => {
                             window._registrarTokenFCM();
                             window._fcmPermissaoGranted = false;
                         }
+                        // ── LER ROLE DO FIRESTORE (usuário já cadastrado) ──────────
+                        try {
+                            const nomeLocal = localStorage.getItem('usuarioIdentificacao');
+                            if (nomeLocal && firebase.firestore) {
+                                firebase.firestore().collection('usuarios').doc(user.uid).get()
+                                    .then(function(docSnap) {
+                                        if (docSnap.exists) {
+                                            const d = docSnap.data();
+                                            window._meuRole = d.role || 'usuario';
+                                            window._meuNomeUsuario = d.nome || nomeLocal;
+                                            console.log('[Admin] Role:', window._meuRole);
+                                            console.log('[Admin] Bloqueado:', d.bloqueado === true);
+                                            // Atualizar visibilidade do botão admin
+                                            if (typeof window._adminVerificarBotao === 'function') window._adminVerificarBotao();
+                                            // STEP 4-1: ler config global após role conhecido
+                                            if (typeof window._adminLerConfigGlobal === 'function') window._adminLerConfigGlobal();
+                                            if (d.bloqueado === true) {
+                                                _mostrarTelaBloqueio();
+                                            }
+                                        }
+                                    })
+                                    .catch(function(e) {
+                                        console.warn('[Admin] Não foi possível ler role do Firestore:', e.message);
+                                    });
+                            }
+                        } catch(eRole) {
+                            console.warn('[Admin] Erro ao tentar ler role:', eRole.message);
+                        }
+                        // ── FIM LEITURA ROLE ───────────────────────────────────────
+
+                        // ── STEP 3-1: HEARTBEAT FIRESTORE (ultimoAcesso a cada 2 min) ──
+                        (function _iniciarHeartbeatFirestore() {
+                            if (window._heartbeatFirestoreInterval) {
+                                clearInterval(window._heartbeatFirestoreInterval);
+                            }
+                            function _enviarHeartbeatFirestore() {
+                                try {
+                                    var uid = window.meuID;
+                                    if (!uid) return;
+                                    var role = window._meuRole || '';
+                                    // Não enviar heartbeat se bloqueado
+                                    if (window._usuarioBloqueado) return;
+                                    var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+                                    if (!db) return;
+                                    db.collection('usuarios').doc(uid).update({
+                                        ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+                                    }).then(function() {
+                                        console.log('[Admin] Heartbeat enviado');
+                                    }).catch(function(e) {
+                                        console.warn('[Admin] Heartbeat erro:', e.message);
+                                    });
+                                } catch(e) {
+                                    console.warn('[Admin] Heartbeat exceção:', e.message);
+                                }
+                            }
+                            // Enviar imediatamente e depois a cada 2 minutos
+                            _enviarHeartbeatFirestore();
+                            window._heartbeatFirestoreInterval = setInterval(_enviarHeartbeatFirestore, 2 * 60 * 1000);
+                            window._enviarHeartbeatFirestore = _enviarHeartbeatFirestore;
+                        })();
+                        // ── FIM HEARTBEAT FIRESTORE ────────────────────────────────────
+                        // STEP 4-1: ler config global com delay (garante que o módulo admin já carregou)
+                        setTimeout(function() {
+                            if (typeof window._adminLerConfigGlobal === 'function') window._adminLerConfigGlobal();
+                        }, 2000);
                     } else {
                         console.log('[Auth] Nenhum usuário autenticado ainda, aguardando signInAnonymously...');
                     }
@@ -4618,6 +5428,39 @@ window.addEventListener('load', () => {
         window.TEMA_MQTT = TEMA_MQTT;
         const TEMA_PODAS = TEMA_MQTT + '/poda';
         let clienteMQTT = null; const colegasNoMapa = {};
+
+        // STEP 3-2: Cache de usuários invisíveis no radar { uid: true }
+        window._radarInvisiveis = {};
+        (function _iniciarCacheInvisiveis() {
+            function _atualizarCacheInvisiveis() {
+                try {
+                    var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+                    if (!db) return;
+                    db.collection('usuarios').where('invisivel', '==', true).get().then(function(snap) {
+                        var novo = {};
+                        snap.forEach(function(doc) { novo[doc.id] = true; });
+                        window._radarInvisiveis = novo;
+                        // Remover do mapa colegas que ficaram invisíveis (para usuários comuns)
+                        var meuRole = window._meuRole || '';
+                        if (meuRole !== 'admin' && meuRole !== 'supervisor') {
+                            for (var uid in novo) {
+                                if (colegasNoMapa[uid] && colegasNoMapa[uid].marker) {
+                                    colegasNoMapa[uid].marker.remove();
+                                    delete colegasNoMapa[uid];
+                                }
+                            }
+                        }
+                    }).catch(function(e) {
+                        console.warn('[Admin] Erro ao atualizar cache invisíveis:', e.message);
+                    });
+                } catch(e) {}
+            }
+            // Atualizar a cada 2 minutos
+            setTimeout(function() {
+                _atualizarCacheInvisiveis();
+                setInterval(_atualizarCacheInvisiveis, 2 * 60 * 1000);
+            }, 5000); // aguardar 5s para Firestore estar disponível
+        })();
 
         // Dicionario de presenca do app (independente do radar)
         const usuariosOnline = {};
@@ -4651,6 +5494,11 @@ window.addEventListener('load', () => {
 
         window.addEventListener('beforeunload', function() {
             mqttPublish(TEMA_MQTT, { acao: "SAIU_APP", remetente: meuID });
+            // STEP 3-1: Tentar marcar offline via sendBeacon (best-effort)
+            try {
+                if (window._heartbeatFirestoreInterval) clearInterval(window._heartbeatFirestoreInterval);
+                // Não há API síncrona para Firestore no beforeunload; o heartbeat expirará naturalmente em 5min
+            } catch(e) {}
         });
 
         // ---- Indicador visual de status de conexão ----
@@ -5292,12 +6140,45 @@ window.addEventListener('load', () => {
                     atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat);
                 }
             }
+            else if (msg.acao === "invisivel_update") {
+                // Atualização imediata do cache de invisíveis sem esperar o polling de 2min
+                var uidInv = msg.uid;
+                if (uidInv) {
+                    if (msg.invisivel) {
+                        window._radarInvisiveis[uidInv] = true;
+                        // Remover do mapa se o usuário local não for admin/supervisor
+                        var meuRoleInv = window._meuRole || '';
+                        if (meuRoleInv !== 'admin' && meuRoleInv !== 'supervisor') {
+                            if (colegasNoMapa[uidInv] && colegasNoMapa[uidInv].marker) {
+                                colegasNoMapa[uidInv].marker.remove();
+                                delete colegasNoMapa[uidInv];
+                            }
+                        }
+                    } else {
+                        delete window._radarInvisiveis[uidInv];
+                    }
+                    console.log('[MQTT] invisivel_update uid:', uidInv, 'invisivel:', msg.invisivel);
+                }
+            }
         }
 
         function atualizarMarcadorColega(id, autor, lng, lat) {
             const numLng = parseFloat(lng);
             const numLat = parseFloat(lat);
             if (isNaN(numLng) || isNaN(numLat)) return;
+
+            // STEP 3-2: Filtro de invisibilidade no radar
+            // Admin/supervisor veem todos; usuários comuns não veem quem está invisível
+            var meuRole = window._meuRole || '';
+            var ehAdminOuSupervisor = (meuRole === 'admin' || meuRole === 'supervisor');
+            if (!ehAdminOuSupervisor && window._radarInvisiveis && window._radarInvisiveis[id]) {
+                // Colega está invisível e eu não sou admin/supervisor — remover do mapa se existir
+                if (colegasNoMapa[id] && colegasNoMapa[id].marker) {
+                    colegasNoMapa[id].marker.remove();
+                    delete colegasNoMapa[id];
+                }
+                return;
+            }
 
             if (colegasNoMapa[id] && colegasNoMapa[id].marker) {
                 const colega = colegasNoMapa[id];
@@ -14110,6 +14991,49 @@ window.apagarSomenteFotoComentario = function(chaveId, chaveNome, lat, lng) {
 function _getCidadeUsuario() {
     return window.cidadeUsuario || localStorage.getItem('cidadeUsuario') || '';
 }
+
+// ── TELA DE BLOQUEIO ──────────────────────────────────────────────────────────
+function _mostrarTelaBloqueio() {
+    // Impede qualquer interação com o app
+    window._usuarioBloqueado = true; // STEP 3-1: parar heartbeat
+    if (window._heartbeatFirestoreInterval) clearInterval(window._heartbeatFirestoreInterval);
+    document.body.style.pointerEvents = 'none';
+
+    const tela = document.createElement('div');
+    tela.id = 'telaBloqueioAdmin';
+    tela.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'width:100vw', 'height:100vh',
+        'background:rgba(0,0,0,0.92)', 'z-index:99999',
+        'display:flex', 'flex-direction:column',
+        'align-items:center', 'justify-content:center',
+        'pointer-events:all', 'user-select:none'
+    ].join(';');
+
+    tela.innerHTML = [
+        '<div style="text-align:center;padding:40px;max-width:480px;">',
+        '<div style="font-size:64px;margin-bottom:20px;">🚫</div>',
+        '<h2 style="color:#ff4444;font-size:22px;margin-bottom:16px;font-family:sans-serif;">Acesso Suspenso</h2>',
+        '<p style="color:#ffffff;font-size:16px;line-height:1.6;font-family:sans-serif;">',
+        'Seu acesso ao sistema foi suspenso.<br>Entre em contato com o administrador.',
+        '</p>',
+        '</div>'
+    ].join('');
+
+    document.body.appendChild(tela);
+    console.warn('[Admin] Usuário BLOQUEADO. Tela de bloqueio exibida.');
+}
+// ── FIM TELA DE BLOQUEIO ──────────────────────────────────────────────────────
+
+// ── AVISO DE SECURITY RULES FIRESTORE ────────────────────────────────────────
+console.info(
+    '[Admin] LEMBRETE: Configure as Firestore Security Rules para a collection "usuarios":\n' +
+    'match /usuarios/{userId} {\n' +
+    '  allow read: if request.auth != null;\n' +
+    '  allow write: if request.auth.uid == userId;\n' +
+    '  allow update: if get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role == "admin";\n' +
+    '}'
+);
+// ── FIM AVISO SECURITY RULES ──────────────────────────────────────────────────
 
 function _inicializarCidadeUsuario() {
     if (window.cidadeUsuario) return;
@@ -27121,4 +28045,681 @@ if ('launchQueue' in window) {
 })();
 </script>
 <!-- ===== FIM KML/KMZ COMPARTILHADOS ===== -->
+
+<!-- ===== PAINEL ADMIN ===== -->
+<script>
+(function() {
+    'use strict';
+
+    // Cache dos usuários carregados
+    var _adminUsuarios = [];
+    var _adminFiltroAtual = '';
+
+    // ── Exibir botão admin conforme role ─────────────────────────────────────
+    function _adminVerificarBotao() {
+        var role = window._meuRole || '';
+        var btn = document.getElementById('btnAdmin');
+        if (!btn) return;
+        if (role === 'admin' || role === 'supervisor') {
+            btn.style.display = 'flex';
+        } else {
+            btn.style.display = 'none';
+        }
+    }
+
+    // Verificar imediatamente e também após 3s (role pode ser definido depois do Auth)
+    _adminVerificarBotao();
+    setTimeout(_adminVerificarBotao, 3000);
+    setTimeout(_adminVerificarBotao, 6000);
+
+    // Expor globalmente para ser chamado após Auth resolver
+    window._adminVerificarBotao = _adminVerificarBotao;
+
+    // ── Tempo relativo ────────────────────────────────────────────────────────
+    function _adminTempoRelativo(ts) {
+        if (!ts) return 'nunca';
+        var agora = Date.now();
+        var diff = agora - ts;
+        var seg = Math.floor(diff / 1000);
+        if (seg < 60) return 'agora';
+        var min = Math.floor(seg / 60);
+        if (min < 60) return 'há ' + min + ' min';
+        var h = Math.floor(min / 60);
+        if (h < 24) return 'há ' + h + 'h';
+        var d = Math.floor(h / 24);
+        return 'há ' + d + ' dia' + (d > 1 ? 's' : '');
+    }
+
+    // ── Ícone de role ─────────────────────────────────────────────────────────
+    function _adminIconeRole(role) {
+        if (role === 'admin') return '👑';
+        if (role === 'supervisor') return '🛡️';
+        return '👤';
+    }
+
+    // ── Renderizar lista ──────────────────────────────────────────────────────
+    function _adminRenderizar(lista) {
+        var container = document.getElementById('adminListaContainer');
+        if (!container) return;
+
+        var filtro = _adminFiltroAtual.toLowerCase().trim();
+        var filtrados = lista.filter(function(u) {
+            if (!filtro) return true;
+            var nome = (u.nome || '').toLowerCase();
+            var cidade = (u.cidade || '').toLowerCase();
+            return nome.indexOf(filtro) !== -1 || cidade.indexOf(filtro) !== -1;
+        });
+
+        if (filtrados.length === 0) {
+            container.innerHTML = '<div class="admin-loading">Nenhum usuário encontrado.</div>';
+            return;
+        }
+
+        var agora = Date.now();
+        var html = '';
+        filtrados.forEach(function(u) {
+            var ts = u.ultimoAcesso || 0;
+            var isOnline = ts && (agora - ts) < 5 * 60 * 1000;
+            var isBloqueado = !!u.bloqueado;
+            var cardClass = 'admin-user-card' + (isBloqueado ? ' bloqueado' : '');
+            var statusClass = isOnline ? 'online' : 'offline';
+            var statusTxt = isOnline ? '🟢 Online' : '🔴 Offline';
+            var iconeRole = _adminIconeRole(u.role);
+            var tempoAcesso = _adminTempoRelativo(ts);
+
+            html += '<div class="' + cardClass + '" data-uid="' + (u._uid || '') + '" onclick="_adminClicarUsuario(this)">';
+            html += '<div class="admin-user-avatar">' + iconeRole + '</div>';
+            html += '<div class="admin-user-info">';
+            html += '<div class="admin-user-nome">' + _adminEscapar(u.nome || 'Sem nome') + '</div>';
+            html += '<div class="admin-user-meta">';
+            html += (u.cidade ? '📍 ' + _adminEscapar(u.cidade) + ' · ' : '');
+            html += tempoAcesso;
+            html += '</div>';
+            html += '</div>';
+            html += '<div class="admin-user-status">';
+            html += '<span class="admin-status-dot ' + statusClass + '">' + statusTxt + '</span>';
+            if (isBloqueado) {
+                html += '<span class="admin-badge-bloqueado">🚫 Bloqueado</span>';
+            }
+            if (u.invisivel) {
+                html += '<span class="admin-badge-bloqueado" style="background:rgba(123,31,162,0.25);color:#CE93D8;border-color:rgba(123,31,162,0.4);">👁️‍🗨️ Invisível</span>';
+            }
+            html += '</div>';
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
+    }
+
+    // ── Escapar HTML ──────────────────────────────────────────────────────────
+    function _adminEscapar(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // ── Atualizar contadores ──────────────────────────────────────────────────
+    function _adminAtualizarContadores(lista) {
+        var agora = Date.now();
+        var total = lista.length;
+        var online = lista.filter(function(u) {
+            return u.ultimoAcesso && (agora - u.ultimoAcesso) < 5 * 60 * 1000;
+        }).length;
+        var bloqueados = lista.filter(function(u) { return !!u.bloqueado; }).length;
+
+        var elTotal = document.getElementById('adminCtTotal');
+        var elOnline = document.getElementById('adminCtOnline');
+        var elBloq = document.getElementById('adminCtBloqueado');
+        if (elTotal) elTotal.textContent = total;
+        if (elOnline) elOnline.textContent = online;
+        if (elBloq) elBloq.textContent = bloqueados;
+    }
+
+    // ── Carregar usuários do Firestore ────────────────────────────────────────
+    window._adminCarregarUsuarios = function() {
+        var container = document.getElementById('adminListaContainer');
+        if (container) container.innerHTML = '<div class="admin-loading">⏳ Carregando usuários...</div>';
+
+        var db = window._kmlFirestore;
+        if (!db) {
+            if (container) container.innerHTML = '<div class="admin-loading">Firestore não disponível.</div>';
+            return;
+        }
+
+        db.collection('usuarios').orderBy('ultimoAcesso', 'desc').get()
+            .then(function(snap) {
+                _adminUsuarios = [];
+                snap.forEach(function(doc) {
+                    var d = doc.data();
+                    var ts = 0;
+                    if (d.ultimoAcesso && d.ultimoAcesso.toMillis) {
+                        ts = d.ultimoAcesso.toMillis();
+                    } else if (d.ultimoAcesso && typeof d.ultimoAcesso === 'number') {
+                        ts = d.ultimoAcesso;
+                    }
+                    _adminUsuarios.push({
+                        _uid: doc.id,
+                        nome: d.nome || '',
+                        role: d.role || 'usuario',
+                        cidade: d.cidade || '',
+                        ultimoAcesso: ts,
+                        bloqueado: !!d.bloqueado,
+                        invisivel: !!d.invisivel
+                    });
+                });
+
+                console.log('[Admin] ' + _adminUsuarios.length + ' usuários carregados');
+                var online = _adminUsuarios.filter(function(u) {
+                    return u.ultimoAcesso && (Date.now() - u.ultimoAcesso) < 5 * 60 * 1000;
+                }).length;
+                console.log('[Admin] ' + online + ' online');
+
+                _adminAtualizarContadores(_adminUsuarios);
+                _adminRenderizar(_adminUsuarios);
+            })
+            .catch(function(e) {
+                console.error('[Admin] Erro ao carregar usuários:', e);
+                if (container) container.innerHTML = '<div class="admin-loading">Erro ao carregar: ' + _adminEscapar(e.message || String(e)) + '</div>';
+            });
+    };
+
+    // ── Filtrar ───────────────────────────────────────────────────────────────
+    window._adminFiltrar = function(valor) {
+        _adminFiltroAtual = valor || '';
+        _adminRenderizar(_adminUsuarios);
+    };
+
+    // ── Clique em card de usuário ─────────────────────────────────────────────
+    window._adminClicarUsuario = function(el) {
+        var uid = el.getAttribute('data-uid');
+        var usuario = _adminUsuarios.find(function(u) { return u._uid === uid; });
+        if (!usuario) return;
+        console.log('[Admin] Usuário selecionado:', usuario.nome, '| UID:', uid);
+        _adminAbrirModal(usuario);
+    };
+
+    // ── Modal de ações ────────────────────────────────────────────────────────
+    var _adminUsuarioAtual = null;
+
+    function _adminAbrirModal(usuario) {
+        _adminUsuarioAtual = usuario;
+        var meuRole = window._meuRole || '';
+        var meuUID = window.meuID || '';
+
+        // Preencher cabeçalho
+        var avatar = document.getElementById('adminModalAvatar');
+        var nome = document.getElementById('adminModalNome');
+        var roleEl = document.getElementById('adminModalRole');
+        if (avatar) avatar.textContent = _adminIconeRole(usuario.role);
+        if (nome) nome.textContent = usuario.nome || 'Sem nome';
+        if (roleEl) roleEl.textContent = _adminIconeRole(usuario.role) + ' ' + (usuario.role || 'usuario') + (usuario.bloqueado ? ' · 🚫 Bloqueado' : '');
+
+        // Botão bloquear/desbloquear
+        var btnBloquear = document.getElementById('adminBtnBloquear');
+        if (btnBloquear) {
+            var ehAdmin = usuario.role === 'admin';
+            var ehEuMesmo = usuario._uid === meuUID;
+            if (ehAdmin || ehEuMesmo) {
+                btnBloquear.disabled = true;
+                btnBloquear.style.opacity = '0.4';
+                btnBloquear.style.cursor = 'not-allowed';
+                btnBloquear.textContent = ehAdmin ? '🔒 Admin não pode ser bloqueado' : '🔒 Não pode bloquear a si mesmo';
+                btnBloquear.className = 'admin-modal-btn';
+                btnBloquear.style.background = 'rgba(255,255,255,0.06)';
+                btnBloquear.style.color = '#888';
+            } else {
+                btnBloquear.disabled = false;
+                btnBloquear.style.opacity = '1';
+                btnBloquear.style.cursor = 'pointer';
+                btnBloquear.style.background = '';
+                btnBloquear.style.color = '';
+                if (usuario.bloqueado) {
+                    btnBloquear.textContent = '✅ Desbloquear Usuário';
+                    btnBloquear.className = 'admin-modal-btn verde';
+                } else {
+                    btnBloquear.textContent = '🚫 Bloquear Usuário';
+                    btnBloquear.className = 'admin-modal-btn vermelho';
+                }
+            }
+        }
+
+        // Seção de role (só admin vê)
+        var secaoRole = document.getElementById('adminSecaoRole');
+        var dividerRole = document.getElementById('adminDividerRole');
+        if (meuRole === 'admin') {
+            if (secaoRole) secaoRole.style.display = '';
+            if (dividerRole) dividerRole.style.display = '';
+            // Destacar role atual
+            var roles = ['admin', 'supervisor', 'usuario'];
+            roles.forEach(function(r) {
+                var btn = document.getElementById('adminRoleBtn' + r.charAt(0).toUpperCase() + r.slice(1));
+                if (btn) {
+                    btn.className = 'admin-role-btn' + (usuario.role === r ? ' ativo' : '');
+                    // Desabilitar se for eu mesmo
+                    if (usuario._uid === meuUID) {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.4';
+                        btn.style.cursor = 'not-allowed';
+                    } else {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                    }
+                }
+            });
+        } else {
+            if (secaoRole) secaoRole.style.display = 'none';
+            if (dividerRole) dividerRole.style.display = 'none';
+        }
+
+        // Limpar campo de mensagem
+        var msgInput = document.getElementById('adminMsgInput');
+        if (msgInput) msgInput.value = '';
+
+        // Abrir modal
+        var modal = document.getElementById('adminModalAcoes');
+        if (modal) modal.classList.add('aberto');
+    }
+
+    window._adminFecharModal = function() {
+        var modal = document.getElementById('adminModalAcoes');
+        if (modal) modal.classList.remove('aberto');
+        _adminUsuarioAtual = null;
+    };
+
+    // ── Toast simples para o admin ────────────────────────────────────────────
+    function _adminToast(msg, cor) {
+        if (typeof mostrarNotificacaoRealTime === 'function') {
+            mostrarNotificacaoRealTime(msg, cor || '#FF9800', false, 4000);
+        } else {
+            alert(msg);
+        }
+    }
+
+    // ── Ação: Bloquear / Desbloquear ─────────────────────────────────────────
+    window._adminAcaoBloquear = function() {
+        var u = _adminUsuarioAtual;
+        if (!u) return;
+        var db = window._kmlFirestore;
+        if (!db) { _adminToast('Firestore não disponível.', '#f44336'); return; }
+
+        var novoEstado = !u.bloqueado;
+        var acao = novoEstado ? 'bloquear' : 'desbloquear';
+        var confirmMsg = novoEstado
+            ? 'Tem certeza que deseja bloquear ' + u.nome + '?'
+            : 'Tem certeza que deseja desbloquear ' + u.nome + '?';
+
+        if (!confirm(confirmMsg)) return;
+
+        db.collection('usuarios').doc(u._uid).update({ bloqueado: novoEstado })
+            .then(function() {
+                console.log('[Admin] Usuário ' + (novoEstado ? 'bloqueado' : 'desbloqueado') + ':', u.nome);
+                _adminToast(
+                    (novoEstado ? '🚫 Usuário ' : '✅ Usuário ') + u.nome + (novoEstado ? ' bloqueado com sucesso.' : ' desbloqueado com sucesso.'),
+                    novoEstado ? '#f44336' : '#4CAF50'
+                );
+                window._adminFecharModal();
+                window._adminCarregarUsuarios();
+            })
+            .catch(function(e) {
+                console.error('[Admin] Erro ao ' + acao + ':', e);
+                _adminToast('Erro ao ' + acao + ': ' + (e.message || String(e)), '#f44336');
+            });
+    };
+
+    // ── Ação: Alterar role ────────────────────────────────────────────────────
+    window._adminAcaoRole = function(novoRole) {
+        var u = _adminUsuarioAtual;
+        if (!u) return;
+        if (u.role === novoRole) return;
+        var db = window._kmlFirestore;
+        if (!db) { _adminToast('Firestore não disponível.', '#f44336'); return; }
+
+        var nomeRole = novoRole === 'admin' ? 'Admin 👑' : novoRole === 'supervisor' ? 'Supervisor 🛡️' : 'Usuário 👤';
+        if (!confirm('Promover ' + u.nome + ' para ' + nomeRole + '?')) return;
+
+        db.collection('usuarios').doc(u._uid).update({ role: novoRole })
+            .then(function() {
+                console.log('[Admin] Role alterado:', u.nome, u.role, '->', novoRole);
+                _adminToast('✅ ' + u.nome + ' agora é ' + nomeRole, '#FF9800');
+                window._adminFecharModal();
+                window._adminCarregarUsuarios();
+            })
+            .catch(function(e) {
+                console.error('[Admin] Erro ao alterar role:', e);
+                _adminToast('Erro ao alterar função: ' + (e.message || String(e)), '#f44336');
+            });
+    };
+
+    // ── Ação: Mensagem direta ─────────────────────────────────────────────────
+    window._adminAcaoMensagem = function() {
+        var u = _adminUsuarioAtual;
+        if (!u) return;
+        var input = document.getElementById('adminMsgInput');
+        var texto = input ? input.value.trim() : '';
+        if (!texto) { _adminToast('Digite uma mensagem antes de enviar.', '#FF9800'); return; }
+
+        var meuNome = (typeof getAutorFormatado === 'function') ? getAutorFormatado() : (window._meuRole === 'admin' ? '👑 Admin' : '🛡️ Supervisor');
+        var textoHtml = '📩 <b>Mensagem de ' + meuNome + ' para você:</b><br>' + texto;
+        var ts = Date.now();
+        var remetenteId = window.meuID || 'sistema';
+
+        // Salvar no Firestore como mensagem privada para o destinatário
+        var db = window._kmlFirestore;
+        if (db) {
+            db.collection('chat_mensagens').add({
+                remetenteId: remetenteId,
+                autor: meuNome,
+                texto: textoHtml,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                timestampCliente: ts,
+                destino: u._uid,
+                isSistema: false,
+                tipo: 'privada',
+                mqttDedupeKey: remetenteId + '_' + ts
+            }).then(function() {
+                console.log('[Admin] Mensagem direta enviada para:', u.nome, '| UID:', u._uid);
+                _adminToast('📤 Mensagem enviada para ' + u.nome, '#4CAF50');
+                if (input) input.value = '';
+            }).catch(function(e) {
+                console.error('[Admin] Erro ao enviar mensagem:', e);
+                _adminToast('Erro ao enviar mensagem: ' + (e.message || String(e)), '#f44336');
+            });
+        } else {
+            _adminToast('Firestore não disponível para enviar mensagem.', '#f44336');
+        }
+
+        // Também publicar via MQTT se conectado
+        if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
+            var novaMensagem = {
+                remetenteId: remetenteId,
+                autor: meuNome,
+                texto: textoHtml,
+                timestamp: ts,
+                destino: u._uid,
+                isSistema: false
+            };
+            mqttPublish(TEMA_MQTT, { acao: 'NOVA_MENSAGEM_CHAT', mensagem: novaMensagem });
+        }
+    };
+
+    // ── STEP 3-2: Toggle Modo Invisível no Radar ─────────────────────────────
+
+    // Atualiza UI do toggle conforme estado (invisivel = true/false)
+    function _adminAtualizarUIInvisivel(invisivel) {
+        var chk = document.getElementById('adminInvisivelCheck');
+        var txt = document.getElementById('adminInvisivelTxt');
+        var lbl = document.querySelector('.admin-invisivel-label');
+        if (chk) chk.checked = !!invisivel;
+        if (txt) {
+            txt.textContent = invisivel ? 'INVISÍVEL' : 'VISÍVEL';
+            txt.className = 'admin-toggle-txt ' + (invisivel ? 'invisivel' : 'visivel');
+        }
+        if (lbl) {
+            lbl.innerHTML = invisivel
+                ? '<span>👁️‍🗨️</span> Invisível no Radar'
+                : '<span>👁️</span> Visível no Radar';
+        }
+    }
+
+    // Lê o estado atual do Firestore e sincroniza o toggle
+    function _adminSincronizarToggleInvisivel() {
+        var uid = window.meuID;
+        if (!uid) return;
+        var db = window._kmlFirestore;
+        if (!db) return;
+        db.collection('usuarios').doc(uid).get().then(function(doc) {
+            if (doc.exists) {
+                var invisivel = !!doc.data().invisivel;
+                _adminAtualizarUIInvisivel(invisivel);
+            }
+        }).catch(function(e) {
+            console.warn('[Admin] Erro ao ler estado invisivel:', e.message);
+        });
+    }
+
+    // Chamado pelo onchange do checkbox
+    window._adminToggleInvisivel = function(checked) {
+        var invisivel = !!checked; // checked = true → invisível
+        var uid = window.meuID;
+        if (!uid) { _adminToast('UID não disponível.', '#f44336'); return; }
+        var db = window._kmlFirestore;
+        if (!db) { _adminToast('Firestore não disponível.', '#f44336'); return; }
+
+        db.collection('usuarios').doc(uid).update({ invisivel: invisivel })
+            .then(function() {
+                console.log('[Admin] Modo invisivel:', invisivel ? 'ON' : 'OFF');
+                _adminAtualizarUIInvisivel(invisivel);
+                _adminToast(
+                    invisivel ? '👁️‍🗨️ Você está invisível no radar' : '👁️ Você está visível no radar',
+                    invisivel ? '#7B1FA2' : '#4CAF50'
+                );
+                // Notificar outros clientes via MQTT para atualização imediata do cache
+                if (typeof mqttPublish === 'function' && typeof TEMA_MQTT !== 'undefined') {
+                    mqttPublish(TEMA_MQTT, { acao: 'invisivel_update', uid: uid, invisivel: invisivel });
+                }
+            })
+            .catch(function(e) {
+                console.error('[Admin] Erro ao atualizar invisivel:', e.message);
+                _adminToast('Erro ao alterar visibilidade: ' + (e.message || String(e)), '#f44336');
+                // Reverter UI em caso de erro
+                _adminSincronizarToggleInvisivel();
+            });
+    };
+
+    // ── Abrir painel ──────────────────────────────────────────────────────────
+    window.abrirPainelAdmin = function() {
+        var role = window._meuRole || '';
+        if (role !== 'admin' && role !== 'supervisor') {
+            console.warn('[Admin] Acesso negado — role:', role);
+            return;
+        }
+        var panel = document.getElementById('panelAdmin');
+        if (!panel) return;
+        panel.classList.add('aberto');
+        console.log('[Admin] Painel aberto');
+        _adminCarregarUsuarios();
+        _adminSincronizarToggleInvisivel(); // STEP 3-2: sincronizar estado do toggle
+        _adminSincronizarConfig(); // STEP 4-1: sincronizar configurações
+    };
+
+    // ── Fechar painel ─────────────────────────────────────────────────────────
+    window.fecharPainelAdmin = function() {
+        var panel = document.getElementById('panelAdmin');
+        if (panel) panel.classList.remove('aberto');
+        var input = document.getElementById('adminSearchInput');
+        if (input) input.value = '';
+        _adminFiltroAtual = '';
+    };
+
+    // ── STEP 4-1: Configuração Remota via Firestore ──────────────────────────
+
+    // Lê config_global e aplica manutenção / banner de aviso
+    function _adminLerConfigGlobal() {
+        var db = window._kmlFirestore;
+        if (!db) return;
+        db.collection('config_admin').doc('config_global').get()
+            .then(function(doc) {
+                var cfg = doc.exists ? doc.data() : {};
+                var manutencao = cfg.manutencao === true;
+                var avisoAtivo = cfg.avisoAtivo === true;
+                var mensagemGlobal = cfg.mensagemGlobal || '';
+                var role = window._meuRole || '';
+
+                // Modo manutenção: bloquear não-admins
+                if (manutencao && role !== 'admin') {
+                    var banner = document.getElementById('adminBannerManutencao');
+                    if (banner) banner.classList.add('ativo');
+                    console.log('[Admin] Modo manutenção ativo — acesso bloqueado');
+                }
+
+                // Banner de aviso global
+                if (avisoAtivo && mensagemGlobal) {
+                    var bannerAviso = document.getElementById('adminBannerAvisoGlobal');
+                    var textoEl = document.getElementById('adminBannerAvisoTexto');
+                    if (bannerAviso && textoEl) {
+                        textoEl.textContent = mensagemGlobal;
+                        bannerAviso.classList.add('ativo');
+                    }
+                }
+            })
+            .catch(function(e) {
+                console.warn('[Admin] Erro ao ler config_global:', e.message);
+            });
+    }
+
+    // Sincroniza os controles do painel com o Firestore
+    function _adminSincronizarConfig() {
+        var db = window._kmlFirestore;
+        if (!db) return;
+        db.collection('config_admin').doc('config_global').get()
+            .then(function(doc) {
+                var cfg = doc.exists ? doc.data() : {};
+                var manutencao = cfg.manutencao === true;
+                var avisoAtivo = cfg.avisoAtivo === true;
+                var mensagemGlobal = cfg.mensagemGlobal || '';
+
+                var chkMan = document.getElementById('adminManutencaoCheck');
+                var txtMan = document.getElementById('adminManutencaoTxt');
+                if (chkMan) chkMan.checked = manutencao;
+                if (txtMan) {
+                    txtMan.textContent = manutencao ? 'ON' : 'OFF';
+                    txtMan.className = 'admin-config-toggle-txt ' + (manutencao ? 'on' : 'off');
+                }
+
+                var chkAviso = document.getElementById('adminAvisoAtivoCheck');
+                var txtAviso = document.getElementById('adminAvisoAtivoTxt');
+                if (chkAviso) chkAviso.checked = avisoAtivo;
+                if (txtAviso) {
+                    txtAviso.textContent = avisoAtivo ? 'ON' : 'OFF';
+                    txtAviso.className = 'admin-config-toggle-txt ' + (avisoAtivo ? 'aviso-on' : 'aviso-off');
+                }
+
+                var inputMsg = document.getElementById('adminMensagemGlobalInput');
+                if (inputMsg) inputMsg.value = mensagemGlobal;
+            })
+            .catch(function(e) {
+                console.warn('[Admin] Erro ao sincronizar config:', e.message);
+            });
+    }
+
+    // Toggle manutenção (só atualiza UI local, salva ao clicar Salvar)
+    window._adminLerConfigGlobal = _adminLerConfigGlobal;
+    window._adminSincronizarConfig = _adminSincronizarConfig;
+
+    window._adminToggleManutencao = function(checked) {
+        var txt = document.getElementById('adminManutencaoTxt');
+        if (txt) {
+            txt.textContent = checked ? 'ON' : 'OFF';
+            txt.className = 'admin-config-toggle-txt ' + (checked ? 'on' : 'off');
+        }
+    };
+
+    // Toggle aviso ativo (só atualiza UI local, salva ao clicar Salvar)
+    window._adminToggleAvisoAtivo = function(checked) {
+        var txt = document.getElementById('adminAvisoAtivoTxt');
+        if (txt) {
+            txt.textContent = checked ? 'ON' : 'OFF';
+            txt.className = 'admin-config-toggle-txt ' + (checked ? 'aviso-on' : 'aviso-off');
+        }
+    };
+
+    // Salvar configurações no Firestore
+    window._adminSalvarConfig = function() {
+        var db = window._kmlFirestore;
+        if (!db) { _adminToast('Firestore não disponível.', '#f44336'); return; }
+        var role = window._meuRole || '';
+        if (role !== 'admin') { _adminToast('Apenas admins podem alterar configurações.', '#f44336'); return; }
+
+        var manutencao = !!(document.getElementById('adminManutencaoCheck') || {}).checked;
+        var avisoAtivo = !!(document.getElementById('adminAvisoAtivoCheck') || {}).checked;
+        var mensagemGlobal = (document.getElementById('adminMensagemGlobalInput') || {}).value || '';
+
+        var chkMan = document.getElementById('adminManutencaoCheck');
+        var chkAviso = document.getElementById('adminAvisoAtivoCheck');
+        if (chkMan) manutencao = chkMan.checked;
+        if (chkAviso) avisoAtivo = chkAviso.checked;
+
+        db.collection('config_admin').doc('config_global').set({
+            manutencao: manutencao,
+            avisoAtivo: avisoAtivo,
+            mensagemGlobal: mensagemGlobal,
+            versaoMinima: '',
+            atualizadoPor: window.meuID || '',
+            atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true })
+        .then(function() {
+            console.log('[Admin] Config salva');
+            _adminToast('✅ Configurações salvas com sucesso!', '#4CAF50');
+            // Atualizar banner local imediatamente
+            var bannerAviso = document.getElementById('adminBannerAvisoGlobal');
+            var textoEl = document.getElementById('adminBannerAvisoTexto');
+            if (bannerAviso && textoEl) {
+                if (avisoAtivo && mensagemGlobal) {
+                    textoEl.textContent = mensagemGlobal;
+                    bannerAviso.classList.add('ativo');
+                } else {
+                    bannerAviso.classList.remove('ativo');
+                }
+            }
+        })
+        .catch(function(e) {
+            console.error('[Admin] Erro ao salvar config:', e.message);
+            _adminToast('Erro ao salvar: ' + (e.message || String(e)), '#f44336');
+        });
+    };
+
+    // ── STEP 4-2: Enviar Aviso Global ────────────────────────────────────────
+
+    window._adminEnviarAvisoGlobal = function() {
+        var role = window._meuRole || '';
+        if (role !== 'admin') { _adminToast('Apenas admins podem enviar avisos globais.', '#f44336'); return; }
+
+        var inputEl = document.getElementById('adminAvisoGlobalInput');
+        var texto = inputEl ? inputEl.value.trim() : '';
+        if (!texto) { _adminToast('Digite uma mensagem antes de enviar.', '#FF9800'); return; }
+
+        var textoHtml = '📣 <b>AVISO DO ADMINISTRADOR</b><br>' + texto.replace(/\n/g, '<br>');
+        var notifTitle = '📣 Aviso do Administrador';
+        var notifBody = texto.substring(0, 100);
+
+        if (typeof enviarMensagemSistemaChat === 'function') {
+            enviarMensagemSistemaChat(textoHtml, notifTitle, notifBody);
+            console.log('[Admin] Aviso global enviado');
+            _adminToast('📣 Aviso enviado para todos!', '#FF9800');
+            if (inputEl) inputEl.value = '';
+        } else {
+            // Fallback: salvar direto no Firestore
+            var db = window._kmlFirestore;
+            if (!db) { _adminToast('Firestore não disponível.', '#f44336'); return; }
+            var ts = Date.now();
+            var uid = window.meuID || 'admin';
+            db.collection('chat_mensagens').add({
+                remetenteId: uid,
+                autor: '🤖 AVISO DO SISTEMA',
+                texto: textoHtml,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                timestampCliente: ts,
+                destino: 'todos',
+                isSistema: true,
+                tipo: 'sistema',
+                notifTitle: notifTitle,
+                notifBody: notifBody,
+                mqttDedupeKey: uid + '_' + ts
+            }).then(function() {
+                console.log('[Admin] Aviso global enviado');
+                _adminToast('📣 Aviso enviado para todos!', '#FF9800');
+                if (inputEl) inputEl.value = '';
+            }).catch(function(e) {
+                _adminToast('Erro ao enviar aviso: ' + (e.message || String(e)), '#f44336');
+            });
+        }
+    };
+
+    console.log('[Admin] Módulo painel admin carregado');
+})();
+</script>
+<!-- ===== FIM PAINEL ADMIN ===== -->
 
