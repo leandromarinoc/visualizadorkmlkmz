@@ -4268,8 +4268,12 @@ function salvarCadastro() {
     localStorage.setItem("modoTrabalho", modo);
 
     // ── REGISTRO NO FIRESTORE ──────────────────────────────────────────────
-    (async function _registrarUsuarioFirestore() {
+    // Função nomeada e reutilizável (também chamada no onAuthStateChanged para usuários existentes)
+    window._registrarUsuarioFirestore = window._registrarUsuarioFirestore || async function _registrarUsuarioFirestoreFn(nomeOverride) {
         try {
+            const nomeUsar = nomeOverride || identUpper || localStorage.getItem('usuarioIdentificacao') || '';
+            if (!nomeUsar || !nomeUsar.trim()) { console.warn('[Admin] Nome indisponível, pulando registro Firestore.'); return; }
+
             const uid = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
             if (!uid) {
                 console.warn('[Admin] UID ainda não disponível, aguardando Auth...');
@@ -4294,7 +4298,7 @@ function salvarCadastro() {
             const jaExiste = snap.exists;
 
             const dadosSalvar = {
-                nome: identUpper,
+                nome: nomeUsar,
                 cidade: _getCidadeUsuario() || '',
                 ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -4308,7 +4312,7 @@ function salvarCadastro() {
             }
 
             await docRef.set(dadosSalvar, { merge: true });
-            console.log('[Admin] Registro usuario salvo. UID:', uidFinal, '| Nome:', identUpper);
+            console.log('[Admin] Registro usuario salvo. UID:', uidFinal, '| Nome:', nomeUsar);
 
             // ── VERIFICAR SE É O PRIMEIRO ADMIN ──────────────────────────
             if (!jaExiste) {
@@ -4319,7 +4323,7 @@ function salvarCadastro() {
                         .get();
                     if (adminsSnap.empty) {
                         await docRef.update({ role: 'admin' });
-                        console.log('[Admin] Nenhum admin encontrado. Usuário atual promovido a ADMIN:', identUpper);
+                        console.log('[Admin] Nenhum admin encontrado. Usuário atual promovido a ADMIN:', nomeUsar);
                     }
                 } catch(eAdmin) {
                     console.warn('[Admin] Não foi possível verificar admins existentes:', eAdmin.message);
@@ -4331,7 +4335,7 @@ function salvarCadastro() {
             if (docAtual.exists) {
                 const dados = docAtual.data();
                 window._meuRole = dados.role || 'usuario';
-                window._meuNomeUsuario = dados.nome || identUpper;
+                window._meuNomeUsuario = dados.nome || nomeUsar;
                 console.log('[Admin] Role:', window._meuRole);
                 console.log('[Admin] Bloqueado:', dados.bloqueado === true);
 
@@ -4347,7 +4351,8 @@ function salvarCadastro() {
         } catch(e) {
             console.error('[Admin] Erro ao registrar usuário no Firestore:', e.message, e);
         }
-    })();
+    };
+    window._registrarUsuarioFirestore();
     // ── FIM REGISTRO FIRESTORE ─────────────────────────────────────────────
 
     // Escondendo o modal (troque pelo ID correto se necessário)
@@ -5362,6 +5367,13 @@ window.addEventListener('load', () => {
                                             if (typeof window._adminLerConfigGlobal === 'function') window._adminLerConfigGlobal();
                                             if (d.bloqueado === true) {
                                                 _mostrarTelaBloqueio();
+                                            }
+                                        } else {
+                                            // Usuário existente (tem nome no localStorage) mas ainda não tem doc na collection 'usuarios'
+                                            // Registrar agora para garantir presença no painel admin
+                                            console.log('[Admin] Doc não encontrado para usuário existente. Registrando na collection usuarios...');
+                                            if (typeof window._registrarUsuarioFirestore === 'function') {
+                                                window._registrarUsuarioFirestore(nomeLocal);
                                             }
                                         }
                                     })
