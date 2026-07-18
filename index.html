@@ -4230,6 +4230,94 @@ function atualizarFormCadastro() {
     }
 }
 
+// ── REGISTRO NO FIRESTORE (escopo global) ─────────────────────────────────
+// Definida aqui para que o onAuthStateChanged possa chamá-la mesmo quando
+// salvarCadastro() nunca foi executada (usuários já cadastrados).
+window._registrarUsuarioFirestore = async function _registrarUsuarioFirestoreFn(nomeOverride) {
+    try {
+        const nomeUsar = nomeOverride || localStorage.getItem('usuarioIdentificacao') || '';
+        if (!nomeUsar || !nomeUsar.trim()) { console.warn('[Admin] Nome indisponível, pulando registro Firestore.'); return; }
+
+        const uid = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
+        if (!uid) {
+            console.warn('[Admin] UID ainda não disponível, aguardando Auth...');
+            // Aguarda até 5s pelo UID
+            await new Promise(function(resolve) {
+                let tentativas = 0;
+                const t = setInterval(function() {
+                    tentativas++;
+                    const u = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
+                    if (u || tentativas >= 50) { clearInterval(t); resolve(); }
+                }, 100);
+            });
+        }
+        const uidFinal = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
+        if (!uidFinal) { console.warn('[Admin] UID indisponível, pulando registro Firestore.'); return; }
+
+        const db = firebase.firestore();
+        const docRef = db.collection('usuarios').doc(uidFinal);
+
+        // Verifica se o doc já existe para decidir se inclui criadoEm
+        const snap = await docRef.get();
+        const jaExiste = snap.exists;
+
+        const dadosSalvar = {
+            nome: nomeUsar,
+            cidade: _getCidadeUsuario() || '',
+            ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (!jaExiste) {
+            // Primeiro acesso: define campos padrão
+            dadosSalvar.role = 'usuario';
+            dadosSalvar.bloqueado = false;
+            dadosSalvar.invisivel = false;
+            dadosSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+        }
+
+        await docRef.set(dadosSalvar, { merge: true });
+        console.log('[Admin] Registro usuario salvo. UID:', uidFinal, '| Nome:', nomeUsar);
+
+        // ── VERIFICAR SE É O PRIMEIRO ADMIN ──────────────────────────
+        if (!jaExiste) {
+            try {
+                const adminsSnap = await db.collection('usuarios')
+                    .where('role', '==', 'admin')
+                    .limit(1)
+                    .get();
+                if (adminsSnap.empty) {
+                    await docRef.update({ role: 'admin' });
+                    console.log('[Admin] Nenhum admin encontrado. Usuário atual promovido a ADMIN:', nomeUsar);
+                }
+            } catch(eAdmin) {
+                console.warn('[Admin] Não foi possível verificar admins existentes:', eAdmin.message);
+            }
+        }
+
+        // ── LER DOC COMPLETO PARA OBTER ROLE ATUAL ───────────────────
+        const docAtual = await docRef.get();
+        if (docAtual.exists) {
+            const dados = docAtual.data();
+            window._meuRole = dados.role || 'usuario';
+            window._meuNomeUsuario = dados.nome || nomeUsar;
+            console.log('[Admin] Role:', window._meuRole);
+            console.log('[Admin] Bloqueado:', dados.bloqueado === true);
+
+            // Atualizar visibilidade do botão admin
+            if (typeof window._adminVerificarBotao === 'function') window._adminVerificarBotao();
+
+            // ── CHECAR BLOQUEIO ───────────────────────────────────────
+            if (dados.bloqueado === true) {
+                _mostrarTelaBloqueio();
+                return; // Interrompe o fluxo normal
+            }
+        }
+    } catch(e) {
+        console.error('[Admin] Erro ao registrar usuário no Firestore:', e.message, e);
+    }
+};
+// ── FIM DEFINIÇÃO GLOBAL ───────────────────────────────────────────────────
+
 function salvarCadastro() {
     const input = document.getElementById('cadIdentificacao');
     const modoRadio = document.querySelector('input[name="modoTrabalho"]:checked');
@@ -4268,90 +4356,7 @@ function salvarCadastro() {
     localStorage.setItem("modoTrabalho", modo);
 
     // ── REGISTRO NO FIRESTORE ──────────────────────────────────────────────
-    // Função nomeada e reutilizável (também chamada no onAuthStateChanged para usuários existentes)
-    window._registrarUsuarioFirestore = window._registrarUsuarioFirestore || async function _registrarUsuarioFirestoreFn(nomeOverride) {
-        try {
-            const nomeUsar = nomeOverride || identUpper || localStorage.getItem('usuarioIdentificacao') || '';
-            if (!nomeUsar || !nomeUsar.trim()) { console.warn('[Admin] Nome indisponível, pulando registro Firestore.'); return; }
-
-            const uid = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
-            if (!uid) {
-                console.warn('[Admin] UID ainda não disponível, aguardando Auth...');
-                // Aguarda até 5s pelo UID
-                await new Promise(function(resolve) {
-                    let tentativas = 0;
-                    const t = setInterval(function() {
-                        tentativas++;
-                        const u = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
-                        if (u || tentativas >= 50) { clearInterval(t); resolve(); }
-                    }, 100);
-                });
-            }
-            const uidFinal = window.meuID || (typeof meuID !== 'undefined' ? meuID : null);
-            if (!uidFinal) { console.warn('[Admin] UID indisponível, pulando registro Firestore.'); return; }
-
-            const db = firebase.firestore();
-            const docRef = db.collection('usuarios').doc(uidFinal);
-
-            // Verifica se o doc já existe para decidir se inclui criadoEm
-            const snap = await docRef.get();
-            const jaExiste = snap.exists;
-
-            const dadosSalvar = {
-                nome: nomeUsar,
-                cidade: _getCidadeUsuario() || '',
-                ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
-            };
-
-            if (!jaExiste) {
-                // Primeiro acesso: define campos padrão
-                dadosSalvar.role = 'usuario';
-                dadosSalvar.bloqueado = false;
-                dadosSalvar.invisivel = false;
-                dadosSalvar.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
-            }
-
-            await docRef.set(dadosSalvar, { merge: true });
-            console.log('[Admin] Registro usuario salvo. UID:', uidFinal, '| Nome:', nomeUsar);
-
-            // ── VERIFICAR SE É O PRIMEIRO ADMIN ──────────────────────────
-            if (!jaExiste) {
-                try {
-                    const adminsSnap = await db.collection('usuarios')
-                        .where('role', '==', 'admin')
-                        .limit(1)
-                        .get();
-                    if (adminsSnap.empty) {
-                        await docRef.update({ role: 'admin' });
-                        console.log('[Admin] Nenhum admin encontrado. Usuário atual promovido a ADMIN:', nomeUsar);
-                    }
-                } catch(eAdmin) {
-                    console.warn('[Admin] Não foi possível verificar admins existentes:', eAdmin.message);
-                }
-            }
-
-            // ── LER DOC COMPLETO PARA OBTER ROLE ATUAL ───────────────────
-            const docAtual = await docRef.get();
-            if (docAtual.exists) {
-                const dados = docAtual.data();
-                window._meuRole = dados.role || 'usuario';
-                window._meuNomeUsuario = dados.nome || nomeUsar;
-                console.log('[Admin] Role:', window._meuRole);
-                console.log('[Admin] Bloqueado:', dados.bloqueado === true);
-
-                // Atualizar visibilidade do botão admin
-                if (typeof window._adminVerificarBotao === 'function') window._adminVerificarBotao();
-
-                // ── CHECAR BLOQUEIO ───────────────────────────────────────
-                if (dados.bloqueado === true) {
-                    _mostrarTelaBloqueio();
-                    return; // Interrompe o fluxo normal
-                }
-            }
-        } catch(e) {
-            console.error('[Admin] Erro ao registrar usuário no Firestore:', e.message, e);
-        }
-    };
+    // A função está definida globalmente (acima de salvarCadastro). Apenas chama.
     window._registrarUsuarioFirestore();
     // ── FIM REGISTRO FIRESTORE ─────────────────────────────────────────────
 
