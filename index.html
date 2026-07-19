@@ -911,7 +911,7 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
 
         /* ===== BOTÃO ADMIN ===== */
         #btnAdmin {
-            position: absolute; top: 410px; right: 10px; z-index: 10001;
+            position: absolute; top: 410px; right: 10px; z-index: 9999;
             display: none; /* controlado por JS */
             box-shadow: inset 3px 0 0 #FF9800, 0 4px 12px rgba(0,0,0,0.35);
             background: #E65100 !important;
@@ -3094,6 +3094,406 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                 <button class="admin-config-btn-salvar" onclick="_adminSalvarConfig()">💾 Salvar Configurações</button>
             </div>
 
+            <!-- Separador: Controle de Funcionalidades -->
+            <div style="font-size:11px; font-weight:700; color:#aaa; margin:14px 0 6px; letter-spacing:1px; text-transform:uppercase;">Controle de Funcionalidades</div>
+            <div style="font-size:11px; color:#888; margin-bottom:10px;">Desligar oculta a funcionalidade para usuários comuns. Admins sempre veem tudo.</div>
+
+            <!-- feat_chat -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>💬</span> Chat</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_chat">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Chat para usuários">
+                            <input type="checkbox" id="adminCheck_feat_chat" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_radar -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>👥</span> Rede Online / Radar</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_radar">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Rede Online para usuários">
+                            <input type="checkbox" id="adminCheck_feat_radar" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_poda -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🌳</span> Sistema de Podas</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_poda">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Podas para usuários">
+                            <input type="checkbox" id="adminCheck_feat_poda" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_chave -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🔑</span> Sistema de Chaves</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_chave">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Chaves para usuários">
+                            <input type="checkbox" id="adminCheck_feat_chave" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_defeito -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>⚠️</span> Sistema de Defeitos</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_defeito">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Defeitos para usuários">
+                            <input type="checkbox" id="adminCheck_feat_defeito" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_interligacao -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🔗</span> Interligações</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_interligacao">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Interligações para usuários">
+                            <input type="checkbox" id="adminCheck_feat_interligacao" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_comentario -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>💬</span> Comentários</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_comentario">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Comentários para usuários">
+                            <input type="checkbox" id="adminCheck_feat_comentario" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_kml_compartilhado -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📂</span> KML/KMZ Compartilhados</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_kml_compartilhado">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar KML Compartilhados para usuários">
+                            <input type="checkbox" id="adminCheck_feat_kml_compartilhado" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_consulta -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📡</span> Consulta (Telegram)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_consulta">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Consulta para usuários">
+                            <input type="checkbox" id="adminCheck_feat_consulta" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_traj -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🛤️</span> Trajetória (TRAJ)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_traj">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Trajetória para usuários">
+                            <input type="checkbox" id="adminCheck_feat_traj" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_3d -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🏔️</span> Modo 3D</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_3d">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Modo 3D para usuários">
+                            <input type="checkbox" id="adminCheck_feat_3d" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_clima -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🌦️</span> Clima</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_clima">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Clima para usuários">
+                            <input type="checkbox" id="adminCheck_feat_clima" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_stilo -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🎨</span> Estilos (STILO)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_stilo">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Estilos para usuários">
+                            <input type="checkbox" id="adminCheck_feat_stilo" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_ferram -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🔧</span> Ferramentas (FERRAM)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_ferram">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar painel Ferramentas para usuários">
+                            <input type="checkbox" id="adminCheck_feat_ferram" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sub-opções do FERRAM -->
+            <div style="font-size:11px; font-weight:700; color:#aaa; margin:14px 0 6px; letter-spacing:1px; text-transform:uppercase; padding-left:4px;">↳ Sub-opções do FERRAM</div>
+            <div style="font-size:11px; color:#888; margin-bottom:10px; padding-left:4px;">Controla cada item dentro do menu Ferramentas individualmente.</div>
+
+            <!-- feat_lista -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(33,150,243,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📋</span> Lista de Podas</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_lista">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Lista de Podas para usuários">
+                            <input type="checkbox" id="adminCheck_feat_lista" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_vao -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(121,85,72,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📏</span> Vão (Medição)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_vao">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Vão para usuários">
+                            <input type="checkbox" id="adminCheck_feat_vao" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_melhoria -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(96,125,139,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>✏️</span> Melhoria</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_melhoria">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Melhoria para usuários">
+                            <input type="checkbox" id="adminCheck_feat_melhoria" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_tela -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(255,143,0,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📱</span> Tela</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_tela">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Tela para usuários">
+                            <input type="checkbox" id="adminCheck_feat_tela" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_inspecao -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(106,13,173,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🔍</span> Inspeção</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_inspecao">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Inspeção para usuários">
+                            <input type="checkbox" id="adminCheck_feat_inspecao" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_croqui -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(0,137,123,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>✏️</span> Fazer/Croqui/Rede</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_croqui">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Fazer/Croqui/Rede para usuários">
+                            <input type="checkbox" id="adminCheck_feat_croqui" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_config_wpp -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(37,211,102,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📲</span> Config. Grupo WhatsApp</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_config_wpp">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Config. WhatsApp para usuários">
+                            <input type="checkbox" id="adminCheck_feat_config_wpp" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_resumo_dia -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(7,94,84,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📊</span> Resumo do Dia</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_resumo_dia">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Resumo do Dia para usuários">
+                            <input type="checkbox" id="adminCheck_feat_resumo_dia" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_rocada -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(230,81,0,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🌿</span> Roçada / Defeito</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_rocada">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Roçada/Defeito para usuários">
+                            <input type="checkbox" id="adminCheck_feat_rocada" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_expor_rocada -->
+            <div class="admin-config-card" style="margin-left:12px; border-left:3px solid rgba(2,136,209,0.4);">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📋</span> Exportar Roçada</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_expor_rocada">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Exportar Roçada para usuários">
+                            <input type="checkbox" id="adminCheck_feat_expor_rocada" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_arquivos -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>📄</span> Arquivos</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_arquivos">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Arquivos para usuários">
+                            <input type="checkbox" id="adminCheck_feat_arquivos" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_arvore -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🌳</span> Árvore</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_arvore">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Árvore para usuários">
+                            <input type="checkbox" id="adminCheck_feat_arvore" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_notif -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🔔</span> Notificações</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_notif">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Notificações para usuários">
+                            <input type="checkbox" id="adminCheck_feat_notif" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- feat_alim -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>⚡</span> Alimentadores (ALIM)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_alim">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Alimentadores para usuários">
+                            <input type="checkbox" id="adminCheck_feat_alim" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Card: Enviar Aviso Push para Todos -->
             <div class="admin-config-card">
                 <div class="admin-config-titulo" style="margin-bottom:8px;">📣 Enviar Aviso para Todos</div>
@@ -3152,6 +3552,13 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                         <textarea class="admin-msg-input" id="adminMsgInput" placeholder="Digite uma mensagem para este usuário..." rows="2"></textarea>
                         <button class="admin-msg-enviar" onclick="_adminAcaoMensagem()" title="Enviar mensagem">📤</button>
                     </div>
+                </div>
+                <div class="admin-modal-divider" id="adminDividerPermissoes"></div>
+                <!-- PERMISSÕES INDIVIDUAIS POR USUÁRIO -->
+                <div id="adminSecaoPermissoes" style="display:none">
+                    <div class="admin-modal-secao-titulo">🔒 Permissões Individuais <span style="font-size:11px;opacity:.55;font-weight:400">(sobrepõe controle global)</span></div>
+                    <div id="adminPermissoesGrid" style="display:flex;flex-direction:column;gap:6px;margin:8px 0 10px 0;max-height:260px;overflow-y:auto;padding-right:4px"></div>
+                    <button class="admin-modal-btn" id="adminBtnSalvarPermissoes" onclick="_adminSalvarPermissoesUsuario()" style="margin-top:2px">💾 Salvar Permissões</button>
                 </div>
             </div>
         </div>
@@ -3242,16 +3649,16 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         <div id="panelFerram" style="display:none; position:absolute; top:58px; left:clamp(58px,8vw,72px); width:min(220px,calc(100vw - 80px)); background:var(--glass); border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,0.3),0 0 0 1px rgba(255,255,255,0.5); flex-direction:column; max-height:calc(100vh - 80px); overflow-y:auto; overflow-x:hidden; backdrop-filter:blur(20px); z-index:1000; pointer-events:auto;">
             <div class="panel-header">🔧 Ferramentas <button onclick="togglePanelFerram()" style="border:none; background:none; cursor:pointer; font-size:16px;">×</button></div>
             <div style="padding:10px; display:flex; flex-direction:column; gap:8px;">
-                <button class="btn-ferram-item" style="background:#FF5722;" onclick="togglePanelFerram(); abrirModalPoda();">🌳<span style="margin-left:6px;">PODA</span></button>
-                <button class="btn-ferram-item" style="background:#E040FB;" onclick="togglePanelFerram(); document.getElementById('chaveEscolhaModalOverlay').style.display='flex';">🔧<span style="margin-left:6px;">CHAVE</span></button>
+                <button class="btn-ferram-item" id="btnPodaFerram" style="background:#FF5722;" onclick="togglePanelFerram(); abrirModalPoda();">🌳<span style="margin-left:6px;">PODA</span></button>
+                <button class="btn-ferram-item" id="btnChaveFerram" style="background:#E040FB;" onclick="togglePanelFerram(); document.getElementById('chaveEscolhaModalOverlay').style.display='flex';">🔧<span style="margin-left:6px;">CHAVE</span></button>
                 <button class="btn-ferram-item" style="background:#2196F3;" id="btnListaPodaFerram" onclick="togglePanelFerram(); togglePanelListaPoda();">📋<span style="margin-left:6px;">LISTA</span></button>
-                <button class="btn-ferram-item" style="background:#795548;" onclick="togglePanelFerram(); ativarMedicao();">📏<span style="margin-left:6px;">VÃO</span></button>
-                <button class="btn-ferram-item" style="background:#607D8B;" onclick="togglePanelFerram(); __melhMostrarHomenagemMaiki(ativarCanetaMagica);">✏️<span style="margin-left:6px;">MELHORIA</span></button>
-                <button class="btn-ferram-item" style="background:#3F51B5;" onclick="togglePanelFerram(); mostrarOnline();">👥<span style="margin-left:6px;">ONLINE</span></button>
-                <button class="btn-ferram-item" style="background:#00838F;" onclick="togglePanelFerram(); toggleChat();">💬<span style="margin-left:6px;">CHAT</span></button>
+                <button class="btn-ferram-item" id="btnVaoFerram" style="background:#795548;" onclick="togglePanelFerram(); ativarMedicao();">📏<span style="margin-left:6px;">VÃO</span></button>
+                <button class="btn-ferram-item" id="btnMelhoriaFerram" style="background:#607D8B;" onclick="togglePanelFerram(); __melhMostrarHomenagemMaiki(ativarCanetaMagica);">✏️<span style="margin-left:6px;">MELHORIA</span></button>
+                <button class="btn-ferram-item" id="btnOnlineFerram" style="background:#3F51B5;" onclick="togglePanelFerram(); mostrarOnline();">👥<span style="margin-left:6px;">ONLINE</span></button>
+                <button class="btn-ferram-item" id="btnChatFerram" style="background:#00838F;" onclick="togglePanelFerram(); toggleChat();">💬<span style="margin-left:6px;">CHAT</span></button>
                 <button class="btn-ferram-item" id="btnTelaFerram" style="background:#FF8F00; display:none;" onclick="togglePanelFerram(); abrirModalTela();">📱<span style="margin-left:6px;">TELA</span></button>
-                <button class="btn-ferram-item" style="background:#6A0DAD;" onclick="togglePanelFerram(); abrirModalInspecaoRamo();">🔍<span style="margin-left:6px;">INSPEÇÃO</span></button>
-                <button class="btn-ferram-item" style="background:#00897B;" onclick="togglePanelFerram(); abrirModalCroqui();">✏️<span style="margin-left:6px;">FAZER/CROQUI/REDE</span></button>
+                <button class="btn-ferram-item" id="btnInspecaoFerram" style="background:#6A0DAD;" onclick="togglePanelFerram(); abrirModalInspecaoRamo();">🔍<span style="margin-left:6px;">INSPEÇÃO</span></button>
+                <button class="btn-ferram-item" id="btnCroquiFerram" style="background:#00897B;" onclick="togglePanelFerram(); abrirModalCroqui();">✏️<span style="margin-left:6px;">FAZER/CROQUI/REDE</span></button>
                 <button class="btn-ferram-item" id="btnConfigWpp" style="background:#25D366;" onclick="togglePanelFerram(); window.__wppAbrirConfig();">📲<span style="margin-left:6px;">CONFIG. GRUPO WHATSAPP</span></button>
                 <button class="btn-ferram-item" id="btnResumoDia" style="background:#075E54;" onclick="togglePanelFerram(); window.__wppAbrirResumoDia();">📊<span style="margin-left:6px;">RESUMO DO DIA</span></button>
             </div>
@@ -5364,6 +5771,7 @@ window.addEventListener('load', () => {
                                             const d = docSnap.data();
                                             window._meuRole = d.role || 'usuario';
                                             window._meuNomeUsuario = d.nome || nomeLocal;
+                                            window._minhasPermissoes = d.permissoes || {};
                                             console.log('[Admin] Role:', window._meuRole);
                                             console.log('[Admin] Bloqueado:', d.bloqueado === true);
                                             // Atualizar visibilidade do botão admin
@@ -8249,7 +8657,9 @@ window.addEventListener('load', () => {
         // Overlay de bloqueio — impede uso do sistema até criar/reconectar pasta
         // isReauth=true: usuário já tem handle salvo mas perdeu permissão (reload sem gesto)
         function _bloquearSistema(mensagem, isReauth) {
+            if (window._pastaJaConfigurada) return;
             if (document.getElementById('bloqueioSistemaPasta')) return;
+            window._bloqueioSistemaMostrado = true;
             const overlay = document.createElement('div');
             overlay.id = 'bloqueioSistemaPasta';
             overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:999999;display:flex;align-items:center;justify-content:center;';
@@ -8276,6 +8686,7 @@ window.addEventListener('load', () => {
                     const ok = await StorageManager.requestFolder();
                     if (ok) {
                         overlay.remove();
+                        window._pastaJaConfigurada = true;
                         localStorage.removeItem('recusouPasta');
                         await _recarregarDadosDaPasta();
                         const notif = document.createElement('div');
@@ -8338,8 +8749,9 @@ window.addEventListener('load', () => {
 
         // Verificação obrigatória de pasta no desktop
         async function _verificarPastaObrigatoriaDesktop() {
-            if (_isMobile) return; // Celular não precisa
-            if (typeof window.showDirectoryPicker !== 'function') return; // Navegador não suporta
+            if (_isMobile) return;
+            if (typeof window.showDirectoryPicker !== 'function') return;
+            if (window._pastaJaConfigurada) return;
             
             // CASO 1: Já tem handle ativo (permissão concedida no init com gesto prévio)
             if (StorageManager.hasHandle()) return; // Tudo ok
@@ -8354,6 +8766,7 @@ window.addEventListener('load', () => {
                     const perm = await savedHandle.queryPermission({ mode: 'readwrite' });
                     if (perm === 'granted') {
                         // Permissão ainda ativa (raro no reload mas possível)
+                        window._pastaJaConfigurada = true;
                         StorageManager.setHandle(savedHandle);
                         await _recarregarDadosDaPasta();
                         return;
@@ -8366,6 +8779,7 @@ window.addEventListener('load', () => {
                     if (perm === 'granted') {
                         StorageManager.setHandle(savedHandle);
                         await _recarregarDadosDaPasta();
+                        window._pastaJaConfigurada = true;
                         console.log('[StorageManager] Reconectado silenciosamente (requestPermission direto).');
                         return; // Reconectou silenciosamente!
                     }
@@ -8382,6 +8796,7 @@ window.addEventListener('load', () => {
                     try {
                         const perm = await savedHandle.requestPermission({ mode: 'readwrite' });
                         if (perm === 'granted') {
+                            window._pastaJaConfigurada = true;
                             StorageManager.setHandle(savedHandle);
                             await _recarregarDadosDaPasta();
                             console.log('[StorageManager] Reconectado silenciosamente no gesto #' + _reconectarTentativas + '.');
@@ -14550,8 +14965,8 @@ function abrirPopupPonto(e) {
                 <a href="https://www.google.com/maps/dir/?api=1&destination=${exactLat},${exactLng}" target="_blank" style="flex:1; background:#2196F3; color:white; padding:8px 4px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:10px; display:flex; align-items:center; justify-content:center;">🗺️ ROTA</a> 
                 <a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${exactLat},${exactLng}" target="_blank" style="flex:1; background:#FFC107; color:black; padding:8px 4px; border-radius:6px; text-decoration:none; font-weight:bold; font-size:10px; display:flex; align-items:center; justify-content:center;">🚶 S.VIEW</a> 
             </div>
-            <button onclick="abrirModalInterligacao(${exactLng}, ${exactLat}, '${(f.name||'').replace(/'/g,"\\'")}', '${(f.alimRef||'').replace(/'/g,"\\'")}'); document.querySelectorAll('.maplibregl-popup').forEach(p=>p.remove());" style="width:100%; margin-top:8px; padding:8px; background:#FF5722; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:11px; cursor:pointer;">🔗 Criar Interligação de Rede</button>
-            <div id="secaoComentarioPopup_${uid}" style="margin-top:10px; border-top:1px solid #e0e0e0; padding-top:8px;">
+            <button onclick="abrirModalInterligacao(${exactLng}, ${exactLat}, '${(f.name||'').replace(/'/g,"\\'")}', '${(f.alimRef||'').replace(/'/g,"\\'")}'); document.querySelectorAll('.maplibregl-popup').forEach(p=>p.remove());" style="width:100%; margin-top:8px; padding:8px; background:#FF5722; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:11px; cursor:pointer; display:${window._featInterligacao !== false ? 'block' : 'none'}">🔗 Criar Interligação de Rede</button>
+            <div id="secaoComentarioPopup_${uid}" style="margin-top:10px; border-top:1px solid #e0e0e0; padding-top:8px; display:${window._featComentario !== false ? 'block' : 'none'}">
                 ${(featOriginal && featOriginal.properties && featOriginal.properties.comentario)
                     ? `<div style="font-size:11px; color:#888; margin-bottom:4px; font-weight:bold;">💬 Comentário:</div>
                        <div style="font-size:12px; color:${featOriginal.properties.comentarioEditado ? '#E91E63' : '#1565C0'}; background:${featOriginal.properties.comentarioEditado ? '#fce4ec' : '#e3f2fd'}; border-radius:6px; padding:6px; margin-bottom:4px; word-break:break-word;">${_escHtmlPopup(featOriginal.properties.comentario)}</div>
@@ -15277,6 +15692,7 @@ function parseCoordSegura(val) {
 }
 
 window.abrirModalInterligacao = function(lng1, lat1, nome1, circ1) {
+    if (window._featInterligacao === false) return;
     _il = { 
         lng1: parseCoordSegura(lng1), lat1: parseCoordSegura(lat1), 
         nome1: nome1 || '(s/n)', circ1: circ1 || '', 
@@ -19389,7 +19805,36 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
 
         window.permissaoPermitir = function() {
             var etapa = _etapas[_permEtapa];
+            var btnPermitir = document.getElementById('permBtnPermitir');
+            var btnPular = document.getElementById('permBtnPular');
+            var icone = document.getElementById('permIcone');
+            var desc = document.getElementById('permDescricao');
+            // Salva estado original
+            var textoOriginal = btnPermitir.textContent;
+            var iconeOriginal = icone.textContent;
+            var descOriginal = desc.textContent;
+            // Ativa animação de loading
+            btnPermitir.disabled = true;
+            btnPular.style.display = 'none';
+            btnPermitir.innerHTML = '<span style="display:inline-flex;align-items:center;gap:8px;"><span class="permSpinner" style="display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:permSpin 0.7s linear infinite;"></span> Aguarde...</span>';
+            btnPermitir.style.opacity = '0.8';
+            icone.innerHTML = '<span style="display:inline-block;animation:permPulse 1.2s ease-in-out infinite;">' + iconeOriginal + '</span>';
+            desc.textContent = 'Verificando permissão...';
+            // Adiciona CSS de animação se não existe
+            if (!document.getElementById('permAnimStyle')) {
+                var st = document.createElement('style');
+                st.id = 'permAnimStyle';
+                st.textContent = '@keyframes permSpin{to{transform:rotate(360deg)}} @keyframes permPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:0.7}}';
+                document.head.appendChild(st);
+            }
             etapa.acao(function(concedido) {
+                // Restaura botão
+                btnPermitir.disabled = false;
+                btnPermitir.textContent = textoOriginal;
+                btnPermitir.style.opacity = '1';
+                btnPular.style.display = 'block';
+                icone.textContent = iconeOriginal;
+                desc.textContent = descOriginal;
                 localStorage.setItem(etapa.chaveLs, concedido ? 'true' : 'false');
                 _proximaEtapa();
             });
@@ -27375,6 +27820,7 @@ if ('launchQueue' in window) {
 
   // ---- Modal de confirmação de defeito (cidade + alimentador) ----
   function _abrirModalConfirmarDefeito(tracado, onConfirmar, onCancelar) {
+    if (window._featDefeito === false) { if (onCancelar) onCancelar(); return; }
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;opacity:0;transition:opacity .2s;';
 
@@ -27434,7 +27880,7 @@ if ('launchQueue' in window) {
       '<div style="font-size:17px;font-weight:900;color:#333;margin-bottom:6px;">O que deseja marcar?</div>' +
       '<div style="font-size:13px;color:#666;margin-bottom:22px;">Trecho desenhado. Escolha a ação.</div>' +
       '<div style="display:flex;flex-direction:column;gap:12px;">' +
-        '<button id="__btnEscolhaDefeito" style="padding:14px 10px;background:#D32F2F;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🔧 Mostrar defeito na rede</button>' +
+        '<button id="__btnEscolhaDefeito" style="padding:14px 10px;background:#D32F2F;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:' + (window._featDefeito !== false ? 'flex' : 'none') + ';align-items:center;justify-content:center;gap:8px;">🔧 Mostrar defeito na rede</button>' +
         '<button id="__btnEscolhaRocada" style="padding:14px 10px;background:#E65100;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🌿 Marcar roçada</button>' +
         '<button id="__btnEscolhaCancelar" style="padding:14px 10px;background:#757575;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">❌ Cancelar</button>' +
       '</div>';
@@ -28335,6 +28781,11 @@ if ('launchQueue' in window) {
         var msgInput = document.getElementById('adminMsgInput');
         if (msgInput) msgInput.value = '';
 
+        // Carregar permissões individuais do usuário no grid
+        if (typeof _adminCarregarPermissoesUsuario === 'function') {
+            _adminCarregarPermissoesUsuario(usuario._uid);
+        }
+
         // Abrir modal
         var modal = document.getElementById('adminModalAcoes');
         if (modal) modal.classList.add('aberto');
@@ -28581,6 +29032,9 @@ if ('launchQueue' in window) {
                         bannerAviso.classList.add('ativo');
                     }
                 }
+
+                // Aplicar feature flags para usuários comuns
+                _adminAplicarFeatureFlags(cfg, role, window._minhasPermissoes || {});
             })
             .catch(function(e) {
                 console.warn('[Admin] Erro ao ler config_global:', e.message);
@@ -28616,6 +29070,23 @@ if ('launchQueue' in window) {
 
                 var inputMsg = document.getElementById('adminMensagemGlobalInput');
                 if (inputMsg) inputMsg.value = mensagemGlobal;
+
+                // Sincronizar toggles de feature flags
+                var featIds = [
+                    'feat_chat','feat_radar','feat_poda','feat_chave','feat_defeito',
+                    'feat_interligacao','feat_comentario','feat_kml_compartilhado',
+                    'feat_consulta','feat_traj','feat_3d','feat_clima','feat_stilo',
+                    'feat_ferram','feat_arquivos','feat_arvore','feat_notif','feat_alim',
+                    'feat_lista','feat_vao','feat_melhoria','feat_tela','feat_inspecao',
+                    'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada'
+                ];
+                featIds.forEach(function(f) {
+                    var ativo = cfg[f] !== false; // default true se não existir
+                    var chk = document.getElementById('adminCheck_' + f);
+                    var txt = document.getElementById('adminTxt_' + f);
+                    if (chk) chk.checked = ativo;
+                    if (txt) txt.textContent = ativo ? 'ON' : 'OFF';
+                });
             })
             .catch(function(e) {
                 console.warn('[Admin] Erro ao sincronizar config:', e.message);
@@ -28659,14 +29130,29 @@ if ('launchQueue' in window) {
         if (chkMan) manutencao = chkMan.checked;
         if (chkAviso) avisoAtivo = chkAviso.checked;
 
-        db.collection('config_admin').doc('config_global').set({
+        // Ler feature flags dos toggles
+        var featIds = [
+            'feat_chat','feat_radar','feat_poda','feat_chave','feat_defeito',
+            'feat_interligacao','feat_comentario','feat_kml_compartilhado',
+            'feat_consulta','feat_traj','feat_3d','feat_clima','feat_stilo',
+            'feat_ferram','feat_arquivos','feat_arvore','feat_notif','feat_alim',
+            'feat_lista','feat_vao','feat_melhoria','feat_tela','feat_inspecao',
+            'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada'
+        ];
+        var featFlags = {};
+        featIds.forEach(function(f) {
+            var chk = document.getElementById('adminCheck_' + f);
+            featFlags[f] = chk ? chk.checked : true;
+        });
+
+        db.collection('config_admin').doc('config_global').set(Object.assign({
             manutencao: manutencao,
             avisoAtivo: avisoAtivo,
             mensagemGlobal: mensagemGlobal,
             versaoMinima: '',
             atualizadoPor: window.meuID || '',
             atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true })
+        }, featFlags), { merge: true })
         .then(function() {
             console.log('[Admin] Config salva');
             _adminToast('✅ Configurações salvas com sucesso!', '#4CAF50');
@@ -28689,6 +29175,189 @@ if ('launchQueue' in window) {
     };
 
     // ── STEP 4-2: Enviar Aviso Global ────────────────────────────────────────
+
+    // Aplica feature flags: oculta elementos para usuários comuns
+    // permissoes: objeto do campo usuarios/{uid}.permissoes (per-user override)
+    // Regra: ativo = global ON && per-user ON (ausente = ON)
+    function _adminAplicarFeatureFlags(cfg, role, permissoes) {
+        // Admins sempre veem tudo
+        if (role === 'admin') return;
+
+        var perm = permissoes || {};
+
+        var flags = {
+            feat_chat:              ['btnChatFerram', 'panelChat'],
+            feat_radar:             ['btnOnlineFerram', 'onlineModalOverlay', 'radarOnlineBadge'],
+            feat_poda:              ['btnPodaFerram', 'btnListaPodaFerram', 'panelListaPoda', 'btnPodasRetiradas'],
+            feat_chave:             ['btnChaveFerram'],
+            feat_kml_compartilhado: ['btnKmlCompartilhado'],
+            feat_consulta:          ['btnConsulta'],
+            feat_traj:              ['btnTraj'],
+            feat_3d:                ['btn3D'],
+            feat_clima:             ['btnClima'],
+            feat_stilo:             ['btnStilo'],
+            feat_ferram:            ['btnFerram'],
+            feat_arquivos:          ['btnAbreArq'],
+            feat_arvore:            ['btnArvore'],
+            feat_notif:             ['btnNotif'],
+            feat_alim:              ['btnAbreAlim'],
+            feat_lista:             ['btnListaPodaFerram'],
+            feat_vao:               ['btnVaoFerram'],
+            feat_melhoria:          ['btnMelhoriaFerram'],
+            feat_tela:              ['btnTelaFerram'],
+            feat_inspecao:          ['btnInspecaoFerram'],
+            feat_croqui:            ['btnCroquiFerram'],
+            feat_config_wpp:        ['btnConfigWpp'],
+            feat_resumo_dia:        ['btnResumoDia'],
+            feat_rocada:            ['btnPodaManual'],
+            feat_expor_rocada:      ['btnExportarPodaManuais']
+        };
+
+        Object.keys(flags).forEach(function(feat) {
+            // Global OFF → sempre OFF; Global ON + per-user OFF → OFF; ambos ON → ON
+            var ativo = (cfg[feat] !== false) && (perm[feat] !== false);
+            if (!ativo) {
+                flags[feat].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                });
+            }
+        });
+
+        // Flags dinâmicas (sem elemento estático) — guardadas em window para uso nos popups
+        window._featDefeito      = (cfg.feat_defeito      !== false) && (perm.feat_defeito      !== false);
+        window._featInterligacao = (cfg.feat_interligacao !== false) && (perm.feat_interligacao !== false);
+        window._featComentario   = (cfg.feat_comentario   !== false) && (perm.feat_comentario   !== false);
+
+        console.log('[Admin] Feature flags aplicadas para usuário comum');
+    }
+    window._adminAplicarFeatureFlags = _adminAplicarFeatureFlags;
+
+    // ── STEP 4-3: Permissões Por Usuário ─────────────────────────────────────
+
+    // Mapa de feat_* → label amigável para o grid de permissões
+    var _adminFeatLabels = {
+        feat_chat:              '💬 Chat',
+        feat_radar:             '👥 Rede Online / Radar',
+        feat_poda:              '🌳 Sistema de Podas',
+        feat_chave:             '🔑 Sistema de Chaves',
+        feat_defeito:           '⚠️ Sistema de Defeitos',
+        feat_interligacao:      '🔗 Interligações',
+        feat_comentario:        '💬 Comentários',
+        feat_kml_compartilhado: '📂 KML/KMZ Compartilhados',
+        feat_consulta:          '📡 Consulta (Telegram)',
+        feat_traj:              '🛤️ Trajetória (TRAJ)',
+        feat_3d:                '🏔️ Modo 3D',
+        feat_clima:             '🌦️ Clima',
+        feat_stilo:             '🎨 Estilos (STILO)',
+        feat_ferram:            '🔧 Ferramentas (FERRAM)',
+        feat_arquivos:          '📄 Arquivos',
+        feat_arvore:            '🌳 Árvore',
+        feat_notif:             '🔔 Notificações',
+        feat_alim:              '⚡ Alimentadores (ALIM)',
+        feat_lista:             '📋 Lista de Podas',
+        feat_vao:               '📏 Vão (Medição)',
+        feat_melhoria:          '✏️ Melhoria',
+        feat_tela:              '📱 Tela',
+        feat_inspecao:          '🔍 Inspeção',
+        feat_croqui:            '✏️ Fazer/Croqui/Rede',
+        feat_config_wpp:        '📲 Config. Grupo WhatsApp',
+        feat_resumo_dia:        '📊 Resumo do Dia',
+        feat_rocada:            '🌿 Roçada / Defeito',
+        feat_expor_rocada:      '📋 Exportar Roçada'
+    };
+
+    var _adminFeatIds = Object.keys(_adminFeatLabels);
+
+    // Carrega permissões do usuário e popula o grid de toggles no modal
+    function _adminCarregarPermissoesUsuario(uid) {
+        var db = window._kmlFirestore;
+        if (!db || !uid) return;
+        var grid = document.getElementById('adminPermissoesGrid');
+        var secao = document.getElementById('adminSecaoPermissoes');
+        var divider = document.getElementById('adminDividerPermissoes');
+        if (!grid) return;
+
+        // Mostrar seção (só admin vê)
+        if (window._meuRole === 'admin') {
+            if (secao) secao.style.display = '';
+            if (divider) divider.style.display = '';
+        } else {
+            if (secao) secao.style.display = 'none';
+            if (divider) divider.style.display = 'none';
+            return;
+        }
+
+        grid.innerHTML = '<div style="font-size:12px;opacity:.6;padding:4px 0">Carregando...</div>';
+
+        db.collection('usuarios').doc(uid).get()
+            .then(function(doc) {
+                var perm = (doc.exists && doc.data().permissoes) ? doc.data().permissoes : {};
+                grid.innerHTML = '';
+                _adminFeatIds.forEach(function(feat) {
+                    var ativo = perm[feat] !== false; // ausente = ON
+                    var row = document.createElement('div');
+                    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:rgba(255,255,255,0.04);border-radius:6px;gap:8px';
+                    var label = document.createElement('span');
+                    label.style.cssText = 'font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+                    label.textContent = _adminFeatLabels[feat] || feat;
+                    var toggleWrap = document.createElement('label');
+                    toggleWrap.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;flex-shrink:0';
+                    var chk = document.createElement('input');
+                    chk.type = 'checkbox';
+                    chk.id = 'adminPermCheck_' + feat;
+                    chk.checked = ativo;
+                    chk.style.cssText = 'width:16px;height:16px;cursor:pointer;accent-color:#4CAF50';
+                    var txt = document.createElement('span');
+                    txt.id = 'adminPermTxt_' + feat;
+                    txt.style.cssText = 'font-size:11px;font-weight:700;min-width:26px;color:' + (ativo ? '#4CAF50' : '#f44336');
+                    txt.textContent = ativo ? 'ON' : 'OFF';
+                    chk.onchange = function() {
+                        txt.textContent = chk.checked ? 'ON' : 'OFF';
+                        txt.style.color = chk.checked ? '#4CAF50' : '#f44336';
+                    };
+                    toggleWrap.appendChild(chk);
+                    toggleWrap.appendChild(txt);
+                    row.appendChild(label);
+                    row.appendChild(toggleWrap);
+                    grid.appendChild(row);
+                });
+            })
+            .catch(function(e) {
+                grid.innerHTML = '<div style="font-size:12px;color:#f44336">Erro ao carregar permissões</div>';
+                console.warn('[Admin] Erro ao carregar permissões do usuário:', e.message);
+            });
+    }
+    window._adminCarregarPermissoesUsuario = _adminCarregarPermissoesUsuario;
+
+    // Salva as permissões editadas no modal de volta ao Firestore
+    window._adminSalvarPermissoesUsuario = function() {
+        var db = window._kmlFirestore;
+        if (!db) return;
+        var usuario = _adminUsuarioAtual;
+        if (!usuario || !usuario._uid) {
+            _adminToast('Nenhum usuário selecionado.', '#f44336');
+            return;
+        }
+        var uid = usuario._uid;
+        var permissoes = {};
+        _adminFeatIds.forEach(function(feat) {
+            var chk = document.getElementById('adminPermCheck_' + feat);
+            permissoes[feat] = chk ? chk.checked : true;
+        });
+        var btn = document.getElementById('adminBtnSalvarPermissoes');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳ Salvando...'; }
+        db.collection('usuarios').doc(uid).update({ permissoes: permissoes })
+            .then(function() {
+                _adminToast('Permissões salvas com sucesso!', '#4CAF50');
+                if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Permissões'; }
+            })
+            .catch(function(e) {
+                _adminToast('Erro ao salvar permissões: ' + (e.message || String(e)), '#f44336');
+                if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar Permissões'; }
+                console.error('[Admin] Erro ao salvar permissões:', e.message);
+            });
+    };
 
     window._adminEnviarAvisoGlobal = function() {
         var role = window._meuRole || '';
