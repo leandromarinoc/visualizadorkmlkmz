@@ -419,16 +419,18 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
             filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5)); cursor: pointer;
         }
         .colega-marker-icon.colega-moving {
-            animation: colegaPulse 1.2s infinite ease-in-out;
-            box-shadow: 0 0 12px rgba(76, 175, 80, 0.8);
+            animation: colegaPulse 1.5s infinite;
+            border: 2px solid #4CAF50;
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5);
         }
         .colega-marker-icon.colega-stopped {
-            opacity: 0.5;
+            opacity: 0.8;
+            border: 2px solid #9E9E9E;
             filter: drop-shadow(0px 4px 5px rgba(0,0,0,0.5)) grayscale(0.5);
         }
         @keyframes colegaPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.15); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.5); }
+            50% { box-shadow: 0 0 0 8px rgba(76, 175, 80, 0); }
         }
         .colega-label {
             position: absolute; top: -18px; background: rgba(0,0,0,0.8); color: #00FF00; padding: 2px 8px;
@@ -786,6 +788,46 @@ body.modo-computador-forcado .maplibregl-popup .maplibregl-popup-content {
         .btn-reset      { box-shadow: inset 3px 0 0 #EF5350, 0 4px 12px rgba(0,0,0,0.35); }
         .btn-arquivos   { box-shadow: inset 3px 0 0 #CE93D8, 0 4px 12px rgba(0,0,0,0.35); }
         .btn-arvore     { box-shadow: inset 3px 0 0 #81C784, 0 4px 12px rgba(0,0,0,0.35); }
+        .btn-endereco   { box-shadow: inset 3px 0 0 #42A5F5, 0 4px 12px rgba(0,0,0,0.35); background: #1976D2 !important; }
+
+        /* PAINEL ENDEREÇO */
+        #panelEndereco {
+            position: fixed; top: 0; left: 60px; width: 380px; height: 100%;
+            background: rgba(10,10,10,0.96); z-index: 10002; padding: 15px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.5); flex-direction: column;
+            overflow-y: auto; overflow-x: hidden; display: none;
+        }
+        #panelEndereco .ender-section { margin-bottom: 16px; }
+        #panelEndereco .ender-label { color: #aaa; font-size: 12px; margin-bottom: 6px; }
+        #panelEndereco .ender-input {
+            width: 100%; box-sizing: border-box; background: #333; color: white;
+            border: 1px solid #555; border-radius: 8px; padding: 9px 12px;
+            font-size: 14px; outline: none;
+        }
+        #panelEndereco .ender-input:focus { border-color: #42A5F5; }
+        #panelEndereco .ender-btn {
+            width: 100%; padding: 10px; border: none; border-radius: 8px;
+            color: white; font-size: 13px; font-weight: 700; cursor: pointer;
+            margin-top: 6px; transition: opacity 0.2s;
+        }
+        #panelEndereco .ender-btn:hover { opacity: 0.85; }
+        #panelEndereco .ender-btn-buscar { background: #1976D2; }
+        #panelEndereco .ender-btn-mapa   { background: #2196F3; }
+        #panelEndereco .ender-btn-aplicar { background: #4CAF50; }
+        #panelEndereco .ender-divider {
+            text-align: center; color: #666; font-size: 12px;
+            margin: 12px 0; border-top: 1px solid #333; padding-top: 12px;
+        }
+        #enderecoResultados {
+            background: #1a1a1a; border-radius: 8px; border: 1px solid #444;
+            max-height: 200px; overflow-y: auto; margin-top: 6px;
+        }
+        #enderecoResultados:empty { display: none; }
+        .ender-coords-row { display: flex; gap: 8px; }
+        .ender-coords-row .ender-input { flex: 1; }
+        @media (max-width: 768px) {
+            #panelEndereco { left: 0 !important; width: 100% !important; padding: 14px !important; box-sizing: border-box !important; }
+        }
         @media (max-width: 768px) {
             #panelArvore {
                 left: 0 !important;
@@ -2997,6 +3039,7 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         <button class="btn-circular btn-reset" onclick="resetGeral()">🔄<span>ATUALIZAR</span></button>
         <button class="btn-circular btn-arquivos" id="btnAbreArq" onclick="togglePanelArquivos()">📄<span>ARQUIVOS</span></button>
         <button class="btn-circular btn-arvore" id="btnArvore" onclick="togglePanelArvore()" style="background: #2E7D32;">🌳<span>ÁRVORE</span></button>
+        <button class="btn-circular btn-endereco" id="btnEndereco" onclick="abrirPanelEndereco()" style="background: #1976D2;">📍<span>ENDER.</span></button>
         <button id="btnVersao" class="btn-circular" onclick="mostrarVersaoAtual()" style="background: #673AB7; font-size: 10px;">🔖<span>VERSAO</span></button>
     </div>
     
@@ -3011,6 +3054,45 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         </div>
         <div id="arvoreListaContainer" style="color:white; flex:1; overflow-y:auto; padding-right:4px;">
             <p style="color:#888; text-align:center;">Carregando...</p>
+        </div>
+    </div>
+
+    <!-- PAINEL ENDEREÇO -->
+    <div id="panelEndereco" style="display:none; position:fixed; top:0; left:60px; width:380px; height:100%; background:rgba(10,10,10,0.96); z-index:10002; padding:15px; box-shadow:4px 0 20px rgba(0,0,0,0.5); flex-direction:column; overflow-y:auto; overflow-x:hidden;">
+        <div style="flex-shrink:0; display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="color:#42A5F5; margin:0; font-size:17px;">📍 Definir Localização</h3>
+            <button onclick="abrirPanelEndereco()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer; min-width:36px; min-height:36px; display:flex; align-items:center; justify-content:center; border-radius:8px; padding:4px 8px; flex-shrink:0;">✕</button>
+        </div>
+
+        <!-- Busca por endereço -->
+        <div class="ender-section">
+            <div class="ender-label">🔍 Digite seu endereço:</div>
+            <input id="enderecoInput" type="text" class="ender-input" placeholder="Ex: Rua São Paulo 123, Bebedouro"
+                onkeydown="if(event.key==='Enter') _buscarEndereco()">
+            <button class="ender-btn ender-btn-buscar" onclick="_buscarEndereco()">🔍 Buscar endereço</button>
+            <div id="enderecoResultados"></div>
+        </div>
+
+        <div class="ender-divider">── ou ──</div>
+
+        <!-- Clicar no mapa -->
+        <div class="ender-section">
+            <button class="ender-btn ender-btn-mapa" onclick="_ativarCliqueNoMapa(); abrirPanelEndereco();">📌 Clicar no mapa para definir</button>
+        </div>
+
+        <div class="ender-divider">── Localização atual ──</div>
+
+        <!-- Info localização atual -->
+        <div class="ender-section">
+            <div id="enderecoLocAtual" style="color:white; font-size:13px; margin-bottom:10px; padding:8px; background:#1a1a1a; border-radius:8px; border:1px solid #333;">
+                <span style="color:#aaa;">Localização não definida</span>
+            </div>
+            <div class="ender-label" style="margin-top:8px;">✏️ Editar manualmente:</div>
+            <div class="ender-coords-row">
+                <input id="enderecoLatInput" type="number" class="ender-input" placeholder="Latitude" step="0.000001" min="-90" max="90">
+                <input id="enderecoLngInput" type="number" class="ender-input" placeholder="Longitude" step="0.000001" min="-180" max="180">
+            </div>
+            <button class="ender-btn ender-btn-aplicar" onclick="_aplicarCoordsManuais()">✅ Aplicar coordenadas</button>
         </div>
     </div>
 
@@ -5834,6 +5916,63 @@ window.addEventListener('load', () => {
                         setTimeout(function() {
                             if (typeof window._adminLerConfigGlobal === 'function') window._adminLerConfigGlobal();
                         }, 2000);
+
+                        // STEP 4-2: carregar pendências abertas do Firestore ao iniciar
+                        setTimeout(function() {
+                            try {
+                                var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+                                if (!db) return;
+                                db.collection('pendencias').where('status', '==', 'aberta').get()
+                                    .then(function(snapshot) {
+                                        var count = 0;
+                                        snapshot.forEach(function(doc) {
+                                            var p = doc.data();
+                                            if (!p || !p.codigo) return;
+                                            // Dedup: não criar se já existe (pode ter vindo via MQTT retain)
+                                            if (window._pendenciasNoMapa && window._pendenciasNoMapa[p.codigo]) return;
+                                            if (p.lat && p.lng) {
+                                                var dadosPend = {
+                                                    codigo: p.codigo,
+                                                    eletricista1: p.eletricista1 || '',
+                                                    eletricista2: p.eletricista2 || '',
+                                                    equipe: p.equipe || '',
+                                                    cidade: p.cidade || '',
+                                                    alimentador: p.alimentador || '',
+                                                    chave: p.chave || '',
+                                                    tipo: p.tipo || '',
+                                                    destino: p.destino || '',
+                                                    localizacao: p.localizacao || '',
+                                                    obs: p.obs || '',
+                                                    foto: p.foto || '',
+                                                    coordenadas: { lat: p.lat, lng: p.lng },
+                                                    timestamp: p.timestampCliente || new Date().toISOString(),
+                                                    uid: p.uid || ''
+                                                };
+                                                if (typeof _criarMarcadorPendencia === 'function') {
+                                                    _criarMarcadorPendencia(p.codigo, p.lat, p.lng, dadosPend);
+                                                }
+                                                if (!window._pendenciasCriadas) window._pendenciasCriadas = [];
+                                                window._pendenciasCriadas.push(dadosPend);
+                                                count++;
+                                            }
+                                        });
+                                        if (count > 0) console.log('[Pendências-FS] Carregadas ' + count + ' pendências abertas do Firestore.');
+                                    })
+                                    .catch(function(e) {
+                                        if (e && e.code === 'permission-denied') {
+                                            console.info(
+                                                '[Pendências-FS] LEMBRETE: Configure as Firestore Security Rules para a collection "pendencias":\n' +
+                                                'match /pendencias/{docId} {\n' +
+                                                '  allow read: if request.auth != null;\n' +
+                                                '  allow write: if request.auth != null;\n' +
+                                                '}'
+                                            );
+                                        } else {
+                                            console.warn('[Pendências-FS] Erro ao carregar pendências:', e.message);
+                                        }
+                                    });
+                            } catch(e) { console.warn('[Pendências-FS] Exceção ao carregar pendências:', e.message); }
+                        }, 3500);
                     } else {
                         console.log('[Auth] Nenhum usuário autenticado ainda, aguardando signInAnonymously...');
                     }
@@ -6021,6 +6160,7 @@ window.addEventListener('load', () => {
                     clienteMQTT.subscribe(TEMA_COMENTARIOS + '/+', { qos: 1 });
                     clienteMQTT.subscribe(TEMA_INTERLIGACOES + '/+', { qos: 1 });
                     clienteMQTT.subscribe(TEMA_MQTT + '/defeito_rede/+', { qos: 1 });
+                    clienteMQTT.subscribe(TEMA_MQTT + '/pendencia/+',    { qos: 1 });
                     // Anuncia presença ao conectar/reconectar
                     setTimeout(() => {
                         const ll = userMarker ? userMarker.getLngLat() : null;
@@ -6177,8 +6317,64 @@ window.addEventListener('load', () => {
                         }
                         return;
                     }
+                    // ── Handler MQTT: Pendências (pend_XXXX) ─────────────────────────
+                    if (topic.startsWith(TEMA_MQTT + '/pendencia/')) {
+                        var _codPendMqtt = topic.substring((TEMA_MQTT + '/pendencia/pend_').length);
+                        if (!_codPendMqtt) return;
+                        // Payload vazio = tombstone legado (não usado, mas tratado)
+                        if (!payload) {
+                            if (window._pendenciasNoMapa && window._pendenciasNoMapa[_codPendMqtt]) {
+                                if (window._pendenciasNoMapa[_codPendMqtt].marker) window._pendenciasNoMapa[_codPendMqtt].marker.remove();
+                                delete window._pendenciasNoMapa[_codPendMqtt];
+                            }
+                            return;
+                        }
+                        var _msgPend; try { _msgPend = JSON.parse(payload); } catch(e) { return; }
+                        // Se status indica remoção: apagar marcador
+                        if (_msgPend.status === 'resolvida' || _msgPend.status === 'apagada_sem_resolver') {
+                            if (window._pendenciasNoMapa && window._pendenciasNoMapa[_codPendMqtt]) {
+                                if (window._pendenciasNoMapa[_codPendMqtt].marker) window._pendenciasNoMapa[_codPendMqtt].marker.remove();
+                                delete window._pendenciasNoMapa[_codPendMqtt];
+                            }
+                            if (window._pendenciasCriadas) {
+                                window._pendenciasCriadas = window._pendenciasCriadas.filter(function(x) { return x.codigo !== _codPendMqtt; });
+                            }
+                            return;
+                        }
+                        // Dedup: ignorar se remetente é o próprio usuário (loopback)
+                        if (_msgPend.uid && _msgPend.uid === (window.meuID || meuID)) return;
+                        // Criar marcador se não existir ainda
+                        if (_msgPend.lat && _msgPend.lng) {
+                            if (!window._pendenciasNoMapa || !window._pendenciasNoMapa[_codPendMqtt]) {
+                                var _dadosPendMqtt = {
+                                    codigo: _codPendMqtt,
+                                    eletricista1: _msgPend.eletricista1 || '',
+                                    eletricista2: _msgPend.eletricista2 || '',
+                                    equipe: _msgPend.equipe || '',
+                                    cidade: _msgPend.cidade || '',
+                                    alimentador: _msgPend.alimentador || '',
+                                    chave: _msgPend.chave || '',
+                                    tipo: _msgPend.tipo || '',
+                                    destino: _msgPend.destino || '',
+                                    localizacao: _msgPend.localizacao || '',
+                                    obs: _msgPend.obs || '',
+                                    coordenadas: { lat: _msgPend.lat, lng: _msgPend.lng },
+                                    timestamp: _msgPend.timestamp || new Date().toISOString(),
+                                    uid: _msgPend.uid || ''
+                                };
+                                if (typeof _criarMarcadorPendencia === 'function') {
+                                    _criarMarcadorPendencia(_codPendMqtt, _msgPend.lat, _msgPend.lng, _dadosPendMqtt);
+                                }
+                                if (!window._pendenciasCriadas) window._pendenciasCriadas = [];
+                                window._pendenciasCriadas.push(_dadosPendMqtt);
+                                console.log('[Pendências-MQTT] Recebida pendência de outro usuário:', _codPendMqtt);
+                            }
+                        }
+                        return;
+                    }
+                    // ── FIM Handler MQTT Pendências ───────────────────────────────────
+
                     if (topic.startsWith(TEMA_PODAS + '/')) {
-                        if (!payload) return; // payload vazio = poda resolvida
                         let msg; try { msg = JSON.parse(payload); } catch(e) { return; }
                         if (msg.acao === 'NOVA_PODA_V2' && msg.features && msg.features.length > 0) {
                             const jaExiste = geoJsonGlobal.features.some(f => f && f.properties && f.properties.id === msg.features[0].properties.id);
@@ -6264,6 +6460,13 @@ window.addEventListener('load', () => {
             }
             else if (msg.acao === "SAIU_APP") {
                 delete usuariosOnline[msg.remetente];
+                return;
+            }
+            else if (msg.acao === "ATUALIZAR_GPS") {
+                if (msg.remetente === meuID) return;
+                if (msg.lng != null && msg.lat != null) {
+                    atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat);
+                }
                 return;
             }
             else if (msg.acao === "PRESENCA_ONLINE") {
@@ -6627,7 +6830,7 @@ window.addEventListener('load', () => {
                     colega.marker.setLngLat([endLng, endLat]);
                 } else {
                     const startTime = performance.now();
-                    const DURATION = 1000;
+                    const DURATION = 800;
                     function step(now) {
                         const elapsed = now - startTime;
                         const t = Math.min(elapsed / DURATION, 1);
@@ -14258,7 +14461,11 @@ window.apagarChaveAtual = function() {
                 // Feedback de precisão ruim em desktop
                 if (!_isMobile && accuracy > 500) {
                     const precKm = (accuracy / 1000).toFixed(1);
-                    mostrarNotificacaoRealTime(`📍 <b>Localização aproximada</b><br>Precisão: ~${precKm}km (sem GPS de hardware). Resultado pode variar.`, '#FF9800', false);
+                    if (accuracy > 1000) {
+                        mostrarNotificacaoRealTime(`📍 <b>Localização aproximada</b><br>Precisão: ~${precKm}km (sem GPS de hardware).<br><a onclick="abrirPanelEndereco()" style="color:#FFEB3B; cursor:pointer; text-decoration:underline;">📌 Clique aqui para definir localização exata</a>`, '#FF9800', false, 8000);
+                    } else {
+                        mostrarNotificacaoRealTime(`📍 <b>Localização aproximada</b><br>Precisão: ~${precKm}km (sem GPS de hardware). Resultado pode variar.`, '#FF9800', false);
+                    }
                 }
                 // Ativar watchPosition se gpsPermitido não foi recusado
                 if (localStorage.getItem('gpsPermitido') !== 'false') { atualizarLocalizacao(); }
@@ -14313,6 +14520,116 @@ window.apagarChaveAtual = function() {
         map.flyTo({ center: userMarker.getLngLat(), zoom: zoomLevel });
     }
 }
+
+// ─── PAINEL DE ENDEREÇO / GEOLOCALIZAÇÃO MANUAL ───────────────────────────
+let _modoCliqueMapaAtivo = false;
+
+function abrirPanelEndereco() {
+    const panel = document.getElementById('panelEndereco');
+    if (!panel) return;
+    if (panel.style.display === 'flex') {
+        panel.style.display = 'none';
+        return;
+    }
+    panel.style.display = 'flex';
+    _atualizarInfoLocAtual();
+}
+
+async function _buscarEndereco() {
+    const input = document.getElementById('enderecoInput');
+    if (!input) return;
+    const query = input.value.trim();
+    if (!query) return;
+    const container = document.getElementById('enderecoResultados');
+    container.innerHTML = '<div style="color:#aaa; text-align:center; padding:12px;">Buscando...</div>';
+    try {
+        const resp = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=br&limit=5&addressdetails=1`,
+            { headers: { 'Accept-Language': 'pt-BR', 'User-Agent': 'InspecaoPro/8.69' } }
+        );
+        const dados = await resp.json();
+        if (!dados.length) {
+            container.innerHTML = '<div style="color:#FF5252; padding:12px;">Nenhum resultado encontrado. Tente outro endereço.</div>';
+            return;
+        }
+        container.innerHTML = '';
+        dados.forEach(function(r) {
+            const div = document.createElement('div');
+            div.style.cssText = 'padding:10px 12px; border-bottom:1px solid #333; cursor:pointer; color:white; transition:background 0.2s;';
+            div.innerHTML = `<b style="font-size:13px;">${r.display_name}</b><br><small style="color:#aaa;">Lat: ${parseFloat(r.lat).toFixed(6)}, Lng: ${parseFloat(r.lon).toFixed(6)}</small>`;
+            div.onmouseenter = function() { div.style.background = '#2a2a2a'; };
+            div.onmouseleave = function() { div.style.background = 'transparent'; };
+            div.onclick = function() { _aplicarLocalizacaoEndereco(parseFloat(r.lat), parseFloat(r.lon), r.display_name); };
+            container.appendChild(div);
+        });
+    } catch(e) {
+        container.innerHTML = '<div style="color:#FF5252; padding:12px;">Erro na busca. Verifique sua conexão.</div>';
+    }
+}
+
+function _aplicarLocalizacaoEndereco(lat, lng, descricao) {
+    const _map = window.__mapPodaManual__ || window.map || map;
+    if (userMarker) {
+        _animateMarker(lng, lat);
+    } else {
+        const wrapper = document.createElement('div'); wrapper.className = 'user-location-wrapper';
+        const dot = document.createElement('div'); dot.className = 'user-location-marker-mobile';
+        const arrow = document.createElement('div'); arrow.className = 'user-direction-arrow';
+        wrapper.appendChild(arrow); wrapper.appendChild(dot);
+        userMarker = new maplibregl.Marker({ element: wrapper, anchor: 'center' }).setLngLat([lng, lat]).addTo(_map);
+        _animLast = { lng, lat };
+    }
+    _map.flyTo({ center: [lng, lat], zoom: 16 });
+    localStorage.setItem('lastUserPos', JSON.stringify([lng, lat]));
+    if (typeof clienteMQTT !== 'undefined' && clienteMQTT && clienteMQTT.connected) {
+        clienteMQTT.publish(TEMA_MQTT, JSON.stringify({
+            acao: 'ATUALIZAR_GPS', remetente: meuID, autor: getAutorFormatado(), lng: lng, lat: lat
+        }), { qos: 0 });
+    }
+    mostrarNotificacaoRealTime(`📍 <b>Localização definida!</b><br>${descricao || 'Coordenadas aplicadas'}`, '#4CAF50', false, 3000);
+    _atualizarInfoLocAtual();
+    // Fechar painel após selecionar resultado
+    const panel = document.getElementById('panelEndereco');
+    if (panel) panel.style.display = 'none';
+}
+
+function _ativarCliqueNoMapa() {
+    const _map = window.__mapPodaManual__ || window.map || map;
+    _modoCliqueMapaAtivo = true;
+    mostrarNotificacaoRealTime('📌 <b>Modo seleção ativo</b><br>Clique no mapa para definir sua localização.', '#2196F3', false, 5000);
+    _map.getCanvas().style.cursor = 'crosshair';
+    _map.once('click', function(e) {
+        _modoCliqueMapaAtivo = false;
+        _map.getCanvas().style.cursor = '';
+        _aplicarLocalizacaoEndereco(e.lngLat.lat, e.lngLat.lng, `Lat: ${e.lngLat.lat.toFixed(6)}, Lng: ${e.lngLat.lng.toFixed(6)}`);
+    });
+}
+
+function _atualizarInfoLocAtual() {
+    const infoEl = document.getElementById('enderecoLocAtual');
+    if (!infoEl) return;
+    if (userMarker) {
+        const ll = userMarker.getLngLat();
+        infoEl.innerHTML = `Lat: <b>${ll.lat.toFixed(6)}</b> &nbsp; Lng: <b>${ll.lng.toFixed(6)}</b>`;
+        const latInput = document.getElementById('enderecoLatInput');
+        const lngInput = document.getElementById('enderecoLngInput');
+        if (latInput) latInput.value = ll.lat.toFixed(6);
+        if (lngInput) lngInput.value = ll.lng.toFixed(6);
+    } else {
+        infoEl.innerHTML = '<span style="color:#aaa;">Localização não definida</span>';
+    }
+}
+
+function _aplicarCoordsManuais() {
+    const lat = parseFloat(document.getElementById('enderecoLatInput').value);
+    const lng = parseFloat(document.getElementById('enderecoLngInput').value);
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        mostrarNotificacaoRealTime('⚠️ Coordenadas inválidas!', '#FF5252', false, 2000);
+        return;
+    }
+    _aplicarLocalizacaoEndereco(lat, lng, `Manual: ${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+}
+// ─── FIM PAINEL DE ENDEREÇO ────────────────────────────────────────────────
 
 
         function inicializarCamadasDeMedicao() {
@@ -16138,6 +16455,9 @@ map.on('click', 'l-linhas', (e) => {
         <button id="btn-cadastrar-chave-aqui" style="width:100%; padding:10px; background:#28A745; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px; margin-top:8px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
             ➕ Cadastrar nova chave neste local
         </button>
+        <button id="btn-criar-pendencia-aqui" style="width:100%; padding:10px; background:#e74c3c; color:#fff; border:none; border-radius:6px; font-weight:bold; font-size:13px; margin-top:8px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.15);">
+            ⚠️ Criar pendência neste ponto
+        </button>
     </div>`;
 
     // Remove balões antigos antes de abrir o novo (evita sobreposição)
@@ -16220,6 +16540,19 @@ map.on('click', 'l-linhas', (e) => {
         }
         document.getElementById('btn-apagar-chave').style.display = 'none';
         document.getElementById('chaveModalOverlay').style.display = 'flex';
+    });
+
+    // AÇÃO DE CRIAR PENDÊNCIA NESTE PONTO
+    document.getElementById('btn-criar-pendencia-aqui').addEventListener('click', () => {
+        window._pendenciaCoordTemp = { lat: _coordClicada.lat, lng: _coordClicada.lng };
+        document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
+        var nomeAlimInput = document.getElementById('edit-alim-nome');
+        if (nomeAlimInput && nomeAlimInput.value) {
+            var pendAlimField = document.getElementById('pendAlimentador');
+            if (pendAlimField) pendAlimField.value = nomeAlimInput.value.trim();
+        }
+        var pendModalEl = document.getElementById('pendModal');
+        if (pendModalEl) pendModalEl.style.display = 'flex';
     });
 });
 
@@ -16466,6 +16799,20 @@ _registrarListenersMapa();
                 map.flyTo({ center: [lngC, latC], zoom: 18 });
                 if (isModoComputadorCelular) { document.getElementById('inputBuscaDiv').blur(); } else { document.getElementById('inputBusca').blur(); }
                 return;
+            }
+
+            // --- BUSCA POR CÓDIGO DE PENDÊNCIA (4 dígitos) ---
+            if (/^\d{4}$/.test(valRaw.trim())) {
+                var codPend = valRaw.trim();
+                if (window._pendenciasNoMapa && window._pendenciasNoMapa[codPend]) {
+                    var pend = window._pendenciasNoMapa[codPend];
+                    map.flyTo({ center: [pend.lng, pend.lat], zoom: 18 });
+                    setTimeout(function() {
+                        if (window._destacarMarcadorPendencia) _destacarMarcadorPendencia(codPend);
+                    }, 600);
+                    if (isModoComputadorCelular) { document.getElementById('inputBuscaDiv').blur(); } else { document.getElementById('inputBusca').blur(); }
+                    return;
+                }
             }
 
             // --- BUSCA POR CHAVE (logica original) ---
@@ -25810,6 +26157,7 @@ window.croquiCarregarImagem = function(event) {
     reader.readAsDataURL(file);
     event.target.value = '';
 };
+
 function _mostrarModalPopupBloqueado() {
     var existing = document.getElementById('_popupBloqueadoModal');
     if (existing) { existing.style.display = 'flex'; return; }
@@ -25858,6 +26206,7 @@ function _mostrarModalPopupBloqueado() {
         if (e.target === overlay) overlay.style.display = 'none';
     });
 }
+
 function _abrirEditorNovaAba(imagemBase64, modoMapa) {
     var nova = window.open('', '_blank');
     var _isMobEditor = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -25913,7 +26262,8 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
     html += '_edCtx.drawImage(snap,0,0,snap.width,snap.height,0,0,nw,nh);';
     html += '_edUndoStack=[];_edRedoStack=[];_edSalvarUndo();';
     html += '});';
-    html += '</' + 'script></body></html>';
+    html += '</' + 'script>';
+    html += '</body></html>';
     var blob = new Blob([html], {type: 'text/html; charset=utf-8'});
     var blobUrl = URL.createObjectURL(blob);
     if (nova && nova !== window) { nova.close(); }
@@ -25925,7 +26275,1062 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
     _edLinkAba.click();
     document.body.removeChild(_edLinkAba);
 }
+</script>
+    <!-- MODAL DE PENDENCIA PASSO 1 -->
 
+    <div id="pendModal" class="modal-overlay" style="z-index: 9999;">
+        <div class="modal-box" style="border: 3px solid #e74c3c; max-width: 460px; text-align: left;">
+            <h2 style="color: #e74c3c; margin-top: 0; text-align: center; font-size: clamp(16px,4vw,20px);">⚠️ Nova Pendência na Rede</h2>
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Código da Pendência *</label>
+            <input id="pendCodigo" class="input-form" type="text" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" minlength="4" placeholder="0000" required style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Nome do 1º Eletricista *</label>
+            <input id="pendEletricista1" class="input-form" type="text" pattern="[A-Za-zÀ-ú\s]+" placeholder="Nome completo" required style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Nome do 2º Eletricista</label>
+            <input id="pendEletricista2" class="input-form" type="text" pattern="[A-Za-zÀ-ú\s]+" placeholder="Nome completo (opcional)" style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Número da Equipe</label>
+            <input id="pendEquipe" class="input-form" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Ex: 12" style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Cidade</label>
+            <input id="pendCidade" class="input-form" type="text" pattern="[A-Za-zÀ-ú\s]+" placeholder="Nome da cidade" style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Alimentador</label>
+            <input id="pendAlimentador" class="input-form" type="text" placeholder="Ex: ALIM-01" style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Número da Chave</label>
+            <input id="pendChave" class="input-form" type="text" placeholder="Ex: CH-042" style="margin-bottom:12px;">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Tipo de Pendência *</label>
+            <select id="pendTipo" class="input-form" required style="margin-bottom:12px;">
+                <option value="">(selecione)</option>
+                <option>Cruzeta substituir</option>
+                <option>Isolador substituir</option>
+                <option>Jamper rompido</option>
+                <option>Cabos substituir</option>
+                <option>Cruzeta transformar estrutura</option>
+                <option>Alça pré-formada substituir</option>
+                <option>Alça tangente substituir</option>
+                <option>Alça de ancoragem substituir</option>
+                <option>Cabo fora do isolador</option>
+                <option>Fazer emenda de cabo</option>
+                <option>Podar árvore</option>
+                <option>Trocar bateria de painel religador</option>
+                <option>Trocar bateria de painel regulador</option>
+                <option>Chave substituir</option>
+                <option>Refazer conexão de flytap</option>
+                <option>Refazer todo flytap</option>
+                <option>Suspeita de fraude</option>
+                <option>Medidor grupo A</option>
+                <option>Cliente categoria medição indireta</option>
+            </select>
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Para quem vai a pendência? *</label>
+            <select id="pendDestino" class="input-form" required style="margin-bottom:12px;">
+                <option value="">(selecione)</option>
+                <option>Linha viva</option>
+                <option>Equipamentos especiais</option>
+                <option>PMO</option>
+                <option>RPC</option>
+                <option>Grupo A</option>
+                <option>Outro</option>
+            </select>
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Foto da pendência</label>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button type="button" onclick="document.getElementById('pendFotoCamera').click()" style="flex:1; padding:8px 4px; background:#e74c3c; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;">📷 Tirar Foto</button>
+                <button type="button" onclick="document.getElementById('pendFotoGaleria').click()" style="flex:1; padding:8px 4px; background:#555; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer;">🖼️ Galeria</button>
+            </div>
+            <input id="pendFotoCamera" type="file" accept="image/*" capture="environment" style="display:none;">
+            <input id="pendFotoGaleria" type="file" accept="image/*" style="display:none;">
+            <input id="pendFoto" type="hidden" value="">
+            <div id="pendFotoPreview" style="display:none; margin-bottom:12px; text-align:center;">
+                <img id="pendFotoImg" src="" alt="Preview" style="max-width:100%; max-height:180px; border-radius:8px; border:2px solid #e74c3c;">
+            </div>
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Localização</label>
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                <input id="pendLocalizacao" class="input-form" type="text" readonly placeholder="Clique no botão para pegar localização" style="margin-bottom:0; flex:1; font-size:11px; background:#f5f5f5;">
+                <span id="pendLocalizacaoCheck" style="display:none; color:#27ae60; font-size:18px;">✔</span>
+            </div>
+            <button type="button" id="pendBtnGeo" style="width:100%; padding:10px; background:#2980b9; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; margin-bottom:12px; box-shadow:0 2px 6px rgba(41,128,185,0.3);">
+                📍 Pegar localização exata
+            </button>
+
+            <button type="button" id="pendBtnPrint" style="width:100%; padding:10px; background:#8e44ad; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; margin-bottom:8px; box-shadow:0 2px 6px rgba(142,68,173,0.3);">
+                📸 Tirar print do mapa no local
+            </button>
+            <div id="pendPrintMapaPreview" style="display:none; margin-bottom:12px; text-align:center;">
+                <img id="pendPrintMapaImg" src="" alt="Print do mapa" style="max-width:100%; max-height:180px; border-radius:8px; border:2px solid #8e44ad;">
+            </div>
+            <input id="pendPrintMapa" type="hidden" value="">
+
+            <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Observações adicionais</label>
+            <textarea id="pendObs" class="input-form" rows="3" placeholder="Descreva detalhes adicionais (opcional)" style="resize:vertical; margin-bottom:16px;"></textarea>
+
+            <button type="button" id="pendBtnCriar" class="btn-salvar" style="background:#27ae60; box-shadow:0 4px 10px rgba(39,174,96,0.4); margin-bottom:10px;">
+                ✅ Criar Pendência
+            </button>
+            <button type="button" id="pendBtnCancelar" class="btn-fechar-modal">
+                Cancelar
+            </button>
+        </div>
+    </div>
+
+<script>
+    (function() {
+        if (!window._pendenciasCriadas) window._pendenciasCriadas = [];
+        if (!window._pendenciasNoMapa) window._pendenciasNoMapa = {};
+
+        // ── PASSO 2: Marcador de pendência no mapa ──────────────────────────────
+        function _criarMarcadorPendencia(codigo, lat, lng, dadosPendencia) {
+            var _mapInst = window.__mapPodaManual__ || window.map;
+            if (!_mapInst) return;
+            // Remove marcador anterior com mesmo código, se existir
+            if (window._pendenciasNoMapa[codigo] && window._pendenciasNoMapa[codigo].marker) {
+                window._pendenciasNoMapa[codigo].marker.remove();
+            }
+
+            // Elemento HTML: triângulo vermelho + código
+            var wrapper = document.createElement('div');
+            wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;';
+            wrapper.title = 'Pendência ' + codigo + ' — ' + (dadosPendencia.tipo || '');
+
+            var canvas = document.createElement('canvas');
+            var tam = 28;
+            canvas.width = tam;
+            canvas.height = tam;
+            var ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.moveTo(tam / 2, 0);
+            ctx.lineTo(0, tam);
+            ctx.lineTo(tam, tam);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = '#7b0000';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            var label = document.createElement('div');
+            label.textContent = codigo;
+            label.style.cssText = [
+                'font-size:10px',
+                'font-weight:bold',
+                'color:#fff',
+                'background:rgba(183,28,28,0.85)',
+                'border-radius:3px',
+                'padding:1px 3px',
+                'margin-top:1px',
+                'white-space:nowrap',
+                'pointer-events:none',
+                'line-height:1.2'
+            ].join(';');
+
+            wrapper.appendChild(canvas);
+            wrapper.appendChild(label);
+
+            // Clique no marcador (Fase 3: detalhe da pendência) — balão rico
+            wrapper.addEventListener('click', function(ev) {
+                ev.stopPropagation();
+                var p = window._pendenciasNoMapa[codigo];
+                if (p) { _abrirBalaoDetalhesPendencia(p); }
+            });
+
+            var marker = new maplibregl.Marker({ element: wrapper, anchor: 'bottom' })
+                .setLngLat([lng, lat])
+                .addTo(_mapInst);
+
+            window._pendenciasNoMapa[codigo] = {
+                codigo: codigo,
+                lat: lat,
+                lng: lng,
+                marker: marker,
+                dados: dadosPendencia
+            };
+
+            console.log('[Pendências] Marcador criado no mapa:', codigo, lat, lng);
+        }
+
+        // ── Destaque pulsante temporário ────────────────────────────────────────
+        function _destacarMarcadorPendencia(codigo) {
+            var entry = window._pendenciasNoMapa[codigo];
+            if (!entry || !entry.marker) return;
+            var el = entry.marker.getElement();
+            if (!el) return;
+            var canvas = el.querySelector('canvas');
+            if (!canvas) return;
+            var orig = canvas.style.transform || '';
+            var pulsos = 0;
+            var iv = setInterval(function() {
+                pulsos++;
+                canvas.style.transform = (pulsos % 2 === 1) ? 'scale(1.5)' : 'scale(1)';
+                if (pulsos >= 6) { clearInterval(iv); canvas.style.transform = orig; }
+            }, 200);
+        }
+        window._destacarMarcadorPendencia = _destacarMarcadorPendencia;
+        window._criarMarcadorPendencia = _criarMarcadorPendencia;
+        // ────────────────────────────────────────────────────────────────────────
+
+        document.getElementById('pendFotoCamera').addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('pendFotoImg').src = e.target.result;
+                document.getElementById('pendFotoPreview').style.display = 'block';
+                document.getElementById('pendFoto').value = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('pendFotoGaleria').addEventListener('change', function() {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('pendFotoImg').src = e.target.result;
+                document.getElementById('pendFotoPreview').style.display = 'block';
+                document.getElementById('pendFoto').value = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('pendBtnGeo').addEventListener('click', function() {
+            var btn = this;
+            btn.disabled = true;
+            btn.textContent = '⏳ Obtendo localização...';
+            if (!navigator.geolocation) {
+                alert('Geolocalização não suportada neste dispositivo.');
+                btn.disabled = false;
+                btn.textContent = '📍 Pegar localização exata';
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    var lat = pos.coords.latitude.toFixed(7);
+                    var lng = pos.coords.longitude.toFixed(7);
+                    var link = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+                    document.getElementById('pendLocalizacao').value = link;
+                    document.getElementById('pendLocalizacaoCheck').style.display = 'inline';
+                    btn.disabled = false;
+                    btn.textContent = '📍 Pegar localização exata';
+                },
+                function(err) {
+                    alert('Erro ao obter localização: ' + err.message);
+                    btn.disabled = false;
+                    btn.textContent = '📍 Pegar localização exata';
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        });
+
+        document.getElementById('pendBtnPrint').addEventListener('click', function() {
+            try {
+                var canvas = (typeof map !== 'undefined') ? map.getCanvas() : null;
+                if (!canvas) { alert('Mapa não disponível para captura.'); return; }
+                var dataUrl = canvas.toDataURL('image/png');
+                document.getElementById('pendPrintMapa').value = dataUrl;
+                document.getElementById('pendPrintMapaImg').src = dataUrl;
+                document.getElementById('pendPrintMapaPreview').style.display = 'block';
+            } catch(e) {
+                alert('Não foi possível capturar o mapa: ' + e.message);
+            }
+        });
+
+        document.getElementById('pendBtnCancelar').addEventListener('click', function() {
+            document.getElementById('pendModal').style.display = 'none';
+        });
+
+        document.getElementById('pendBtnCriar').addEventListener('click', function() {
+            var codigo = document.getElementById('pendCodigo').value.trim();
+            var elet1 = document.getElementById('pendEletricista1').value.trim();
+            var tipo = document.getElementById('pendTipo').value;
+            var destino = document.getElementById('pendDestino').value;
+
+            if (!codigo || codigo.length !== 4 || !/^\d{4}$/.test(codigo)) {
+                alert('Código da Pendência deve ter exatamente 4 dígitos numéricos.');
+                document.getElementById('pendCodigo').focus();
+                return;
+            }
+            if (!elet1) {
+                alert('Nome do 1º Eletricista é obrigatório.');
+                document.getElementById('pendEletricista1').focus();
+                return;
+            }
+            if (!/^[A-Za-zÀ-ú\s]+$/.test(elet1)) {
+                alert('Nome deve conter apenas letras e espaços.');
+                document.getElementById('pendEletricista1').focus();
+                return;
+            }
+            if (!tipo) {
+                alert('Selecione o Tipo de Pendência.');
+                document.getElementById('pendTipo').focus();
+                return;
+            }
+            if (!destino) {
+                alert('Selecione para quem vai a pendência.');
+                document.getElementById('pendDestino').focus();
+                return;
+            }
+
+            var uid = (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser)
+                ? firebase.auth().currentUser.uid : 'anonimo';
+
+            var pendencia = {
+                id: 'PEND-' + Date.now(),
+                codigo: codigo,
+                eletricista1: elet1,
+                eletricista2: document.getElementById('pendEletricista2').value.trim(),
+                equipe: document.getElementById('pendEquipe').value.trim(),
+                cidade: document.getElementById('pendCidade').value.trim(),
+                alimentador: document.getElementById('pendAlimentador').value.trim(),
+                chave: document.getElementById('pendChave').value.trim(),
+                tipo: tipo,
+                destino: destino,
+                localizacao: document.getElementById('pendLocalizacao').value.trim(),
+                printMapa: document.getElementById('pendPrintMapa').value,
+                foto: document.getElementById('pendFotoImg').src || '',
+                obs: document.getElementById('pendObs').value.trim(),
+                coordenadas: window._pendenciaCoordTemp || null,
+                timestamp: new Date().toISOString(),
+                uid: uid
+            };
+
+            window._pendenciasCriadas.push(pendencia);
+            console.log('[Pendências] Nova pendência criada:', pendencia);
+
+            // PASSO 2: criar marcador no mapa
+            if (pendencia.coordenadas && pendencia.coordenadas.lat && pendencia.coordenadas.lng) {
+                _criarMarcadorPendencia(pendencia.codigo, pendencia.coordenadas.lat, pendencia.coordenadas.lng, pendencia);
+            }
+
+            // ── PASSO 5: Notificação no chat ─────────────────────────────────
+            var _nomeAutorPend = window._meuNomeUsuario || localStorage.getItem('usuarioIdentificacao') || 'Usuário';
+            if (typeof enviarMensagemSistemaChat === 'function') {
+                enviarMensagemSistemaChat(
+                    '⚠️ NOVA PENDÊNCIA #' + pendencia.codigo + ' criada por ' + _nomeAutorPend +
+                    ' - ' + (pendencia.tipo || '-') +
+                    ' - ' + (pendencia.alimentador || '-') +
+                    ' - ' + (pendencia.cidade || '-')
+                );
+            }
+
+            // ── PASSO 5: Relatório WhatsApp ao criar ─────────────────────────
+            var _mapsLinkPend = (pendencia.coordenadas && pendencia.coordenadas.lat)
+                ? 'https://maps.google.com/?q=' + pendencia.coordenadas.lat + ',' + pendencia.coordenadas.lng
+                : (pendencia.localizacao || '-');
+            var _dataCriacaoPend = new Date().toLocaleString('pt-BR');
+            var _relatorioCriar = [
+                '🆕 NOVA PENDÊNCIA CRIADA',
+                '',
+                '🔢 Código: #' + pendencia.codigo,
+                '📍 Localização: ' + _mapsLinkPend,
+                '⚡ Alimentador: ' + (pendencia.alimentador || '-'),
+                '🏙️ Cidade: ' + (pendencia.cidade || '-'),
+                '🔧 Tipo: ' + (pendencia.tipo || '-'),
+                '📌 Destino: ' + (pendencia.destino || '-'),
+                '👷 Equipe: ' + (pendencia.equipe || '-'),
+                '👤 1º Eletricista: ' + (pendencia.eletricista1 || '-'),
+                '👤 2º Eletricista: ' + (pendencia.eletricista2 || '-'),
+                '📝 Observações: ' + (pendencia.obs || '-'),
+                '📅 Data: ' + _dataCriacaoPend
+            ].join('\n');
+
+            // ── PASSO 6: Publicar via MQTT (retain=true para novos usuários) ─
+            var _TEMA_PEND = (typeof TEMA_MQTT !== 'undefined' ? TEMA_MQTT : 'inspecao_pro_podas_bebedouro_oficial');
+            var _topicoPend = _TEMA_PEND + '/pendencia/pend_' + pendencia.codigo;
+            var _payloadMqttPend = {
+                codigo: pendencia.codigo,
+                eletricista1: pendencia.eletricista1,
+                eletricista2: pendencia.eletricista2,
+                equipe: pendencia.equipe,
+                cidade: pendencia.cidade,
+                alimentador: pendencia.alimentador,
+                chave: pendencia.chave,
+                tipo: pendencia.tipo,
+                destino: pendencia.destino,
+                localizacao: pendencia.localizacao,
+                obs: pendencia.obs,
+                lat: pendencia.coordenadas ? pendencia.coordenadas.lat : null,
+                lng: pendencia.coordenadas ? pendencia.coordenadas.lng : null,
+                timestamp: pendencia.timestamp,
+                uid: pendencia.uid,
+                status: 'aberta'
+            };
+            if (typeof mqttPublish === 'function') {
+                mqttPublish(_topicoPend, _payloadMqttPend, { retain: true, qos: 1 });
+                console.log('[Pendências-MQTT] Publicado:', _topicoPend);
+            }
+
+            // ── PASSO 6: Salvar no Firestore ─────────────────────────────────
+            (function _salvarPendenciaFirestore(p) {
+                try {
+                    var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+                    if (!db) { console.warn('[Pendências-FS] Firestore não disponível'); return; }
+                    // Foto como base64/dataURL salva diretamente no documento
+                    var fotoData = '';
+                    var fotoEl = document.getElementById('pendFotoImg');
+                    if (fotoEl && fotoEl.src && fotoEl.src.startsWith('data:')) {
+                        fotoData = fotoEl.src; // base64 dataURL
+                    }
+                    var docData = {
+                        codigo: p.codigo,
+                        eletricista1: p.eletricista1,
+                        eletricista2: p.eletricista2 || '',
+                        equipe: p.equipe || '',
+                        cidade: p.cidade || '',
+                        alimentador: p.alimentador || '',
+                        chave: p.chave || '',
+                        tipo: p.tipo || '',
+                        destino: p.destino || '',
+                        localizacao: p.localizacao || '',
+                        obs: p.obs || '',
+                        foto: fotoData,
+                        lat: p.coordenadas ? p.coordenadas.lat : null,
+                        lng: p.coordenadas ? p.coordenadas.lng : null,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        timestampCliente: p.timestamp,
+                        uid: p.uid,
+                        status: 'aberta'
+                    };
+                    db.collection('pendencias').doc(p.codigo).set(docData)
+                        .then(function() { console.log('[Pendências-FS] Salvo no Firestore:', p.codigo); })
+                        .catch(function(e) { console.warn('[Pendências-FS] Erro ao salvar:', e.message); });
+                } catch(e) { console.warn('[Pendências-FS] Exceção ao salvar:', e.message); }
+            })(pendencia);
+
+            document.getElementById('pendModal').style.display = 'none';
+            _pendLimparModal();
+            _pendToast('✅ Pendência ' + codigo + ' criada com sucesso!');
+            setTimeout(function() { _mostrarRelatorioFinal(_relatorioCriar, '🆕 Nova Pendência Criada', pendencia.foto, pendencia.printMapa); }, 400);
+        });
+
+        function _pendLimparModal() {
+            ['pendCodigo','pendEletricista1','pendEletricista2','pendEquipe','pendCidade',
+             'pendAlimentador','pendChave','pendObs','pendLocalizacao','pendPrintMapa'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            document.getElementById('pendTipo').value = '';
+            document.getElementById('pendDestino').value = '';
+            document.getElementById('pendFoto').value = '';
+            document.getElementById('pendFotoPreview').style.display = 'none';
+            document.getElementById('pendFotoImg').src = '';
+            document.getElementById('pendPrintMapaPreview').style.display = 'none';
+            document.getElementById('pendPrintMapaImg').src = '';
+            document.getElementById('pendLocalizacaoCheck').style.display = 'none';
+        }
+
+        // ── BALÃO DE DETALHES DA PENDÊNCIA (Passo 3 e 4) ───────────────────────
+        function _abrirBalaoDetalhesPendencia(p) {
+            // Remove overlay anterior se existir
+            var anterior = document.getElementById('_pendBalaoOverlay');
+            if (anterior) anterior.remove();
+
+            var d = p.dados || {};
+            var lat = p.lat;
+            var lng = p.lng;
+            var codigo = p.codigo;
+            var mapsLink = 'https://www.google.com/maps?q=' + lat + ',' + lng;
+
+            // ── Overlay escuro de fundo ──────────────────────────────────────
+            var overlay = document.createElement('div');
+            overlay.id = '_pendBalaoOverlay';
+            overlay.style.cssText = [
+                'position:fixed;inset:0;z-index:19000',
+                'background:rgba(0,0,0,0.55)',
+                'backdrop-filter:blur(3px)',
+                '-webkit-backdrop-filter:blur(3px)',
+                'display:flex;align-items:center;justify-content:center',
+                'padding:12px',
+                'animation:_pendFadeIn 0.2s ease'
+            ].join(';');
+
+            // ── Caixa branca principal ───────────────────────────────────────
+            var box = document.createElement('div');
+            box.id = '_pendBalaoBox';
+            box.style.cssText = [
+                'background:#fff',
+                'border-radius:20px',
+                'box-shadow:0 20px 60px rgba(0,0,0,0.45)',
+                'width:100%;max-width:400px',
+                'max-height:calc(100svh - 24px)',
+                'overflow-y:auto',
+                'font-family:Open Sans,Arial,sans-serif',
+                'position:relative'
+            ].join(';');
+
+            // ── Cabeçalho vermelho ───────────────────────────────────────────
+            var header = document.createElement('div');
+            header.style.cssText = [
+                'background:linear-gradient(135deg,#c0392b,#e74c3c)',
+                'color:#fff',
+                'border-radius:20px 20px 0 0',
+                'padding:16px 18px 14px',
+                'display:flex;align-items:center;justify-content:space-between'
+            ].join(';');
+            header.innerHTML = '<span style="font-size:17px;font-weight:700;">⚠️ Pendência #' + codigo + '</span>' +
+                '<button id="_pendBalaoFechar" style="background:rgba(255,255,255,0.2);border:none;color:#fff;border-radius:50%;width:30px;height:30px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>';
+
+            // ── Corpo com informações ────────────────────────────────────────
+            var corpo = document.createElement('div');
+            corpo.style.cssText = 'padding:16px 18px 8px;';
+
+            function _linha(icone, label, valor) {
+                if (!valor || valor === '-' || valor === '') return '';
+                return '<div style="display:flex;gap:8px;margin-bottom:9px;align-items:flex-start;">' +
+                    '<span style="font-size:15px;min-width:22px;">' + icone + '</span>' +
+                    '<div><span style="font-size:11px;color:#888;display:block;line-height:1.2;">' + label + '</span>' +
+                    '<span style="font-size:13px;color:#1a1a1a;font-weight:600;">' + valor + '</span></div></div>';
+            }
+
+            corpo.innerHTML =
+                _linha('🔧', 'Tipo de pendência', d.tipo || '-') +
+                _linha('📤', 'Para quem vai', d.destino || '-') +
+                _linha('⚡', 'Alimentador', d.alimentador || '-') +
+                _linha('🏙️', 'Cidade', d.cidade || '-') +
+                _linha('👷', 'Equipe', d.equipe || '-') +
+                _linha('👤', 'Eletricistas', [d.eletricista1, d.eletricista2].filter(Boolean).join(', ') || '-') +
+                _linha('📅', 'Data de criação', d.dataCriacao || d.data || '-') +
+                (d.obs ? _linha('📝', 'Observações', d.obs) : '');
+
+            // ── Botões ROTA e S.VIEW ─────────────────────────────────────────
+            var botoesNav = document.createElement('div');
+            botoesNav.style.cssText = 'display:flex;gap:8px;padding:0 18px 12px;';
+
+            var btnRota = document.createElement('button');
+            btnRota.innerHTML = '🗺️ ROTA';
+            btnRota.style.cssText = [
+                'flex:1;padding:11px 6px;border:none;border-radius:12px',
+                'background:#2196F3;color:#fff;font-weight:700;font-size:13px',
+                'cursor:pointer;box-shadow:0 3px 10px rgba(33,150,243,0.4)',
+                'transition:transform 0.15s,box-shadow 0.15s'
+            ].join(';');
+            btnRota.onclick = function() {
+                window.open('https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng, '_blank');
+            };
+
+            var btnSview = document.createElement('button');
+            btnSview.innerHTML = '🏠 S.VIEW';
+            btnSview.style.cssText = [
+                'flex:1;padding:11px 6px;border:none;border-radius:12px',
+                'background:#FFC107;color:#1a1a1a;font-weight:700;font-size:13px',
+                'cursor:pointer;box-shadow:0 3px 10px rgba(255,193,7,0.4)',
+                'transition:transform 0.15s,box-shadow 0.15s'
+            ].join(';');
+            btnSview.onclick = function() {
+                window.open('https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + lat + ',' + lng, '_blank');
+            };
+
+            botoesNav.appendChild(btnRota);
+            botoesNav.appendChild(btnSview);
+
+            // ── Botão VER FOTOS ──────────────────────────────────────────────
+            var botoesVerFotos = document.createElement('div');
+            botoesVerFotos.style.cssText = 'padding:0 18px 10px;';
+
+            var btnVerFotos = document.createElement('button');
+            btnVerFotos.innerHTML = '📷 Ver fotos';
+            btnVerFotos.style.cssText = [
+                'width:100%;padding:10px 6px;border:none;border-radius:12px',
+                'background:#2196F3;color:#fff;font-weight:700;font-size:13px',
+                'cursor:pointer;box-shadow:0 3px 10px rgba(33,150,243,0.35)',
+                'transition:transform 0.15s,box-shadow 0.15s'
+            ].join(';');
+            btnVerFotos.onclick = function() {
+                var fotoSrc = (d.foto && d.foto.startsWith('data:')) ? d.foto : '';
+                var mapaSrc = (d.printMapa && d.printMapa.startsWith('data:')) ? d.printMapa : '';
+
+                // Remove mini modal anterior se existir
+                var antFotos = document.getElementById('_pendFotosOverlay');
+                if (antFotos) antFotos.remove();
+
+                var ovFotos = document.createElement('div');
+                ovFotos.id = '_pendFotosOverlay';
+                ovFotos.style.cssText = [
+                    'position:fixed;inset:0;z-index:21000',
+                    'background:rgba(0,0,0,0.75)',
+                    'backdrop-filter:blur(5px)',
+                    '-webkit-backdrop-filter:blur(5px)',
+                    'display:flex;align-items:center;justify-content:center',
+                    'padding:12px',
+                    'animation:_pendFadeIn 0.2s ease'
+                ].join(';');
+
+                var boxFotos = document.createElement('div');
+                boxFotos.style.cssText = [
+                    'background:#fff;border-radius:20px',
+                    'box-shadow:0 20px 60px rgba(0,0,0,0.5)',
+                    'width:100%;max-width:400px',
+                    'max-height:calc(100svh - 24px)',
+                    'overflow-y:auto;padding:18px',
+                    'font-family:Open Sans,Arial,sans-serif'
+                ].join(';');
+
+                function _fotoCard(src, legenda, dlNome) {
+                    if (!src) return '';
+                    var card = document.createElement('div');
+                    card.style.cssText = 'margin-bottom:16px;border:1.5px solid #e0e0e0;border-radius:12px;overflow:hidden;';
+                    card.innerHTML = [
+                        '<div style="background:#f5f5f5;padding:8px 12px;font-size:12px;color:#555;font-weight:600;">' + legenda + '</div>',
+                        '<div style="padding:10px;text-align:center;">',
+                        '<img src="' + src + '" style="max-width:100%;border-radius:8px;max-height:260px;object-fit:contain;display:block;margin:0 auto;cursor:zoom-in;" onclick="window.open(this.src,\'_blank\')">',
+                        '</div>',
+                        '<div style="padding:0 10px 10px;text-align:right;">',
+                        '<button data-src="' + src + '" data-dl="' + dlNome + '" style="padding:7px 14px;border:none;border-radius:8px;background:#2196F3;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar</button>',
+                        '</div>'
+                    ].join('');
+                    card.querySelector('button').addEventListener('click', function() {
+                        var a = document.createElement('a');
+                        a.href = this.getAttribute('data-src');
+                        a.download = this.getAttribute('data-dl');
+                        a.click();
+                    });
+                    return card;
+                }
+
+                var headerFotos = document.createElement('div');
+                headerFotos.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;';
+                headerFotos.innerHTML = '<span style="font-size:15px;font-weight:700;color:#1a1a1a;">📷 Fotos da Pendência #' + codigo + '</span>' +
+                    '<button id="_pendFotosFechar" style="background:#f0f0f0;border:none;border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>';
+
+                boxFotos.appendChild(headerFotos);
+
+                if (!fotoSrc && !mapaSrc) {
+                    var semFoto = document.createElement('div');
+                    semFoto.style.cssText = 'text-align:center;padding:30px 0;color:#888;font-size:14px;';
+                    semFoto.textContent = 'Nenhuma foto registrada';
+                    boxFotos.appendChild(semFoto);
+                } else {
+                    var c1 = _fotoCard(fotoSrc, '📷 Foto da pendência', 'foto_pendencia.jpg');
+                    var c2 = _fotoCard(mapaSrc, '🗺️ Print do mapa', 'print_mapa.jpg');
+                    if (c1) boxFotos.appendChild(c1);
+                    if (c2) boxFotos.appendChild(c2);
+                }
+
+                var btnFecharFotos = document.createElement('button');
+                btnFecharFotos.textContent = 'Fechar';
+                btnFecharFotos.style.cssText = 'width:100%;padding:11px;border:2px solid #ccc;border-radius:12px;background:#fff;color:#555;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px;';
+                boxFotos.appendChild(btnFecharFotos);
+
+                ovFotos.appendChild(boxFotos);
+                document.body.appendChild(ovFotos);
+
+                function _fecharFotos() { var ov = document.getElementById('_pendFotosOverlay'); if (ov) ov.remove(); }
+                document.getElementById('_pendFotosFechar').addEventListener('click', _fecharFotos);
+                btnFecharFotos.addEventListener('click', _fecharFotos);
+                ovFotos.addEventListener('click', function(e) { if (e.target === ovFotos) _fecharFotos(); });
+            };
+            botoesVerFotos.appendChild(btnVerFotos);
+
+            // ── Divisor ──────────────────────────────────────────────────────
+            var divisor = document.createElement('div');
+            divisor.style.cssText = 'height:1px;background:#f0f0f0;margin:0 18px 12px;';
+
+            // ── Botões de ação ───────────────────────────────────────────────
+            var botoesAcao = document.createElement('div');
+            botoesAcao.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:0 18px 18px;';
+
+            var btnApagar = document.createElement('button');
+            btnApagar.innerHTML = '🗑️ Apagar pendência sem resolver';
+            btnApagar.style.cssText = [
+                'width:100%;padding:12px;border:2px solid #e74c3c;border-radius:12px',
+                'background:#fff;color:#e74c3c;font-weight:700;font-size:13px',
+                'cursor:pointer;transition:background 0.15s,color 0.15s'
+            ].join(';');
+            btnApagar.onmouseenter = function() { this.style.background='#e74c3c'; this.style.color='#fff'; };
+            btnApagar.onmouseleave = function() { this.style.background='#fff'; this.style.color='#e74c3c'; };
+
+            var btnResolver = document.createElement('button');
+            btnResolver.innerHTML = '✅ Tirar pendência (resolvida)';
+            btnResolver.style.cssText = [
+                'width:100%;padding:12px;border:none;border-radius:12px',
+                'background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff',
+                'font-weight:700;font-size:13px;cursor:pointer',
+                'box-shadow:0 3px 10px rgba(39,174,96,0.4)',
+                'transition:transform 0.15s,box-shadow 0.15s'
+            ].join(';');
+
+            botoesAcao.appendChild(btnApagar);
+            botoesAcao.appendChild(btnResolver);
+
+            // ── Área do mini formulário de resolução (oculta inicialmente) ──
+            var areaResolucao = document.createElement('div');
+            areaResolucao.id = '_pendAreaResolucao';
+            areaResolucao.style.cssText = 'display:none;padding:0 18px 18px;';
+            areaResolucao.innerHTML = [
+                '<div style="background:#f0faf4;border:1.5px solid #27ae60;border-radius:14px;padding:16px;">',
+                '<div style="font-size:14px;font-weight:700;color:#27ae60;margin-bottom:14px;">✅ Confirmar resolução</div>',
+                '<label style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Nome dos envolvidos *</label>',
+                '<input id="_pendResNomes" type="text" placeholder="Ex: João Silva, Pedro Souza" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #ccc;border-radius:9px;font-size:13px;margin-bottom:10px;">',
+                '<label style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Equipe (número) *</label>',
+                '<input id="_pendResEquipe" type="number" placeholder="Ex: 3" style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #ccc;border-radius:9px;font-size:13px;margin-bottom:10px;">',
+                '<label style="font-size:12px;color:#555;display:block;margin-bottom:4px;">Foto da pendência resolvida</label>',
+                '<div style="display:flex;gap:8px;margin-bottom:6px;">',
+                '<button type="button" id="_pendResBtnCamera" style="flex:1;padding:8px 4px;background:#e74c3c;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">📷 Tirar Foto</button>',
+                '<button type="button" id="_pendResBtnGaleria" style="flex:1;padding:8px 4px;background:#555;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">🖼️ Galeria</button>',
+                '</div>',
+                '<input id="_pendResFotoCamera" type="file" accept="image/*" capture="environment" style="display:none;">',
+                '<input id="_pendResFoto" type="file" accept="image/*" style="display:none;">',
+                '<div id="_pendResFotoPreview" style="display:none;margin-bottom:10px;"><img id="_pendResFotoImg" style="max-width:100%;border-radius:8px;max-height:140px;object-fit:cover;"></div>',
+                '<label style="font-size:12px;color:#555;display:block;margin-bottom:4px;">O que foi feito *</label>',
+                '<textarea id="_pendResObs" rows="3" placeholder="Descreva o que foi feito..." style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #ccc;border-radius:9px;font-size:13px;resize:vertical;margin-bottom:12px;"></textarea>',
+                '<div style="display:flex;gap:8px;">',
+                '<button id="_pendResBtnConfirmar" style="flex:1;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,#27ae60,#2ecc71);color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Confirmar resolução</button>',
+                '<button id="_pendResBtnCancelar" style="flex:1;padding:11px;border:2px solid #ccc;border-radius:10px;background:#fff;color:#555;font-weight:700;font-size:13px;cursor:pointer;">Cancelar</button>',
+                '</div>',
+                '</div>'
+            ].join('');
+
+            // ── Área do relatório (oculta inicialmente) ──────────────────────
+            var areaRelatorio = document.createElement('div');
+            areaRelatorio.id = '_pendAreaRelatorio';
+            areaRelatorio.style.cssText = 'display:none;padding:0 18px 18px;';
+
+            // ── Montar estrutura ─────────────────────────────────────────────
+            box.appendChild(header);
+            box.appendChild(corpo);
+            box.appendChild(botoesNav);
+            box.appendChild(botoesVerFotos);
+            box.appendChild(divisor);
+            box.appendChild(botoesAcao);
+            box.appendChild(areaResolucao);
+            box.appendChild(areaRelatorio);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            // ── Animação CSS ─────────────────────────────────────────────────
+            if (!document.getElementById('_pendBalaoStyle')) {
+                var st = document.createElement('style');
+                st.id = '_pendBalaoStyle';
+                st.textContent = '@keyframes _pendFadeIn{from{opacity:0}to{opacity:1}}';
+                document.head.appendChild(st);
+            }
+
+            // ── Fechar ao clicar no overlay ou no X ──────────────────────────
+            function _fecharBalao() {
+                var ov = document.getElementById('_pendBalaoOverlay');
+                if (ov) ov.remove();
+            }
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) _fecharBalao(); });
+            document.getElementById('_pendBalaoFechar').addEventListener('click', _fecharBalao);
+
+            // ── Preview da foto de resolução ─────────────────────────────────
+            function _pendResAplicarFoto(file) {
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('_pendResFotoImg').src = e.target.result;
+                    document.getElementById('_pendResFotoPreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+            document.getElementById('_pendResBtnCamera').addEventListener('click', function() {
+                document.getElementById('_pendResFotoCamera').click();
+            });
+            document.getElementById('_pendResBtnGaleria').addEventListener('click', function() {
+                document.getElementById('_pendResFoto').click();
+            });
+            document.getElementById('_pendResFotoCamera').addEventListener('change', function() {
+                _pendResAplicarFoto(this.files[0]);
+            });
+            document.getElementById('_pendResFoto').addEventListener('change', function() {
+                _pendResAplicarFoto(this.files[0]);
+            });
+
+            // ── Botão APAGAR SEM RESOLVER ────────────────────────────────────
+            btnApagar.addEventListener('click', function() {
+                if (!confirm('Tem certeza? Isso vai registrar que a pendência foi apagada SEM manutenção.')) return;
+
+                var nomeUsuario = localStorage.getItem('usuarioIdentificacao') || window._meuNomeUsuario || 'Usuário';
+                var dataAtual = new Date().toLocaleString('pt-BR');
+
+                // Remove marcador e dados
+                if (window._pendenciasNoMapa[codigo] && window._pendenciasNoMapa[codigo].marker) {
+                    window._pendenciasNoMapa[codigo].marker.remove();
+                }
+                delete window._pendenciasNoMapa[codigo];
+                if (window._pendenciasCriadas) {
+                    window._pendenciasCriadas = window._pendenciasCriadas.filter(function(x) { return x.codigo !== codigo; });
+                }
+
+                // Mensagem no chat
+                if (typeof enviarMensagemSistemaChat === 'function') {
+                    enviarMensagemSistemaChat('⚠️ PENDÊNCIA #' + codigo + ' APAGADA SEM MANUTENÇÃO por ' + nomeUsuario);
+                }
+
+                // ── MQTT: limpar retained message da pendência ────────────────
+                var _TEMA_PEND_AP = (typeof TEMA_MQTT !== 'undefined' ? TEMA_MQTT : 'inspecao_pro_podas_bebedouro_oficial');
+                if (typeof mqttPublish === 'function') {
+                    mqttPublish(_TEMA_PEND_AP + '/pendencia/pend_' + codigo,
+                        { codigo: codigo, status: 'apagada_sem_resolver', apagadaPor: nomeUsuario, dataApagada: dataAtual },
+                        { retain: true, qos: 1 });
+                }
+
+                // ── Firestore: atualizar status ───────────────────────────────
+                (function() {
+                    try {
+                        var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+                        if (db) {
+                            db.collection('pendencias').doc(codigo).update({
+                                status: 'apagada_sem_resolver',
+                                apagadaPor: nomeUsuario,
+                                dataApagada: firebase.firestore.FieldValue.serverTimestamp()
+                            }).catch(function(e) { console.warn('[Pendências-FS] Erro ao apagar:', e.message); });
+                        }
+                    } catch(e) { console.warn('[Pendências-FS] Exceção ao apagar:', e.message); }
+                })();
+
+                // Relatório
+                var relatorio = [
+                    '⚠️ PENDÊNCIA APAGADA SEM MANUTENÇÃO',
+                    '',
+                    '🔢 Código: #' + codigo,
+                    '📍 Localização: ' + mapsLink,
+                    '⚡ Alimentador: ' + (d.alimentador || '-'),
+                    '🏙️ Cidade: ' + (d.cidade || '-'),
+                    '🔧 Tipo: ' + (d.tipo || '-'),
+                    '❌ Apagada por: ' + nomeUsuario,
+                    '📅 Data: ' + dataAtual,
+                    '⚠️ ATENÇÃO: Pendência removida sem manutenção necessária'
+                ].join('\n');
+
+                _fecharBalao();
+                _pendToast('🗑️ Pendência #' + codigo + ' apagada.');
+                _mostrarRelatorioFinal(relatorio, '⚠️ Pendência Apagada');
+            });
+
+            // ── Botão RESOLVER — abre mini formulário ────────────────────────
+            btnResolver.addEventListener('click', function() {
+                botoesAcao.style.display = 'none';
+                areaResolucao.style.display = 'block';
+                box.scrollTop = box.scrollHeight;
+            });
+
+            // ── Cancelar resolução ───────────────────────────────────────────
+            document.getElementById('_pendResBtnCancelar').addEventListener('click', function() {
+                areaResolucao.style.display = 'none';
+                botoesAcao.style.display = 'flex';
+                botoesAcao.style.flexDirection = 'column';
+            });
+
+            // ── Confirmar resolução ──────────────────────────────────────────
+            document.getElementById('_pendResBtnConfirmar').addEventListener('click', function() {
+                var nomes = (document.getElementById('_pendResNomes').value || '').trim();
+                var equipe = (document.getElementById('_pendResEquipe').value || '').trim();
+                var obsRes = (document.getElementById('_pendResObs').value || '').trim();
+
+                if (!nomes) { alert('Informe o nome dos envolvidos.'); return; }
+                if (!obsRes) { alert('Informe o que foi feito.'); return; }
+
+                var dataAtual = new Date().toLocaleString('pt-BR');
+
+                // Remove marcador e dados
+                if (window._pendenciasNoMapa[codigo] && window._pendenciasNoMapa[codigo].marker) {
+                    window._pendenciasNoMapa[codigo].marker.remove();
+                }
+                delete window._pendenciasNoMapa[codigo];
+                if (window._pendenciasCriadas) {
+                    window._pendenciasCriadas = window._pendenciasCriadas.filter(function(x) { return x.codigo !== codigo; });
+                }
+
+                // Mensagem no chat
+                if (typeof enviarMensagemSistemaChat === 'function') {
+                    enviarMensagemSistemaChat('✅ PENDÊNCIA #' + codigo + ' RESOLVIDA por ' + nomes + (equipe ? ' - Equipe ' + equipe : '') + ' - ' + obsRes);
+                }
+
+                // ── MQTT: publicar como resolvida (retain=true) ───────────────
+                var _TEMA_PEND_RES = (typeof TEMA_MQTT !== 'undefined' ? TEMA_MQTT : 'inspecao_pro_podas_bebedouro_oficial');
+                if (typeof mqttPublish === 'function') {
+                    mqttPublish(_TEMA_PEND_RES + '/pendencia/pend_' + codigo,
+                        { codigo: codigo, status: 'resolvida', resolvidoPor: nomes, equipeRes: equipe, obsResolucao: obsRes, dataResolucao: dataAtual },
+                        { retain: true, qos: 1 });
+                }
+
+                // ── Firestore: atualizar status para resolvida ────────────────
+                (function() {
+                    try {
+                        var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
+                        if (db) {
+                            // Capturar foto de resolução se houver
+                            var fotoResData = '';
+                            var fotoResEl = document.getElementById('_pendResFotoImg');
+                            if (fotoResEl && fotoResEl.src && fotoResEl.src.startsWith('data:')) {
+                                fotoResData = fotoResEl.src;
+                            }
+                            db.collection('pendencias').doc(codigo).update({
+                                status: 'resolvida',
+                                resolvidoPor: nomes,
+                                equipeResolucao: equipe || '',
+                                obsResolucao: obsRes,
+                                fotoResolucao: fotoResData,
+                                dataResolucao: firebase.firestore.FieldValue.serverTimestamp()
+                            }).catch(function(e) { console.warn('[Pendências-FS] Erro ao resolver:', e.message); });
+                        }
+                    } catch(e) { console.warn('[Pendências-FS] Exceção ao resolver:', e.message); }
+                })();
+
+                // Relatório
+                var relatorio = [
+                    '📋 RELATÓRIO DE PENDÊNCIA RESOLVIDA',
+                    '',
+                    '🔢 Código: #' + codigo,
+                    '📍 Localização: ' + mapsLink,
+                    '⚡ Alimentador: ' + (d.alimentador || '-'),
+                    '🏙️ Cidade: ' + (d.cidade || '-'),
+                    '🔧 Tipo: ' + (d.tipo || '-'),
+                    '👷 Equipe: ' + (equipe || d.equipe || '-'),
+                    '👤 Resolvido por: ' + nomes,
+                    '📝 O que foi feito: ' + obsRes,
+                    '📅 Data criação: ' + (d.dataCriacao || d.data || '-'),
+                    '📅 Data resolução: ' + dataAtual
+                ].join('\n');
+
+                _fecharBalao();
+                _pendToast('✅ Pendência #' + codigo + ' resolvida!');
+                _mostrarRelatorioFinal(relatorio, '✅ Pendência Resolvida');
+            });
+        }
+
+        // ── MODAL DE RELATÓRIO FINAL (WhatsApp + Copiar) ─────────────────────
+        function _mostrarRelatorioFinal(texto, titulo, fotoPendencia, printMapa) {
+            var anterior = document.getElementById('_pendRelatorioOverlay');
+            if (anterior) anterior.remove();
+
+            var overlay = document.createElement('div');
+            overlay.id = '_pendRelatorioOverlay';
+            overlay.style.cssText = [
+                'position:fixed;inset:0;z-index:20000',
+                'background:rgba(0,0,0,0.65)',
+                'backdrop-filter:blur(4px)',
+                '-webkit-backdrop-filter:blur(4px)',
+                'display:flex;align-items:center;justify-content:center',
+                'padding:12px',
+                'animation:_pendFadeIn 0.2s ease'
+            ].join(';');
+
+            var box = document.createElement('div');
+            box.style.cssText = [
+                'background:#fff;border-radius:20px',
+                'box-shadow:0 20px 60px rgba(0,0,0,0.45)',
+                'width:100%;max-width:420px',
+                'max-height:calc(100svh - 24px)',
+                'overflow-y:auto;padding:20px',
+                'font-family:Open Sans,Arial,sans-serif'
+            ].join(';');
+
+            // ── Montar HTML das fotos ────────────────────────────────────────
+            function _buildFotoHtml(src, legenda, btnId) {
+                if (!src || !src.startsWith('data:')) return '';
+                return [
+                    '<div style="margin-top:14px;border:1.5px solid #e0e0e0;border-radius:12px;overflow:hidden;">',
+                    '<div style="background:#f5f5f5;padding:8px 12px;font-size:12px;color:#555;font-weight:600;">' + legenda + '</div>',
+                    '<div style="padding:10px;text-align:center;">',
+                    '<img src="' + src + '" style="max-width:100%;border-radius:8px;max-height:220px;object-fit:contain;display:block;margin:0 auto;">',
+                    '</div>',
+                    '<div style="padding:0 10px 10px;text-align:right;">',
+                    '<button id="' + btnId + '" style="padding:7px 14px;border:none;border-radius:8px;background:#2196F3;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">💾 Salvar foto</button>',
+                    '</div>',
+                    '</div>'
+                ].join('');
+            }
+
+            var fotosHtml = _buildFotoHtml(fotoPendencia, '📷 Foto da pendência', '_pendRelSalvarFoto') +
+                            _buildFotoHtml(printMapa, '🗺️ Print do mapa', '_pendRelSalvarMapa');
+
+            box.innerHTML = [
+                '<div style="font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:14px;">' + titulo + '</div>',
+                '<textarea id="_pendRelTexto" readonly style="width:100%;box-sizing:border-box;height:220px;padding:12px;border:1.5px solid #ddd;border-radius:10px;font-size:12px;font-family:monospace;resize:vertical;background:#f9f9f9;color:#222;">' + texto + '</textarea>',
+                fotosHtml,
+                '<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">',
+                '<button id="_pendRelBtnCompartilhar" style="width:100%;padding:14px 20px;border:none;border-radius:12px;background:#25D366;color:#fff;font-weight:700;font-size:16px;cursor:pointer;margin-bottom:10px;">📤 Compartilhar no WhatsApp</button>',
+                '<button id="_pendRelBtnCopiar" style="width:100%;padding:12px;border:2px solid #2196F3;border-radius:12px;background:#fff;color:#2196F3;font-weight:700;font-size:14px;cursor:pointer;">📋 Copiar relatório</button>',
+                '<button id="_pendRelBtnFechar" style="width:100%;padding:12px;border:2px solid #ccc;border-radius:12px;background:#fff;color:#555;font-weight:700;font-size:14px;cursor:pointer;">Fechar</button>',
+                '</div>'
+            ].join('');
+
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            document.getElementById('_pendRelBtnFechar').addEventListener('click', function() { overlay.remove(); });
+            overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+
+            document.getElementById('_pendRelBtnCompartilhar').addEventListener('click', async function() {
+                var textoRelatorio = document.getElementById('_pendRelTexto').value;
+                var files = [];
+                try {
+                    if (fotoPendencia && fotoPendencia.startsWith('data:')) {
+                        var blob1 = await fetch(fotoPendencia).then(function(r) { return r.blob(); });
+                        files.push(new File([blob1], 'foto-pendencia.jpg', { type: 'image/jpeg' }));
+                    }
+                    if (printMapa && printMapa.startsWith('data:')) {
+                        var blob2 = await fetch(printMapa).then(function(r) { return r.blob(); });
+                        files.push(new File([blob2], 'print-mapa.png', { type: 'image/png' }));
+                    }
+                    var shareData = { text: textoRelatorio };
+                    if (files.length > 0 && navigator.canShare && navigator.canShare({ files: files })) {
+                        shareData.files = files;
+                    }
+                    await navigator.share(shareData);
+                } catch (err) {
+                    if (err && err.name !== 'AbortError') {
+                        window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(textoRelatorio));
+                    }
+                }
+            });
+
+            document.getElementById('_pendRelBtnCopiar').addEventListener('click', function() {
+                var ta = document.getElementById('_pendRelTexto');
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(texto).then(function() {
+                        _pendToast('📋 Relatório copiado!');
+                    }).catch(function() {
+                        ta.select(); document.execCommand('copy');
+                        _pendToast('📋 Relatório copiado!');
+                    });
+                } else {
+                    ta.select(); document.execCommand('copy');
+                    _pendToast('📋 Relatório copiado!');
+                }
+            });
+
+            // ── Botões de salvar foto ────────────────────────────────────────
+            function _bindSalvar(btnId, src, nomeArq) {
+                var btn = document.getElementById(btnId);
+                if (!btn || !src) return;
+                btn.addEventListener('click', function() {
+                    var a = document.createElement('a');
+                    a.href = src;
+                    a.download = nomeArq;
+                    a.click();
+                });
+            }
+            _bindSalvar('_pendRelSalvarFoto', fotoPendencia, 'foto_pendencia.jpg');
+            _bindSalvar('_pendRelSalvarMapa', printMapa, 'print_mapa.jpg');
+        }
+        // ── FIM PASSO 3 e 4 ─────────────────────────────────────────────────
+
+        function _pendToast(msg) {
+            var toast = document.getElementById('liveToast');
+            if (toast) {
+                toast.textContent = msg;
+                toast.style.display = 'block';
+                toast.style.opacity = '1';
+                setTimeout(function() {
+                    toast.style.opacity = '0';
+                    setTimeout(function() { toast.style.display = 'none'; }, 500);
+                }, 3500);
+            } else {
+                alert(msg);
+            }
+        }
+    })();
+    </script>
+
+<script>
 // ── AVISO DE ATUALIZAÇÃO — MODAL DE BOAS-VINDAS ──────────────────────────────
 (function() {
   var __avisoAtualizacaoMostrado = false;
