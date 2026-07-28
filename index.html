@@ -3040,6 +3040,7 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         <button class="btn-circular btn-arquivos" id="btnAbreArq" onclick="togglePanelArquivos()">📄<span>ARQUIVOS</span></button>
         <button class="btn-circular btn-arvore" id="btnArvore" onclick="togglePanelArvore()" style="background: #2E7D32;">🌳<span>ÁRVORE</span></button>
         <button class="btn-circular btn-endereco" id="btnEndereco" onclick="abrirPanelEndereco()" style="background: #1976D2;">📍<span>ENDER.</span></button>
+        <button class="btn-circular" id="btnDef" onclick="_mostrarInfoDef()" style="background: #E65100;">⚡<span>DEF</span></button>
         <button id="btnVersao" class="btn-circular" onclick="mostrarVersaoAtual()" style="background: #673AB7; font-size: 10px;">🔖<span>VERSAO</span></button>
     </div>
     
@@ -6341,8 +6342,13 @@ window.addEventListener('load', () => {
                             }
                             return;
                         }
-                        // Dedup: ignorar se remetente é o próprio usuário (loopback)
-                        if (_msgPend.uid && _msgPend.uid === (window.meuID || meuID)) return;
+                        // Dedup: ignorar se remetente é o próprio usuário (loopback) — mas só se marcador já existe
+                        if (_msgPend.uid && _msgPend.uid === (window.meuID || meuID)) {
+                            // Se o marcador JÁ existe, ignorar (dedup correto)
+                            if (window._pendenciasNoMapa && window._pendenciasNoMapa[_codPendMqtt]) return;
+                            // Se NÃO existe, criar mesmo sendo do próprio usuário (fallback)
+                            console.log('[Pendências-MQTT] Criando marcador via MQTT loopback (fallback):', _codPendMqtt);
+                        }
                         // Criar marcador se não existir ainda
                         if (_msgPend.lat && _msgPend.lng) {
                             if (!window._pendenciasNoMapa || !window._pendenciasNoMapa[_codPendMqtt]) {
@@ -14535,6 +14541,7 @@ function abrirPanelEndereco() {
     _atualizarInfoLocAtual();
 }
 
+
 async function _buscarEndereco() {
     const input = document.getElementById('enderecoInput');
     if (!input) return;
@@ -16545,6 +16552,7 @@ map.on('click', 'l-linhas', (e) => {
     // AÇÃO DE CRIAR PENDÊNCIA NESTE PONTO
     document.getElementById('btn-criar-pendencia-aqui').addEventListener('click', () => {
         window._pendenciaCoordTemp = { lat: _coordClicada.lat, lng: _coordClicada.lng };
+        console.log('[Pendências] _pendenciaCoordTemp definido:', window._pendenciaCoordTemp);
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
         var nomeAlimInput = document.getElementById('edit-alim-nome');
         if (nomeAlimInput && nomeAlimInput.value) {
@@ -23808,6 +23816,60 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
 </script>
 <!-- ===== FIM MARCAR PODA MANUAL ===== -->
 
+<script>
+function _mostrarInfoDef() {
+  try {
+    if (localStorage.getItem('inspecao-pro-def-info-oculto') === '1') {
+      window._defOrigemBtnDef = true;
+      var b = document.getElementById('btnPodaManual');
+      if (b) b.click(); else alert('Módulo roçada/defeito não carregado.');
+      return;
+    }
+  } catch(e) {}
+
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;opacity:0;transition:opacity .2s;';
+
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border-radius:18px;padding:26px 22px;max-width:380px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.3);text-align:center;border-top:6px solid;border-image:linear-gradient(90deg,#E65100,#FF9800) 1;transform:scale(0.92);transition:transform .25s cubic-bezier(0.16,1,0.3,1);';
+
+  card.innerHTML =
+    '<div style="font-size:40px;margin-bottom:8px;">⚡</div>' +
+    '<div style="font-size:18px;font-weight:900;color:#E65100;margin-bottom:12px;">Defeito na Rede</div>' +
+    '<div style="font-size:14px;line-height:1.55;color:#333;text-align:left;background:#fff3e0;padding:13px;border-left:4px solid #E65100;border-radius:8px;margin-bottom:14px;">' +
+      'Esta ferramenta indica <b>defeito em tempo real</b>. Para melhor funcionamento, ligue para um colega e indique para o mesmo o local que quer passar onde está o defeito — ele vai poder ver o defeito que você marcar na tela dele.' +
+    '</div>' +
+    '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;margin-bottom:14px;cursor:pointer;text-align:left;">' +
+      '<input type="checkbox" id="chkDefInfoOcultar" style="width:16px;height:16px;cursor:pointer;">' +
+      '<span>Não mostrar mais esta mensagem</span>' +
+    '</label>' +
+    '<button id="btnDefInfoOk" style="width:100%;padding:13px;background:linear-gradient(135deg,#E65100,#FF9800);color:#fff;border:none;border-radius:10px;font-weight:900;font-size:15px;cursor:pointer;">OK, entendi!</button>';
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  requestAnimationFrame(function(){
+    overlay.style.opacity = '1';
+    card.style.transform = 'scale(1)';
+  });
+
+  document.getElementById('btnDefInfoOk').onclick = function(){
+    var ocultar = document.getElementById('chkDefInfoOcultar').checked;
+    if (ocultar) {
+      try { localStorage.setItem('inspecao-pro-def-info-oculto', '1'); } catch(e){}
+    }
+    overlay.style.opacity = '0';
+    card.style.transform = 'scale(0.92)';
+    setTimeout(function(){
+      try { overlay.remove(); } catch(e){}
+      window._defOrigemBtnDef = true;
+      var b = document.getElementById('btnPodaManual');
+      if (b) b.click(); else alert('Módulo roçada/defeito não carregado.');
+    }, 200);
+  };
+}
+</script>
+
 <!-- ===== RELATÓRIO PODAS RETIRADAS ===== -->
 <script>
 (function() {
@@ -26359,12 +26421,6 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
                 📍 Pegar localização exata
             </button>
 
-            <button type="button" id="pendBtnPrint" style="width:100%; padding:10px; background:#8e44ad; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer; margin-bottom:8px; box-shadow:0 2px 6px rgba(142,68,173,0.3);">
-                📸 Tirar print do mapa no local
-            </button>
-            <div id="pendPrintMapaPreview" style="display:none; margin-bottom:12px; text-align:center;">
-                <img id="pendPrintMapaImg" src="" alt="Print do mapa" style="max-width:100%; max-height:180px; border-radius:8px; border:2px solid #8e44ad;">
-            </div>
             <input id="pendPrintMapa" type="hidden" value="">
 
             <label style="font-size:12px; font-weight:700; color:#555; display:block; margin-bottom:4px;">Observações adicionais</label>
@@ -26386,8 +26442,11 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
 
         // ── PASSO 2: Marcador de pendência no mapa ──────────────────────────────
         function _criarMarcadorPendencia(codigo, lat, lng, dadosPendencia) {
-            var _mapInst = window.__mapPodaManual__ || window.map;
-            if (!_mapInst) return;
+            var _mapInst = window.__mapPodaManual__ || window.map || (typeof map !== 'undefined' ? map : null);
+            if (!_mapInst) {
+                console.error('[Pendências] ERRO: Nenhuma instância do mapa encontrada para criar marcador!', codigo);
+                return;
+            }
             // Remove marcador anterior com mesmo código, se existir
             if (window._pendenciasNoMapa[codigo] && window._pendenciasNoMapa[codigo].marker) {
                 window._pendenciasNoMapa[codigo].marker.remove();
@@ -26502,47 +26561,93 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
             var btn = this;
             btn.disabled = true;
             btn.textContent = '⏳ Obtendo localização...';
-            if (!navigator.geolocation) {
-                alert('Geolocalização não suportada neste dispositivo.');
+            function _aplicarLocPend(lat, lng) {
+                var link = 'https://www.google.com/maps?q=' + parseFloat(lat).toFixed(7) + ',' + parseFloat(lng).toFixed(7);
+                document.getElementById('pendLocalizacao').value = link;
+                document.getElementById('pendLocalizacaoCheck').style.display = 'inline';
                 btn.disabled = false;
                 btn.textContent = '📍 Pegar localização exata';
+            }
+            function _fallbackLocal() {
+                if (window._pendenciaCoordTemp && window._pendenciaCoordTemp.lat != null && window._pendenciaCoordTemp.lng != null) {
+                    _aplicarLocPend(window._pendenciaCoordTemp.lat, window._pendenciaCoordTemp.lng);
+                } else if (window.userMarker) {
+                    try {
+                        var lnglat = window.userMarker.getLngLat();
+                        _aplicarLocPend(lnglat.lat, lnglat.lng);
+                    } catch(e) {
+                        alert('Não foi possível obter localização. Use o painel ENDER. na sidebar para definir manualmente.');
+                        btn.disabled = false;
+                        btn.textContent = '📍 Pegar localização exata';
+                    }
+                } else {
+                    alert('Não foi possível obter localização. Use o painel ENDER. na sidebar para definir manualmente.');
+                    btn.disabled = false;
+                    btn.textContent = '📍 Pegar localização exata';
+                }
+            }
+            if (!navigator.geolocation) {
+                _fallbackLocal();
                 return;
             }
             navigator.geolocation.getCurrentPosition(
                 function(pos) {
-                    var lat = pos.coords.latitude.toFixed(7);
-                    var lng = pos.coords.longitude.toFixed(7);
-                    var link = 'https://www.google.com/maps?q=' + lat + ',' + lng;
-                    document.getElementById('pendLocalizacao').value = link;
-                    document.getElementById('pendLocalizacaoCheck').style.display = 'inline';
-                    btn.disabled = false;
-                    btn.textContent = '📍 Pegar localização exata';
+                    _aplicarLocPend(pos.coords.latitude, pos.coords.longitude);
                 },
                 function(err) {
-                    alert('Erro ao obter localização: ' + err.message);
-                    btn.disabled = false;
-                    btn.textContent = '📍 Pegar localização exata';
+                    navigator.geolocation.getCurrentPosition(
+                        function(pos) {
+                            _aplicarLocPend(pos.coords.latitude, pos.coords.longitude);
+                        },
+                        function(err2) {
+                            _fallbackLocal();
+                        },
+                        { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 }
+                    );
                 },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
-        });
-
-        document.getElementById('pendBtnPrint').addEventListener('click', function() {
-            try {
-                var canvas = (typeof map !== 'undefined') ? map.getCanvas() : null;
-                if (!canvas) { alert('Mapa não disponível para captura.'); return; }
-                var dataUrl = canvas.toDataURL('image/png');
-                document.getElementById('pendPrintMapa').value = dataUrl;
-                document.getElementById('pendPrintMapaImg').src = dataUrl;
-                document.getElementById('pendPrintMapaPreview').style.display = 'block';
-            } catch(e) {
-                alert('Não foi possível capturar o mapa: ' + e.message);
-            }
         });
 
         document.getElementById('pendBtnCancelar').addEventListener('click', function() {
             document.getElementById('pendModal').style.display = 'none';
         });
+
+        function _comprimirPrintMapa(dataURL, maxWidth, maxHeight, quality) {
+            return new Promise(function(resolve) {
+                maxWidth = maxWidth || 800;
+                maxHeight = maxHeight || 600;
+                quality = quality || 0.6;
+                var img = new Image();
+                img.onload = function() {
+                    var w = img.width;
+                    var h = img.height;
+                    if (w > maxWidth || h > maxHeight) {
+                        var ratio = Math.min(maxWidth / w, maxHeight / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    var compressed = canvas.toDataURL('image/jpeg', quality);
+                    var tentativas = 0;
+                    while (compressed.length > 900000 && tentativas < 5) {
+                        quality -= 0.1;
+                        if (quality < 0.1) quality = 0.1;
+                        compressed = canvas.toDataURL('image/jpeg', quality);
+                        tentativas++;
+                    }
+                    resolve(compressed);
+                };
+                img.onerror = function() {
+                    resolve(dataURL);
+                };
+                img.src = dataURL;
+            });
+        }
 
         document.getElementById('pendBtnCriar').addEventListener('click', function() {
             var codigo = document.getElementById('pendCodigo').value.trim();
@@ -26591,7 +26696,7 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
                 tipo: tipo,
                 destino: destino,
                 localizacao: document.getElementById('pendLocalizacao').value.trim(),
-                printMapa: document.getElementById('pendPrintMapa').value,
+                printMapa: '',
                 foto: document.getElementById('pendFotoImg').src || '',
                 obs: document.getElementById('pendObs').value.trim(),
                 coordenadas: window._pendenciaCoordTemp || null,
@@ -26602,12 +26707,99 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
             window._pendenciasCriadas.push(pendencia);
             console.log('[Pendências] Nova pendência criada:', pendencia);
 
-            // PASSO 2: criar marcador no mapa
+            // Fechar modal para o mapa ficar visível
+            document.getElementById('pendModal').style.display = 'none';
+            _pendLimparModal();
+
+            // Criar marcador no mapa
+            console.log('[Pendências] Tentando criar marcador local:', pendencia.codigo, pendencia.coordenadas);
             if (pendencia.coordenadas && pendencia.coordenadas.lat && pendencia.coordenadas.lng) {
                 _criarMarcadorPendencia(pendencia.codigo, pendencia.coordenadas.lat, pendencia.coordenadas.lng, pendencia);
+                // Verificar se foi criado com sucesso
+                if (!window._pendenciasNoMapa[pendencia.codigo]) {
+                    console.warn('[Pendências] Marcador NÃO foi criado - tentando forçar com referência alternativa do mapa');
+                    var _mapFallback = window.__mapPodaManual__ || window.map;
+                    if (!_mapFallback && typeof map !== 'undefined') _mapFallback = map;
+                    if (_mapFallback) {
+                        window.__mapPodaManual__ = _mapFallback;
+                        _criarMarcadorPendencia(pendencia.codigo, pendencia.coordenadas.lat, pendencia.coordenadas.lng, pendencia);
+                    }
+                }
+            } else {
+                console.warn('[Pendências] Coordenadas ausentes! _pendenciaCoordTemp:', window._pendenciaCoordTemp);
             }
 
-            // ── PASSO 5: Notificação no chat ─────────────────────────────────
+            // FlyTo + captura automática do print do mapa
+            var _mapRef = window.__mapPodaManual__ || window.map || (typeof map !== 'undefined' ? map : null);
+            if (_mapRef && pendencia.coordenadas && pendencia.coordenadas.lat && pendencia.coordenadas.lng) {
+                _mapRef.flyTo({ center: [pendencia.coordenadas.lng, pendencia.coordenadas.lat], zoom: 17 });
+
+                var _onMoveEnd = function() {
+                    _mapRef.off('moveend', _onMoveEnd);
+                    // Pequeno delay extra para garantir que o marcador está renderizado
+                    setTimeout(function() {
+                        try {
+                            var mapCanvas = _mapRef.getCanvas();
+                            var tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = mapCanvas.width;
+                            tempCanvas.height = mapCanvas.height;
+                            var ctx = tempCanvas.getContext('2d');
+                            // Copiar o mapa para o canvas temporário
+                            ctx.drawImage(mapCanvas, 0, 0);
+                            // Calcular posição em pixels da pendência
+                            var _pixel = _mapRef.project([pendencia.coordenadas.lng, pendencia.coordenadas.lat]);
+                            var px = _pixel.x;
+                            var py = _pixel.y;
+                            var tam = 40;
+                            // Desenhar triângulo vermelho apontando para cima
+                            ctx.fillStyle = '#e74c3c';
+                            ctx.beginPath();
+                            ctx.moveTo(px, py - tam);
+                            ctx.lineTo(px - tam / 2, py);
+                            ctx.lineTo(px + tam / 2, py);
+                            ctx.closePath();
+                            ctx.fill();
+                            ctx.strokeStyle = '#7b0000';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                            // Desenhar código da pendência abaixo do triângulo
+                            ctx.font = 'bold 14px Arial';
+                            ctx.textAlign = 'center';
+                            var _codText = String(pendencia.codigo);
+                            var textWidth = ctx.measureText(_codText).width;
+                            ctx.fillStyle = 'rgba(183,28,28,0.85)';
+                            ctx.fillRect(px - textWidth / 2 - 4, py + 2, textWidth + 8, 18);
+                            ctx.fillStyle = '#fff';
+                            ctx.fillText(_codText, px, py + 16);
+                            var _printDataURLRaw = tempCanvas.toDataURL('image/png');
+                            console.log('[Pendências] Print do mapa capturado automaticamente (com marcador)');
+                            _comprimirPrintMapa(_printDataURLRaw, 800, 600, 0.6).then(function(compressed) {
+                                pendencia.printMapa = compressed;
+                                if (window._pendenciasNoMapa && window._pendenciasNoMapa[pendencia.codigo]) {
+                                    window._pendenciasNoMapa[pendencia.codigo].dados.printMapa = compressed;
+                                }
+                                console.log('[Pendências] Print comprimido: ' + Math.round(compressed.length / 1024) + 'KB');
+                                _finalizarCriacaoPendencia(pendencia);
+                            });
+                        } catch(e) {
+                            console.warn('[Pendências] Erro ao capturar print do mapa:', e);
+                            pendencia.printMapa = '';
+                            _finalizarCriacaoPendencia(pendencia);
+                        }
+                    }, 500);
+                };
+                _mapRef.on('moveend', _onMoveEnd);
+            } else {
+                // Sem mapa ou coordenadas — continuar sem print
+                pendencia.printMapa = '';
+                _finalizarCriacaoPendencia(pendencia);
+            }
+        });
+
+        function _finalizarCriacaoPendencia(pendencia) {
+            var codigo = pendencia.codigo;
+
+            // ── Notificação no chat ───────────────────────────────────────────
             var _nomeAutorPend = window._meuNomeUsuario || localStorage.getItem('usuarioIdentificacao') || 'Usuário';
             if (typeof enviarMensagemSistemaChat === 'function') {
                 enviarMensagemSistemaChat(
@@ -26618,7 +26810,7 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
                 );
             }
 
-            // ── PASSO 5: Relatório WhatsApp ao criar ─────────────────────────
+            // ── Relatório WhatsApp ao criar ───────────────────────────────────
             var _mapsLinkPend = (pendencia.coordenadas && pendencia.coordenadas.lat)
                 ? 'https://maps.google.com/?q=' + pendencia.coordenadas.lat + ',' + pendencia.coordenadas.lng
                 : (pendencia.localizacao || '-');
@@ -26639,7 +26831,7 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
                 '📅 Data: ' + _dataCriacaoPend
             ].join('\n');
 
-            // ── PASSO 6: Publicar via MQTT (retain=true para novos usuários) ─
+            // ── Publicar via MQTT (SEM printMapa — muito grande para MQTT) ────
             var _TEMA_PEND = (typeof TEMA_MQTT !== 'undefined' ? TEMA_MQTT : 'inspecao_pro_podas_bebedouro_oficial');
             var _topicoPend = _TEMA_PEND + '/pendencia/pend_' + pendencia.codigo;
             var _payloadMqttPend = {
@@ -26665,48 +26857,55 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
                 console.log('[Pendências-MQTT] Publicado:', _topicoPend);
             }
 
-            // ── PASSO 6: Salvar no Firestore ─────────────────────────────────
+            // ── Salvar no Firestore (COM printMapa) ───────────────────────────
             (function _salvarPendenciaFirestore(p) {
                 try {
                     var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
                     if (!db) { console.warn('[Pendências-FS] Firestore não disponível'); return; }
-                    // Foto como base64/dataURL salva diretamente no documento
                     var fotoData = '';
                     var fotoEl = document.getElementById('pendFotoImg');
                     if (fotoEl && fotoEl.src && fotoEl.src.startsWith('data:')) {
-                        fotoData = fotoEl.src; // base64 dataURL
+                        fotoData = fotoEl.src;
                     }
-                    var docData = {
-                        codigo: p.codigo,
-                        eletricista1: p.eletricista1,
-                        eletricista2: p.eletricista2 || '',
-                        equipe: p.equipe || '',
-                        cidade: p.cidade || '',
-                        alimentador: p.alimentador || '',
-                        chave: p.chave || '',
-                        tipo: p.tipo || '',
-                        destino: p.destino || '',
-                        localizacao: p.localizacao || '',
-                        obs: p.obs || '',
-                        foto: fotoData,
-                        lat: p.coordenadas ? p.coordenadas.lat : null,
-                        lng: p.coordenadas ? p.coordenadas.lng : null,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        timestampCliente: p.timestamp,
-                        uid: p.uid,
-                        status: 'aberta'
-                    };
-                    db.collection('pendencias').doc(p.codigo).set(docData)
-                        .then(function() { console.log('[Pendências-FS] Salvo no Firestore:', p.codigo); })
-                        .catch(function(e) { console.warn('[Pendências-FS] Erro ao salvar:', e.message); });
+                    // Comprimir foto se for grande demais
+                    var _fotoPromise = (fotoData && fotoData.length > 900000)
+                        ? _comprimirPrintMapa(fotoData, 1024, 768, 0.7).then(function(c) {
+                            console.log('[Pendências-FS] Foto comprimida: ' + Math.round(c.length / 1024) + 'KB');
+                            return c;
+                          })
+                        : Promise.resolve(fotoData);
+                    _fotoPromise.then(function(fotoFinal) {
+                        var docData = {
+                            codigo: p.codigo,
+                            eletricista1: p.eletricista1,
+                            eletricista2: p.eletricista2 || '',
+                            equipe: p.equipe || '',
+                            cidade: p.cidade || '',
+                            alimentador: p.alimentador || '',
+                            chave: p.chave || '',
+                            tipo: p.tipo || '',
+                            destino: p.destino || '',
+                            localizacao: p.localizacao || '',
+                            obs: p.obs || '',
+                            foto: fotoFinal,
+                            printMapa: p.printMapa || '',
+                            lat: p.coordenadas ? p.coordenadas.lat : null,
+                            lng: p.coordenadas ? p.coordenadas.lng : null,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            timestampCliente: p.timestamp,
+                            uid: p.uid,
+                            status: 'aberta'
+                        };
+                        db.collection('pendencias').doc(p.codigo).set(docData)
+                            .then(function() { console.log('[Pendências-FS] Salvo no Firestore:', p.codigo); })
+                            .catch(function(e) { console.warn('[Pendências-FS] Erro ao salvar:', e.message); });
+                    });
                 } catch(e) { console.warn('[Pendências-FS] Exceção ao salvar:', e.message); }
             })(pendencia);
 
-            document.getElementById('pendModal').style.display = 'none';
-            _pendLimparModal();
             _pendToast('✅ Pendência ' + codigo + ' criada com sucesso!');
             setTimeout(function() { _mostrarRelatorioFinal(_relatorioCriar, '🆕 Nova Pendência Criada', pendencia.foto, pendencia.printMapa); }, 400);
-        });
+        }
 
         function _pendLimparModal() {
             ['pendCodigo','pendEletricista1','pendEletricista2','pendEquipe','pendCidade',
@@ -26719,8 +26918,6 @@ function _abrirEditorNovaAba(imagemBase64, modoMapa) {
             document.getElementById('pendFoto').value = '';
             document.getElementById('pendFotoPreview').style.display = 'none';
             document.getElementById('pendFotoImg').src = '';
-            document.getElementById('pendPrintMapaPreview').style.display = 'none';
-            document.getElementById('pendPrintMapaImg').src = '';
             document.getElementById('pendLocalizacaoCheck').style.display = 'none';
         }
 
@@ -29286,7 +29483,7 @@ if ('launchQueue' in window) {
       '<div style="font-size:13px;color:#666;margin-bottom:22px;">Trecho desenhado. Escolha a ação.</div>' +
       '<div style="display:flex;flex-direction:column;gap:12px;">' +
         '<button id="__btnEscolhaDefeito" style="padding:14px 10px;background:#D32F2F;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:' + (window._featDefeito !== false ? 'flex' : 'none') + ';align-items:center;justify-content:center;gap:8px;">🔧 Mostrar defeito na rede</button>' +
-        '<button id="__btnEscolhaRocada" style="padding:14px 10px;background:#E65100;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">🌿 Marcar roçada</button>' +
+        '<button id="__btnEscolhaRocada" style="padding:14px 10px;background:#E65100;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:' + (window._defOrigemBtnDef ? 'none' : 'flex') + ';align-items:center;justify-content:center;gap:8px;">🌿 Marcar roçada</button>' +
         '<button id="__btnEscolhaCancelar" style="padding:14px 10px;background:#757575;color:#fff;border:none;border-radius:12px;font-weight:900;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">❌ Cancelar</button>' +
       '</div>';
 
@@ -29301,7 +29498,7 @@ if ('launchQueue' in window) {
     function _fechar() {
       overlay.style.opacity = '0';
       card.style.transform = 'scale(0.92)';
-      setTimeout(function(){ try { overlay.remove(); } catch(e){} }, 200);
+      setTimeout(function(){ try { overlay.remove(); } catch(e){} window._defOrigemBtnDef = false; }, 200);
     }
 
     card.querySelector('#__btnEscolhaRocada').onclick = function(){
