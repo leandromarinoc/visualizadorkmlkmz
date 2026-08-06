@@ -21922,9 +21922,6 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       var lista = lerRelatorios();
       lista.push(obj);
       var json = JSON.stringify(lista);
-      if (json.length > 4.5 * 1024 * 1024) {
-        mostrarToast('Atenção: armazenamento quase cheio. Exporte os dados antes de continuar.');
-      }
       localStorage.setItem(LS_KEY, json);
     } catch(e) {
       if (e && e.name === 'QuotaExceededError') {
@@ -21934,6 +21931,73 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       }
     }
   }
+
+  // ---- IndexedDB de relatórios ----
+  var IDB_NAME = 'InspecaoProPodasDB';
+  var IDB_STORE = 'podas_manuais';
+  function _abrirIDB(callback) {
+    var req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function(e) {
+      var db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = function(e) { callback(null, e.target.result); };
+    req.onerror = function(e) { callback(e.target.error, null); };
+  }
+
+  function salvarRelatorioIDB(obj, callback) {
+    _abrirIDB(function(err, db) {
+      if (err) { console.error('[IDB] Erro ao abrir:', err); if (callback) callback(err); return; }
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(obj);
+      tx.oncomplete = function() { db.close(); if (callback) callback(null); };
+      tx.onerror    = function(e) { db.close(); console.error('[IDB] Erro ao salvar:', e); if (callback) callback(e); };
+    });
+  }
+
+  function lerRelatoriosIDB(callback) {
+    _abrirIDB(function(err, db) {
+      if (err) { callback([]); return; }
+      var tx = db.transaction(IDB_STORE, 'readonly');
+      var req = tx.objectStore(IDB_STORE).getAll();
+      req.onsuccess = function(e) { db.close(); callback(e.target.result || []); };
+      req.onerror   = function()  { db.close(); callback([]); };
+    });
+  }
+
+  function apagarTodosRelatoriosIDB(callback) {
+    // Limpar também o localStorage legado se existir
+    try { localStorage.removeItem(LS_KEY); } catch(e) {}
+    _abrirIDB(function(err, db) {
+      if (err) { if (callback) callback(err); return; }
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).clear();
+      tx.oncomplete = function() { db.close(); console.log('[IDB] Todos os relatórios apagados.'); if (callback) callback(null); };
+      tx.onerror    = function(e) { db.close(); if (callback) callback(e); };
+    });
+  }
+
+  // Migração única: localStorage → IndexedDB
+  (function _migrarLocalStorageParaIDB() {
+    var dados = localStorage.getItem(LS_KEY);
+    if (!dados) return;
+    try {
+      var lista = JSON.parse(dados);
+      if (!Array.isArray(lista) || lista.length === 0) { localStorage.removeItem(LS_KEY); return; }
+      var pendentes = lista.length;
+      lista.forEach(function(obj) {
+        salvarRelatorioIDB(obj, function() {
+          pendentes--;
+          if (pendentes === 0) {
+            localStorage.removeItem(LS_KEY);
+            console.log('[IDB] Migração concluída: ' + lista.length + ' relatório(s) migrado(s).');
+          }
+        });
+      });
+    } catch(e) { console.warn('[IDB] Falha na migração:', e); }
+  })();
 
   function normalizarCidade(c) {
     if (!c) return '';
@@ -22088,6 +22152,28 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
             } catch(e) { console.warn('[Relatorio Podas] Falha ao inserir imagem no PDF:', e); }
           }
 
+          // Foto do local (tirada pelo usuário)
+          if (relatorio.fotoBase64) {
+            try {
+              y += 6;
+              doc.setFontSize(11);
+              doc.setFont(undefined, 'bold');
+              doc.setTextColor(30, 30, 30);
+              doc.text('Foto do local:', margin, y);
+              y += 14;
+              var maxFotoW = pageW - margin * 2;
+              var maxFotoH = pageH - y - margin - 40;
+              if (maxFotoH < 100) { doc.addPage(); y = margin; maxFotoH = pageH - margin * 2 - 40; }
+              var fotoProps = doc.getImageProperties(relatorio.fotoBase64);
+              var fotoRatio = fotoProps.width / fotoProps.height;
+              var fotoW = maxFotoW;
+              var fotoH = fotoW / fotoRatio;
+              if (fotoH > maxFotoH) { fotoH = maxFotoH; fotoW = fotoH * fotoRatio; }
+              doc.addImage(relatorio.fotoBase64, 'JPEG', margin + (maxFotoW - fotoW) / 2, y, fotoW, fotoH);
+              y += fotoH + 10;
+            } catch(e) { console.warn('[Relatorio Podas] Falha ao inserir foto no PDF:', e); }
+          }
+
           // Rodapé
           doc.setFontSize(9);
           doc.setTextColor(150, 150, 150);
@@ -22217,6 +22303,20 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
           '<textarea id="podaRelChavesInput" placeholder="Ex.: CH-01, CH-02..." rows="3" style="width:100%;box-sizing:border-box;padding:10px 12px;border:2px solid #ccc;border-radius:9px;font-size:14px;outline:none;margin-bottom:12px;resize:vertical;"></textarea>' +
         '</div>' +
 
+        '<div style="margin-bottom:14px;">' +
+          '<label style="font-size:12px;font-weight:700;color:#333;display:block;margin-bottom:5px;">Foto do local</label>' +
+          '<div style="display:flex;gap:8px;margin-bottom:8px;">' +
+            '<button id="podaRelBtnFotoCamera" type="button" style="flex:1;padding:10px 8px;background:#E65100;color:#fff;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;min-height:40px;">📷 Tirar Foto</button>' +
+            '<button id="podaRelBtnFotoGaleria" type="button" style="flex:1;padding:10px 8px;background:#1976D2;color:#fff;border:none;border-radius:9px;font-weight:700;font-size:13px;cursor:pointer;min-height:40px;">🖼️ Galeria</button>' +
+          '</div>' +
+          '<input type="file" id="podaRelFotoInput" accept="image/*" style="display:none;" />' +
+          '<input type="file" id="podaRelFotoCameraInput" accept="image/*" capture="environment" style="display:none;" />' +
+          '<div id="podaRelFotoPreview" style="display:none;text-align:center;position:relative;">' +
+            '<img id="podaRelFotoImg" src="" style="max-width:100%;max-height:200px;border-radius:10px;border:2px solid #ddd;" />' +
+            '<button id="podaRelBtnFotoApagar" type="button" style="position:absolute;top:6px;right:6px;background:rgba(229,57,53,0.9);color:#fff;border:none;border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;line-height:30px;text-align:center;">✕</button>' +
+          '</div>' +
+        '</div>' +
+
         '<div style="font-size:12px;color:#1565C0;margin-bottom:18px;padding:7px 10px;background:#f5f5f5;border-radius:8px;">📍 Coordenada: <a id="podaRelLatLon" href="https://www.google.com/maps?q=' + latVal.toFixed(6) + ',' + lonVal.toFixed(6) + '" target="_blank" style="color:#1565C0;text-decoration:underline;">https://www.google.com/maps?q=' + latVal.toFixed(6) + ',' + lonVal.toFixed(6) + '</a></div>' +
 
         '<div style="display:flex;gap:10px;">' +
@@ -22258,6 +22358,72 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     }
     document.getElementById('podaRelChaveSim').onchange = atualizarChavesBox;
     document.getElementById('podaRelChaveNao').onchange = atualizarChavesBox;
+
+    // Foto handlers
+    var _podaRelFotoBase64 = null;
+
+    function _podaRelMostrarFoto(dataUrl) {
+      _podaRelFotoBase64 = dataUrl;
+      var img = document.getElementById('podaRelFotoImg');
+      var prev = document.getElementById('podaRelFotoPreview');
+      if (img) img.src = dataUrl;
+      if (prev) prev.style.display = 'block';
+    }
+
+    function _podaRelApagarFoto() {
+      _podaRelFotoBase64 = null;
+      var img = document.getElementById('podaRelFotoImg');
+      var prev = document.getElementById('podaRelFotoPreview');
+      if (img) img.src = '';
+      if (prev) prev.style.display = 'none';
+      var inp1 = document.getElementById('podaRelFotoInput');
+      var inp2 = document.getElementById('podaRelFotoCameraInput');
+      if (inp1) inp1.value = '';
+      if (inp2) inp2.value = '';
+    }
+
+    function _podaRelProcessarFoto(file) {
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        var dataUrl = ev.target.result;
+        // Comprimir se muito grande (>900KB)
+        if (dataUrl.length > 900000) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var MAX_W = 1200, MAX_H = 900;
+            var w = img.width, h = img.height;
+            if (w > MAX_W) { h = h * MAX_W / w; w = MAX_W; }
+            if (h > MAX_H) { w = w * MAX_H / h; h = MAX_H; }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            var compressed = canvas.toDataURL('image/jpeg', 0.65);
+            _podaRelMostrarFoto(compressed);
+          };
+          img.src = dataUrl;
+        } else {
+          _podaRelMostrarFoto(dataUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById('podaRelBtnFotoCamera').onclick = function() {
+      document.getElementById('podaRelFotoCameraInput').click();
+    };
+    document.getElementById('podaRelBtnFotoGaleria').onclick = function() {
+      document.getElementById('podaRelFotoInput').click();
+    };
+    document.getElementById('podaRelFotoCameraInput').onchange = function(e) {
+      if (e.target.files && e.target.files[0]) _podaRelProcessarFoto(e.target.files[0]);
+    };
+    document.getElementById('podaRelFotoInput').onchange = function(e) {
+      if (e.target.files && e.target.files[0]) _podaRelProcessarFoto(e.target.files[0]);
+    };
+    document.getElementById('podaRelBtnFotoApagar').onclick = function() {
+      _podaRelApagarFoto();
+    };
 
     // ESC fecha
     function onEsc(e){ if (e.key === 'Escape') { fecharModalRelatorio(); } }
@@ -22313,24 +22479,21 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
         chaves: chavesVal,
         lat: latVal,
         lon: lonVal,
-        imagemJpegBase64: null
+        imagemJpegBase64: null,
+        fotoBase64: _podaRelFotoBase64 || null
       };
 
-      // Salva imagem se disponível
+      // Pré-carrega a imagem em relatorioAtual (sem salvar — o salvamento ocorre apenas no botão 💾 Salvar)
       if (arquivoPreparado) {
         try {
           var reader = new FileReader();
           reader.onload = function(ev){
             relatorioAtual.imagemJpegBase64 = ev.target.result;
-            salvarRelatorio(JSON.parse(JSON.stringify(relatorioAtual)));
           };
           reader.readAsDataURL(arquivoPreparado);
         } catch(e) {
           console.warn('[Relatorio Podas] Falha ao ler imagem:', e);
-          salvarRelatorio(JSON.parse(JSON.stringify(relatorioAtual)));
         }
-      } else {
-        salvarRelatorio(JSON.parse(JSON.stringify(relatorioAtual)));
       }
 
       fecharModalRelatorio();
@@ -22604,20 +22767,23 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
         lon: rel.lon || null,
         coordenada: { lat: rel.lat || null, lng: rel.lon || null },
         imagemJpegBase64: imagemDataUrl,
+        fotoBase64: rel.fotoBase64 || null,
         origem: 'salvar'
       };
 
-      // O relatório JÁ foi salvo automaticamente quando o usuário clicou OK no relatório rápido.
-      // Aqui apenas confirmamos e fechamos. (Não gravar de novo para não duplicar.)
-
-      // Fechar modal, limpar traçado e desativar ferramenta
-      fecharModal();
-      limparTudo();
-      desativar(false);
-
-      // Toast de confirmação
-      mostrarToast("✅ Relatório salvo. Use 'Expor. Roçada' para acessar.");
-      setTimeout(ocultarToast, 4000);
+      // Salvar no IndexedDB (única vez que o relatório é persistido)
+      salvarRelatorioIDB(obj, function(err) {
+        if (err) {
+          mostrarToast('❌ Erro ao salvar relatório. Tente novamente.');
+          salvo = false;
+          return;
+        }
+        fecharModal();
+        limparTudo();
+        desativar(false);
+        mostrarToast("✅ Relatório salvo. Use 'Expor. Roçada' para acessar.");
+        setTimeout(ocultarToast, 4000);
+      });
     };
 
     var exportado = false;
@@ -23374,7 +23540,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
     var antigo = document.getElementById('podaExportCidadeModal');
     if (antigo) antigo.remove();
 
-    var lista = lerRelatorios();
+    lerRelatoriosIDB(function(lista) {
     var cidadesUnicas = [];
     var vistos = {};
     lista.forEach(function(r){
@@ -23415,7 +23581,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
 
     // Apagar todos os relatórios
     var btnApagarTodos = document.getElementById('podaExportBtnApagarTodos');
-    var totalRelatorios = lerRelatorios().length;
+    var totalRelatorios = lista.length;
     if (totalRelatorios === 0) {
       btnApagarTodos.disabled = true;
       btnApagarTodos.style.background = '#999';
@@ -23424,7 +23590,8 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
       btnApagarTodos.title = 'Nenhum relatório para apagar';
     }
     btnApagarTodos.onclick = function(){
-      var total = lerRelatorios().length;
+      lerRelatoriosIDB(function(listaAtual) {
+      var total = listaAtual.length;
       var overlayConf = document.createElement('div');
       overlayConf.id = 'podaApagarConfModal';
       overlayConf.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -23444,12 +23611,14 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
         overlayConf.remove();
       };
       document.getElementById('podaApagarConfSim').onclick = function(){
-        localStorage.removeItem('inspecao-pro-podas-manuais');
-        overlayConf.remove();
-        fechar();
-        mostrarToast('✅ Todos os relatórios foram apagados.');
-        setTimeout(ocultarToast, 3000);
+        apagarTodosRelatoriosIDB(function() {
+          overlayConf.remove();
+          fechar();
+          mostrarToast('✅ Todos os relatórios foram apagados.');
+          setTimeout(ocultarToast, 3000);
+        });
       };
+      }); // fim lerRelatoriosIDB no btnApagarTodos
     };
 
     // ESC
@@ -23473,7 +23642,7 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
         return;
       }
 
-      var todosRelatorios = lerRelatorios();
+      lerRelatoriosIDB(function(todosRelatorios) {
       var filtrados = todosRelatorios.filter(function(r){ return normalizarCidade(r.cidade) === cnBuscada; });
 
       if (filtrados.length === 0) {
@@ -23590,6 +23759,26 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                 } catch(e3) { console.warn('[Relatorio Podas] img pag PDF:', e3); }
               }
 
+              // Foto do local (tirada pelo usuário)
+              if (r.fotoBase64) {
+                try {
+                  doc.addPage();
+                  var fPageY = margin;
+                  doc.setFontSize(11);
+                  doc.setFont(undefined, 'bold');
+                  doc.setTextColor(30, 30, 30);
+                  doc.text('Foto do local:', margin, fPageY);
+                  fPageY += 14;
+                  var fMaxW = pageW - margin * 2;
+                  var fMaxH = pageH - fPageY - margin - 30;
+                  var fProps = doc.getImageProperties(r.fotoBase64);
+                  var fRat = fProps.width / fProps.height;
+                  var fW = fMaxW, fH = fW / fRat;
+                  if (fH > fMaxH) { fH = fMaxH; fW = fH * fRat; }
+                  doc.addImage(r.fotoBase64, 'JPEG', margin + (fMaxW - fW) / 2, fPageY, fW, fH);
+                } catch(e3b) { console.warn('[Relatorio Podas] foto pag PDF:', e3b); }
+              }
+
               doc.setFontSize(8);
               doc.setTextColor(150,150,150);
               doc.text('Gerado por Inspeção Pro - ' + new Date().toLocaleString('pt-BR'), pageW/2, pageH-15, { align:'center' });
@@ -23639,6 +23828,12 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
                   zip.file('poda-' + String(idx1).padStart(3,'0') + '.jpg', b64, { base64: true });
                 } catch(e6) { console.warn('[Relatorio Podas] Falha img zip:', e6); }
               }
+              if (r.fotoBase64) {
+                try {
+                  var fb64 = r.fotoBase64.split(',')[1];
+                  zip.file('poda-' + String(idx1).padStart(3,'0') + '-foto.jpg', fb64, { base64: true });
+                } catch(e6b) { console.warn('[Relatorio Podas] Falha foto zip:', e6b); }
+              }
             });
             zip.file('resumo.txt', resumo);
             zip.generateAsync({ type: 'blob' }).then(function(zipBlob){
@@ -23687,7 +23882,9 @@ Transformadores, Bancos de Capacitores, Reguladores, Podas.
           }
         });
       };
+      }); // fim lerRelatoriosIDB no btnVerificar
     };
+    }); // fim lerRelatoriosIDB principal
   }
 
   function _exportarPdfSoImagens(relatorios, nomeCidadeSlug, dtStr) {
