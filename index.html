@@ -12632,6 +12632,9 @@ async function carregarListaArvores() {
             html += '<a href="' + googleMapsLink + '" target="_blank" rel="noopener" class="arvore-btn-maps" style="flex:1; padding:10px 8px; min-height:44px; background:#1565C0; color:white; text-align:center; border-radius:8px; text-decoration:none; font-size:13px; font-weight:bold; display:flex; align-items:center; justify-content:center; box-sizing:border-box;">📍 Abrir no Maps</a>';
             html += '<button onclick="atualizarTempoArvore(\'' + id + '\', \'' + (d.tempoRevisita || '') + '\')" class="arvore-btn-atualizar" style="flex:1; padding:10px 8px; min-height:44px; background:#FF9800; color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; box-sizing:border-box;">🔄 Atualizar tempo</button>';
             html += '</div>';
+            html += '<div style="margin-top:6px;">';
+            html += '<button onclick="apagarArvore(\'' + id + '\', \'' + (d.especie || '').replace(/'/g, "\\'") + '\', \'' + (d.cidade || '').replace(/'/g, "\\'") + '\')" style="width:100%; padding:10px 8px; min-height:44px; background:#D32F2F; color:white; border:none; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; box-sizing:border-box;">🗑️ Apagar</button>';
+            html += '</div>';
             html += '</div>';
         });
         container.innerHTML = html;
@@ -12696,6 +12699,46 @@ async function atualizarTempoArvore(docId, tempoAtual) {
     } catch(e) {
         console.error('[Árvore] Erro ao atualizar:', e);
         alert('❌ Erro ao atualizar tempo. Tente novamente.');
+    }
+}
+
+async function apagarArvore(docId, especie, cidade) {
+    var confirmado = confirm('Deseja mesmo apagar esta repoda marcada? Após apagado, todos serão notificados da sua ação. Sim ou Não?');
+    if (!confirmado) return;
+
+    try {
+        var autor = (typeof getAutorFormatado === 'function' ? getAutorFormatado() : 'Usuário');
+
+        await window._kmlFirestore.collection('arvores_revisita').doc(docId).delete();
+
+        carregarListaArvores();
+
+        var msgChat = '<div style="background:linear-gradient(135deg,#B71C1C,#D32F2F); padding:12px; border-radius:10px; color:white;">' +
+            '<b>🗑️ REPODA REMOVIDA</b><br>' +
+            '👤 <b>' + autor + '</b> apagou uma árvore marcada para revisita.<br>' +
+            '🌳 <b>Espécie:</b> ' + especie + '<br>' +
+            '🏙️ <b>Cidade:</b> ' + cidade +
+            '</div>';
+        if (typeof enviarMensagemSistemaChat === 'function') {
+            enviarMensagemSistemaChat(
+                msgChat,
+                '🗑️ Repoda Removida',
+                autor + ' apagou a repoda marcada da árvore ' + especie + ' em ' + cidade
+            );
+        }
+
+        var textoCompartilhar = '🌳 ÁRVORE REMOVIDA\n' +
+            '👤 ' + autor + ' removeu a marcação de revisita.\n' +
+            '🌿 Espécie: ' + especie + '\n' +
+            '📍 Cidade: ' + cidade;
+        if (navigator.share) {
+            navigator.share({ title: 'Árvore removida', text: textoCompartilhar }).catch(function() {});
+        } else {
+            window.open('https://wa.me/?text=' + encodeURIComponent(textoCompartilhar), '_blank');
+        }
+    } catch(e) {
+        console.error('[Árvore] Erro ao apagar:', e);
+        alert('❌ Erro ao apagar árvore. Tente novamente.');
     }
 }
 
