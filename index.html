@@ -3577,6 +3577,20 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                 </div>
             </div>
 
+            <!-- feat_cadastrar_chave -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>➕</span> Cadastrar Nova Chave</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_cadastrar_chave">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Cadastrar Chave para usuários">
+                            <input type="checkbox" id="adminCheck_feat_cadastrar_chave" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Card: Enviar Aviso Push para Todos -->
             <div class="admin-config-card">
                 <div class="admin-config-titulo" style="margin-bottom:8px;">📣 Enviar Aviso para Todos</div>
@@ -16572,8 +16586,14 @@ map.on('click', 'l-linhas', (e) => {
     // AÇÃO DE CADASTRAR NOVA CHAVE NESTE LOCAL
     // ==========================================
     var _coordClicada = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+
+    // Ocultar botão cadastrar chave se feature desligada para não-admin
+    if (window._featCadastrarChave === false) {
+        var btnCad = document.getElementById('btn-cadastrar-chave-aqui');
+        if (btnCad) btnCad.style.display = 'none';
+    }
+
     document.getElementById('btn-cadastrar-chave-aqui').addEventListener('click', () => {
-        // Fechar o popup do alimentador
         document.querySelectorAll('.maplibregl-popup').forEach(p => p.remove());
         // Abrir o modal de cadastro de chave com a coordenada clicada
         document.getElementById('chaveModalTitulo').innerText = '➕ Cadastrar Nova Chave';
@@ -30920,7 +30940,8 @@ if ('launchQueue' in window) {
                     'feat_consulta','feat_traj','feat_3d','feat_clima','feat_stilo',
                     'feat_ferram','feat_arquivos','feat_arvore','feat_notif','feat_alim',
                     'feat_lista','feat_vao','feat_melhoria','feat_tela','feat_inspecao',
-                    'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada'
+                    'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada',
+                    'feat_cadastrar_chave'
                 ];
                 featIds.forEach(function(f) {
                     var ativo = cfg[f] !== false; // default true se não existir
@@ -30979,7 +31000,8 @@ if ('launchQueue' in window) {
             'feat_consulta','feat_traj','feat_3d','feat_clima','feat_stilo',
             'feat_ferram','feat_arquivos','feat_arvore','feat_notif','feat_alim',
             'feat_lista','feat_vao','feat_melhoria','feat_tela','feat_inspecao',
-            'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada'
+            'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada',
+            'feat_cadastrar_chave'
         ];
         var featFlags = {};
         featIds.forEach(function(f) {
@@ -31052,7 +31074,8 @@ if ('launchQueue' in window) {
             feat_config_wpp:        ['btnConfigWpp'],
             feat_resumo_dia:        ['btnResumoDia'],
             feat_rocada:            ['btnPodaManual'],
-            feat_expor_rocada:      ['btnExportarPodaManuais']
+            feat_expor_rocada:      ['btnExportarPodaManuais'],
+            feat_cadastrar_chave:   ['btn-cadastrar-chave-aqui']
         };
 
         Object.keys(flags).forEach(function(feat) {
@@ -31070,6 +31093,7 @@ if ('launchQueue' in window) {
         window._featDefeito      = (cfg.feat_defeito      !== false) && (perm.feat_defeito      !== false);
         window._featInterligacao = (cfg.feat_interligacao !== false) && (perm.feat_interligacao !== false);
         window._featComentario   = (cfg.feat_comentario   !== false) && (perm.feat_comentario   !== false);
+        window._featCadastrarChave = (cfg.feat_cadastrar_chave !== false) && (perm.feat_cadastrar_chave !== false);
 
         console.log('[Admin] Feature flags aplicadas para usuário comum');
     }
@@ -31106,7 +31130,8 @@ if ('launchQueue' in window) {
         feat_config_wpp:        '📲 Config. Grupo WhatsApp',
         feat_resumo_dia:        '📊 Resumo do Dia',
         feat_rocada:            '🌿 Roçada / Defeito',
-        feat_expor_rocada:      '📋 Exportar Roçada'
+        feat_expor_rocada:      '📋 Exportar Roçada',
+        feat_cadastrar_chave:   '➕ Cadastrar Nova Chave'
     };
 
     var _adminFeatIds = Object.keys(_adminFeatLabels);
