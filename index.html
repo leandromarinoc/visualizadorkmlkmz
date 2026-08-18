@@ -3657,6 +3657,12 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
             <input type="text" id="adminSearchInput" placeholder="🔍 Pesquisar por nome ou cidade..." oninput="_adminFiltrar(this.value)">
             <button class="admin-btn-atualizar" onclick="_adminCarregarUsuarios()">🔄 Atualizar</button>
         </div>
+        <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; padding:0 4px;">
+            <button onclick="_adminFiltrarPlataforma('todos')" style="flex:1; min-width:60px; padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.08); color:#fff; font-size:12px; cursor:pointer;">📋 Todos</button>
+            <button onclick="_adminFiltrarPlataforma('pwa')" style="flex:1; min-width:60px; padding:6px 10px; border-radius:8px; border:1px solid rgba(76,175,80,0.4); background:rgba(76,175,80,0.15); color:#66BB6A; font-size:12px; cursor:pointer;">🌐 PWA</button>
+            <button onclick="_adminFiltrarPlataforma('apk')" style="flex:1; min-width:60px; padding:6px 10px; border-radius:8px; border:1px solid rgba(244,67,54,0.4); background:rgba(244,67,54,0.15); color:#ef5350; font-size:12px; cursor:pointer;">📱 APK</button>
+            <button onclick="_adminFiltrarPlataforma('sem')" style="flex:1; min-width:60px; padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.08); color:#aaa; font-size:12px; cursor:pointer;">❓ Sem info</button>
+        </div>
         <div id="adminListaContainer">
             <div class="admin-loading">⏳ Carregando usuários...</div>
         </div>
@@ -4822,7 +4828,8 @@ window._registrarUsuarioFirestore = async function _registrarUsuarioFirestoreFn(
         const dadosSalvar = {
             nome: nomeUsar,
             cidade: _getCidadeUsuario() || '',
-            ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+            ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp(),
+            plataforma: 'pwa'
         };
 
         if (!jaExiste) {
@@ -4933,7 +4940,7 @@ function salvarCadastro() {
     
     setTimeout(() => {
         const ll = userMarker ? userMarker.getLngLat() : null;
-        mqttPublish(TEMA_MQTT, { acao: "PRESENCA_ONLINE", remetente: typeof meuID !== 'undefined' ? meuID : 'desconhecido', autor: getAutorFormatado(), lng: ll ? ll.lng : null, lat: ll ? ll.lat : null });
+        mqttPublish(TEMA_MQTT, { acao: "PRESENCA_ONLINE", remetente: typeof meuID !== 'undefined' ? meuID : 'desconhecido', autor: getAutorFormatado(), lng: ll ? ll.lng : null, lat: ll ? ll.lat : null, plataforma: 'pwa' });
         location.reload(); // Recarrega para aplicar as mudanças no sistema
     }, 1500);
     
@@ -5965,7 +5972,8 @@ window.addEventListener('load', () => {
                                     var db = window._kmlFirestore || (typeof firebase !== 'undefined' && firebase.firestore ? firebase.firestore() : null);
                                     if (!db) return;
                                     db.collection('usuarios').doc(uid).update({
-                                        ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp()
+                                        ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp(),
+                                        plataforma: 'pwa'
                                     }).then(function() {
                                         console.log('[Admin] Heartbeat enviado');
                                     }).catch(function(e) {
@@ -6186,7 +6194,7 @@ window.addEventListener('load', () => {
                 mqttPublish(TEMA_MQTT, {
                     acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
                     lng: ll ? ll.lng : null, lat: ll ? ll.lat : null,
-                    cidade: _getCidadeUsuario()
+                    cidade: _getCidadeUsuario(), plataforma: 'pwa'
                 });
             }, 25000);
             window._heartbeatIntervalId = _heartbeatInterval;
@@ -6236,7 +6244,7 @@ window.addEventListener('load', () => {
                         mqttPublish(TEMA_MQTT, {
                             acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
                             lng: ll ? ll.lng : null, lat: ll ? ll.lat : null,
-                            cidade: _getCidadeUsuario()
+                            cidade: _getCidadeUsuario(), plataforma: 'pwa'
                         });
                     }, 600);
                     _iniciarHeartbeat();
@@ -6528,12 +6536,16 @@ window.addEventListener('load', () => {
 
             if (msg.acao === "PRESENCA_APP") {
                 if (msg.remetente !== meuID) {
-                    usuariosOnline[msg.remetente] = { nome: msg.autor || 'Colega', lastUpdate: Date.now() };
+                    usuariosOnline[msg.remetente] = { nome: msg.autor || 'Colega', lastUpdate: Date.now(), plataforma: msg.plataforma === 'pwa' ? 'pwa' : 'apk' };
                 }
                 return;
             }
             else if (msg.acao === "SAIU_APP") {
                 delete usuariosOnline[msg.remetente];
+                if (window._apkBombardeioIntervals && window._apkBombardeioIntervals[msg.remetente]) {
+                    clearInterval(window._apkBombardeioIntervals[msg.remetente]);
+                    delete window._apkBombardeioIntervals[msg.remetente];
+                }
                 return;
             }
             else if (msg.acao === "ATUALIZAR_GPS") {
@@ -6545,18 +6557,50 @@ window.addEventListener('load', () => {
             }
             else if (msg.acao === "PRESENCA_ONLINE") {
                 if (msg.remetente === meuID) return;
+                // Detectar plataforma: se msg.plataforma === 'pwa' → PWA, senão → APK (código antigo congelado)
+                const plataformaColega = msg.plataforma === 'pwa' ? 'pwa' : 'apk';
                 // Notifica primeira aparição do colega nesta sessão
                 if (!window._usuariosJaNotificados) window._usuariosJaNotificados = new Set();
                 if (!window._usuariosJaNotificados.has(msg.remetente)) {
                     window._usuariosJaNotificados.add(msg.remetente);
                     const cidadeColega = msg.cidade ? ` em ${msg.cidade}` : '';
-                    mostrarNotificacaoRealTime(`🟢 <b>${msg.autor}</b> está online${cidadeColega}`, '#4CAF50', false, 2000);
+                    const badgePlat = plataformaColega === 'apk' ? ' 📱<span style="color:#f44336;font-size:11px;">APK</span>' : '';
+                    mostrarNotificacaoRealTime(`🟢 <b>${msg.autor}</b>${badgePlat} está online${cidadeColega}`, '#4CAF50', false, 2000);
                 }
+                // Salvar plataforma no objeto usuariosOnline
+                usuariosOnline[msg.remetente] = { nome: msg.autor || msg.remetente, lastUpdate: Date.now(), plataforma: plataformaColega };
                 // Atualiza marcador no mapa quando recebe posicao do colega
                 if (msg.lng != null && msg.lat != null) {
-                    atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat);
+                    atualizarMarcadorColega(msg.remetente, msg.autor, msg.lng, msg.lat, plataformaColega);
                 }
                 atualizarListaChatPrivado();
+                // Se é APK, iniciar bombardeio de avisos (somente admin dispara)
+                if (plataformaColega === 'apk' && window._meuRole === 'admin') {
+                    _iniciarBombardeioAPK(msg.remetente, msg.autor || 'Colega');
+                }
+                // Salvar plataforma detectada no Firestore para rastreamento admin
+                if (window._meuRole === 'admin' && window._kmlFirestore) {
+                    var _dbPlat = window._kmlFirestore;
+                    var _docRefPlat = _dbPlat.collection('usuarios').doc(msg.remetente);
+                    _docRefPlat.get().then(function(snap) {
+                        if (snap.exists) {
+                            _docRefPlat.update({ plataforma: plataformaColega, ultimoAcessoMQTT: firebase.firestore.FieldValue.serverTimestamp() }).catch(function(){});
+                        } else {
+                            _docRefPlat.set({
+                                nome: msg.autor || 'Desconhecido',
+                                cidade: msg.cidade || '',
+                                plataforma: plataformaColega,
+                                ultimoAcesso: firebase.firestore.FieldValue.serverTimestamp(),
+                                ultimoAcessoMQTT: firebase.firestore.FieldValue.serverTimestamp(),
+                                role: 'usuario',
+                                bloqueado: false,
+                                invisivel: false,
+                                criadoEm: firebase.firestore.FieldValue.serverTimestamp(),
+                                criadoVia: 'mqtt_deteccao'
+                            }, { merge: true }).catch(function(){});
+                        }
+                    }).catch(function(){});
+                }
             }
           else if (msg.acao === "NOVA_MENSAGEM_CHAT") {
                 if (msg.mensagem.remetenteId === meuID) return;
@@ -6864,7 +6908,7 @@ window.addEventListener('load', () => {
             }
         }
 
-        function atualizarMarcadorColega(id, autor, lng, lat) {
+        function atualizarMarcadorColega(id, autor, lng, lat, plataforma) {
             const numLng = parseFloat(lng);
             const numLat = parseFloat(lat);
             if (isNaN(numLng) || isNaN(numLat)) return;
@@ -6927,11 +6971,19 @@ window.addEventListener('load', () => {
                 colega.lastUpdate = agora;
                 if (movimentou) colega.lastMove = agora;
                 colega.nome = autor;
+                // Atualizar plataforma se fornecida
+                if (plataforma) colega.plataforma = plataforma;
 
-                // Atualizar classe CSS: movendo ou parado
-                const el = colega.marker.getElement();
-                if (el) {
-                    const idx = el.querySelector('.colega-marker-icon');
+                // Atualizar label do marcador se plataforma mudou ou label desatualizado
+                const elExist = colega.marker.getElement();
+                if (elExist) {
+                    const labelExist = elExist.querySelector('.colega-label');
+                    if (labelExist) {
+                        const platAtual = colega.plataforma || 'apk';
+                        const badgeHtmlExist = (platAtual === 'apk') ? ' <span style="background:#f44336;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-left:3px;">APK</span>' : '';
+                        labelExist.innerHTML = autor + badgeHtmlExist;
+                    }
+                    const idx = elExist.querySelector('.colega-marker-icon');
                     if (idx) {
                         if (movimentou && (agora - (colega.lastMove || 0) < 5000)) {
                             idx.classList.add('colega-moving');
@@ -6943,13 +6995,60 @@ window.addEventListener('load', () => {
                     }
                 }
             } else {
+                const platNovo = plataforma || 'apk';
+                const badgeHtml = (platNovo === 'apk') ? ' <span style="background:#f44336;color:#fff;font-size:9px;padding:1px 4px;border-radius:3px;margin-left:3px;">APK</span>' : '';
                 const el = document.createElement('div');
                 el.className = 'colega-marker-container';
-                el.innerHTML = `<div class="colega-label">${autor}</div><div class="colega-marker-icon"></div>`;
+                el.innerHTML = `<div class="colega-label">${autor}${badgeHtml}</div><div class="colega-marker-icon"></div>`;
                 const novoMarker = new maplibregl.Marker({element: el}).setLngLat([numLng, numLat]).addTo(map);
-                colegasNoMapa[id] = { marker: novoMarker, lastUpdate: Date.now(), lastMove: Date.now(), nome: autor, animRafId: null };
+                colegasNoMapa[id] = { marker: novoMarker, lastUpdate: Date.now(), lastMove: Date.now(), nome: autor, animRafId: null, plataforma: platNovo };
             }
             atualizarListaChatPrivado();
+        }
+
+        // ── BOMBARDEIO APK: Enviar avisos repetidos para usuários com app APK desatualizado ──
+        if (!window._apkBombardeioIntervals) window._apkBombardeioIntervals = {};
+
+        function _iniciarBombardeioAPK(remetenteId, nomeUsuario) {
+            if (window._apkBombardeioIntervals[remetenteId]) return;
+            console.log('[APK-Bombardeio] Iniciando bombardeio para:', nomeUsuario, '(' + remetenteId + ')');
+            const mensagemAviso = '⚠️ <b>APP DESATUALIZADO!</b><br><br>' +
+                'Este aplicativo foi <b>descontinuado</b> e a partir de agora não conseguirá mais:<br>' +
+                '❌ Participar da rede de radares<br>' +
+                '❌ Enviar/receber mensagens<br>' +
+                '❌ Compartilhar arquivos KML/KMZ<br>' +
+                '❌ Sincronizar chaves e podas<br><br>' +
+                '👉 <b>Desinstale este app</b> e acesse:<br>' +
+                '🔗 <b>leandromarinoc.github.io/visualizadorkmlkmz/</b><br><br>' +
+                'Instale a versão atualizada pelo navegador e usufrua de todos os benefícios!';
+            _enviarAvisoAPK(remetenteId, mensagemAviso);
+            window._apkBombardeioIntervals[remetenteId] = setInterval(function() {
+                if (!usuariosOnline[remetenteId]) {
+                    clearInterval(window._apkBombardeioIntervals[remetenteId]);
+                    delete window._apkBombardeioIntervals[remetenteId];
+                    console.log('[APK-Bombardeio] Parado para:', nomeUsuario, '(saiu)');
+                    return;
+                }
+                _enviarAvisoAPK(remetenteId, mensagemAviso);
+            }, 15000);
+        }
+
+        function _enviarAvisoAPK(destinoId, textoHtml) {
+            if (!clienteMQTT || !clienteMQTT.connected) return;
+            const ts = Date.now();
+            mqttPublish(TEMA_MQTT, {
+                acao: "NOVA_MENSAGEM_CHAT",
+                mensagem: {
+                    remetenteId: 'sistema_aviso_apk',
+                    autor: '⚠️ AVISO DO SISTEMA',
+                    texto: textoHtml,
+                    timestamp: ts,
+                    timestampCliente: ts,
+                    destino: destinoId,
+                    isSistema: true
+                }
+            });
+            console.log('[APK-Bombardeio] Aviso enviado para:', destinoId);
         }
 
         // Verificação periódica: marcar colegas parados há >15s
@@ -6972,7 +7071,14 @@ window.addEventListener('load', () => {
         const _limparColegasInterval = setInterval(() => {
             const agora = Date.now();
             for (let id in colegasNoMapa) {
-                if (agora - colegasNoMapa[id].lastUpdate > 300000) { colegasNoMapa[id].marker.remove(); delete colegasNoMapa[id]; }
+                if (agora - colegasNoMapa[id].lastUpdate > 300000) {
+                    colegasNoMapa[id].marker.remove();
+                    delete colegasNoMapa[id];
+                    if (window._apkBombardeioIntervals && window._apkBombardeioIntervals[id]) {
+                        clearInterval(window._apkBombardeioIntervals[id]);
+                        delete window._apkBombardeioIntervals[id];
+                    }
+                }
             }
             atualizarListaChatPrivado();
         }, 60000);
@@ -7005,7 +7111,11 @@ window.addEventListener('load', () => {
             let contagem = 1;
             for (let id in usuariosOnline) {
                 const nomeColega = usuariosOnline[id].nome || 'Colega';
-                html += `<div style="padding: 5px; border-bottom: 1px solid #ccc;"><b>${nomeColega}</b> (Online)</div>`;
+                const plat = usuariosOnline[id].plataforma || 'apk';
+                const platBadge = plat === 'apk'
+                    ? '<span style="background:#f44336;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">📱 APK</span>'
+                    : '<span style="background:#4CAF50;color:#fff;font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px;">🌐 PWA</span>';
+                html += `<div style="padding: 5px; border-bottom: 1px solid #ccc;"><b>${nomeColega}</b> ${platBadge}</div>`;
                 contagem++;
             }
             container.innerHTML = `<div style="font-size: 16px; font-weight: bold; text-align: center; color: #333; margin-bottom: 10px;">Total: ${contagem} pessoa(s)</div>` + html;
@@ -30449,6 +30559,7 @@ if ('launchQueue' in window) {
     // Cache dos usuários carregados
     var _adminUsuarios = [];
     var _adminFiltroAtual = '';
+    var _adminFiltroPlataforma = 'todos';
 
     // ── Exibir botão admin conforme role ─────────────────────────────────────
     function _adminVerificarBotao() {
@@ -30499,10 +30610,15 @@ if ('launchQueue' in window) {
 
         var filtro = _adminFiltroAtual.toLowerCase().trim();
         var filtrados = lista.filter(function(u) {
-            if (!filtro) return true;
-            var nome = (u.nome || '').toLowerCase();
-            var cidade = (u.cidade || '').toLowerCase();
-            return nome.indexOf(filtro) !== -1 || cidade.indexOf(filtro) !== -1;
+            if (filtro) {
+                var nome = (u.nome || '').toLowerCase();
+                var cidade = (u.cidade || '').toLowerCase();
+                if (nome.indexOf(filtro) === -1 && cidade.indexOf(filtro) === -1) return false;
+            }
+            if (_adminFiltroPlataforma === 'pwa') return u.plataforma === 'pwa';
+            if (_adminFiltroPlataforma === 'apk') return u.plataforma === 'apk';
+            if (_adminFiltroPlataforma === 'sem') return !u.plataforma;
+            return true;
         });
 
         if (filtrados.length === 0) {
@@ -30539,6 +30655,11 @@ if ('launchQueue' in window) {
             if (u.invisivel) {
                 html += '<span class="admin-badge-bloqueado" style="background:rgba(123,31,162,0.25);color:#CE93D8;border-color:rgba(123,31,162,0.4);">👁️‍🗨️ Invisível</span>';
             }
+            if (u.plataforma === 'apk') {
+                html += '<span class="admin-badge-bloqueado" style="background:rgba(244,67,54,0.2);color:#ef5350;border-color:rgba(244,67,54,0.4);">📱 APK</span>';
+            } else if (u.plataforma === 'pwa') {
+                html += '<span class="admin-badge-bloqueado" style="background:rgba(76,175,80,0.2);color:#66BB6A;border-color:rgba(76,175,80,0.4);">🌐 PWA</span>';
+            }
             html += '</div>';
             html += '</div>';
         });
@@ -30570,6 +30691,9 @@ if ('launchQueue' in window) {
         if (elTotal) elTotal.textContent = total;
         if (elOnline) elOnline.textContent = online;
         if (elBloq) elBloq.textContent = bloqueados;
+        var apkCount = lista.filter(function(u) { return u.plataforma === 'apk'; }).length;
+        var pwaCount = lista.filter(function(u) { return u.plataforma === 'pwa'; }).length;
+        console.log('[Admin] Plataformas: PWA=' + pwaCount + ' APK=' + apkCount + ' Sem info=' + (lista.length - pwaCount - apkCount));
     }
 
     // ── Carregar usuários do Firestore ────────────────────────────────────────
@@ -30601,7 +30725,8 @@ if ('launchQueue' in window) {
                         cidade: d.cidade || '',
                         ultimoAcesso: ts,
                         bloqueado: !!d.bloqueado,
-                        invisivel: !!d.invisivel
+                        invisivel: !!d.invisivel,
+                        plataforma: d.plataforma || ''
                     });
                 });
 
@@ -30623,6 +30748,11 @@ if ('launchQueue' in window) {
     // ── Filtrar ───────────────────────────────────────────────────────────────
     window._adminFiltrar = function(valor) {
         _adminFiltroAtual = valor || '';
+        _adminRenderizar(_adminUsuarios);
+    };
+
+    window._adminFiltrarPlataforma = function(tipo) {
+        _adminFiltroPlataforma = tipo;
         _adminRenderizar(_adminUsuarios);
     };
 
@@ -30649,7 +30779,10 @@ if ('launchQueue' in window) {
         var roleEl = document.getElementById('adminModalRole');
         if (avatar) avatar.textContent = _adminIconeRole(usuario.role);
         if (nome) nome.textContent = usuario.nome || 'Sem nome';
-        if (roleEl) roleEl.textContent = _adminIconeRole(usuario.role) + ' ' + (usuario.role || 'usuario') + (usuario.bloqueado ? ' · 🚫 Bloqueado' : '');
+        var platTxt = '';
+        if (usuario.plataforma === 'apk') platTxt = ' · 📱 APK';
+        else if (usuario.plataforma === 'pwa') platTxt = ' · 🌐 PWA';
+        if (roleEl) roleEl.textContent = _adminIconeRole(usuario.role) + ' ' + (usuario.role || 'usuario') + (usuario.bloqueado ? ' · 🚫 Bloqueado' : '') + platTxt;
 
         // Botão bloquear/desbloquear
         var btnBloquear = document.getElementById('adminBtnBloquear');
