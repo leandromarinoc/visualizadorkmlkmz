@@ -2972,8 +2972,8 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
             <h2 style="color:#E040FB; margin-top:0; font-size:20px;">🔧 Gestão de Chave</h2>
             <p style="color:#333; font-size:13px; margin-bottom:18px;">O que deseja fazer?</p>
             <button class="btn-salvar" style="background:#E040FB; box-shadow:0 4px 10px rgba(224,64,251,0.4); margin-bottom:10px;" onclick="iniciarCadastroChaveNova()">➕ Cadastrar nova chave no mapa</button>
-            <button class="btn-salvar" style="background:#FF9800; box-shadow:0 4px 10px rgba(255,152,0,0.4); margin-bottom:10px;" onclick="abrirEdicaoChavePorNumero()">✏️ Editar / Atualizar número de chave</button>
-            <button class="btn-salvar" style="background:#F44336; box-shadow:0 4px 10px rgba(244,67,54,0.4); margin-bottom:10px;" onclick="abrirApagarChaveModal()">🗑️ Apagar uma chave do mapa</button>
+            <button id="btn-escolha-editar-chave" class="btn-salvar" style="background:#FF9800; box-shadow:0 4px 10px rgba(255,152,0,0.4); margin-bottom:10px;" onclick="abrirEdicaoChavePorNumero()">✏️ Editar / Atualizar número de chave</button>
+            <button id="btn-escolha-apagar-chave" class="btn-salvar" style="background:#F44336; box-shadow:0 4px 10px rgba(244,67,54,0.4); margin-bottom:10px;" onclick="abrirApagarChaveModal()">🗑️ Apagar uma chave do mapa</button>
             <button class="btn-salvar" style="background:#4CAF50; box-shadow:0 4px 10px rgba(76,175,80,0.4); margin-bottom:10px;" onclick="exportarChaves()">📥 Exportar chaves cadastradas (KML)</button>
             <button class="btn-fechar-modal" onclick="document.getElementById('chaveEscolhaModalOverlay').style.display='none'">Cancelar</button>
         </div>
@@ -3585,6 +3585,19 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                         <span class="admin-config-toggle-txt" id="adminTxt_feat_cadastrar_chave">ON</span>
                         <label class="admin-config-pill" title="Habilitar/desabilitar Cadastrar Chave para usuários">
                             <input type="checkbox" id="adminCheck_feat_cadastrar_chave" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <!-- feat_editar_chave -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>✏️</span> Editar / Apagar Chave</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_editar_chave">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar Editar/Apagar Chave para usuários">
+                            <input type="checkbox" id="adminCheck_feat_editar_chave" checked onchange="_adminSalvarConfig()">
                             <span class="admin-config-slider"></span>
                         </label>
                     </div>
@@ -13919,6 +13932,10 @@ function salvarEdicaoChavePorNumero() {
         }
 
         window.abrirEdicaoChave = function(id, nomeAtual, statusAtual) {
+            if (window._featEditarChave === false) {
+                alert('Você não tem permissão para editar chaves.');
+                return;
+            }
             document.getElementById('chaveModalTitulo').innerText = '✏️ Editar Chave';
             document.getElementById('chaveEditId').value = id;
             document.getElementById('chaveNome').value = nomeAtual;
@@ -14111,6 +14128,10 @@ window.salvarChave = function() {
 };
 
 window.apagarChaveAtual = function() {
+  if (window._featEditarChave === false) {
+    alert('Você não tem permissão para apagar chaves.');
+    return;
+  }
   var id = document.getElementById('chaveEditId').value;
   if (!id) { alert('Erro: ID da chave não encontrado.'); return; }
 
@@ -15335,7 +15356,7 @@ function abrirPopupPonto(e) {
         <div style="min-width:160px;"> 
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #ccc; padding-bottom:5px; margin-bottom:8px;">
                 <div style="font-weight:900; font-size:14px; color:#300050; text-transform:uppercase;">${f.name || "PONTO S/N"}</div>
-                <button onclick="abrirEdicaoChave('${f.id || ''}', '${(f.name || "").replace(/'/g,"\\'")}', '${f.statusTxt || ""}')" style="background:none; border:none; cursor:pointer; font-size:16px; padding:0;" title="Editar esta chave">✏️</button>
+                ${window._featEditarChave !== false ? `<button onclick="abrirEdicaoChave('${f.id || ''}', '${(f.name || "").replace(/'/g,"\\'")}', '${f.statusTxt || ""}')" style="background:none; border:none; cursor:pointer; font-size:16px; padding:0;" title="Editar esta chave">✏️</button>` : ''}
             </div>
             <div style="font-size:11px; margin-bottom:4px;"><b>Status:</b> <span style="color:#333; font-weight:800;">${f.statusTxt}</span></div> 
             <div style="font-size:12px; margin-bottom:8px; padding:6px; background:#e0e0e0; border-radius:6px; text-align:center;"><b style="color:#333;">⚡ ALIMENTADOR:</b><br>${alimentadorExibicao}</div>
@@ -30941,7 +30962,8 @@ if ('launchQueue' in window) {
                     'feat_ferram','feat_arquivos','feat_arvore','feat_notif','feat_alim',
                     'feat_lista','feat_vao','feat_melhoria','feat_tela','feat_inspecao',
                     'feat_croqui','feat_config_wpp','feat_resumo_dia','feat_rocada','feat_expor_rocada',
-                    'feat_cadastrar_chave'
+                    'feat_cadastrar_chave',
+                    'feat_editar_chave'
                 ];
                 featIds.forEach(function(f) {
                     var ativo = cfg[f] !== false; // default true se não existir
@@ -31075,7 +31097,8 @@ if ('launchQueue' in window) {
             feat_resumo_dia:        ['btnResumoDia'],
             feat_rocada:            ['btnPodaManual'],
             feat_expor_rocada:      ['btnExportarPodaManuais'],
-            feat_cadastrar_chave:   ['btn-cadastrar-chave-aqui']
+            feat_cadastrar_chave:   ['btn-cadastrar-chave-aqui'],
+            feat_editar_chave:      ['btn-apagar-chave', 'btn-escolha-editar-chave', 'btn-escolha-apagar-chave']
         };
 
         Object.keys(flags).forEach(function(feat) {
@@ -31094,6 +31117,7 @@ if ('launchQueue' in window) {
         window._featInterligacao = (cfg.feat_interligacao !== false) && (perm.feat_interligacao !== false);
         window._featComentario   = (cfg.feat_comentario   !== false) && (perm.feat_comentario   !== false);
         window._featCadastrarChave = (cfg.feat_cadastrar_chave !== false) && (perm.feat_cadastrar_chave !== false);
+        window._featEditarChave = (cfg.feat_editar_chave !== false) && (perm.feat_editar_chave !== false);
 
         console.log('[Admin] Feature flags aplicadas para usuário comum');
     }
@@ -31131,7 +31155,8 @@ if ('launchQueue' in window) {
         feat_resumo_dia:        '📊 Resumo do Dia',
         feat_rocada:            '🌿 Roçada / Defeito',
         feat_expor_rocada:      '📋 Exportar Roçada',
-        feat_cadastrar_chave:   '➕ Cadastrar Nova Chave'
+        feat_cadastrar_chave:   '➕ Cadastrar Nova Chave',
+        feat_editar_chave:      '✏️ Editar / Apagar Chave'
     };
 
     var _adminFeatIds = Object.keys(_adminFeatLabels);
