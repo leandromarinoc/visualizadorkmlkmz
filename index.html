@@ -7010,6 +7010,7 @@ window.addEventListener('load', () => {
         if (!window._apkBombardeioIntervals) window._apkBombardeioIntervals = {};
 
         function _iniciarBombardeioAPK(remetenteId, nomeUsuario) {
+            return; // DESATIVADO — bombardeio APK desligado por decisão do admin
             if (window._apkBombardeioIntervals[remetenteId]) return;
             console.log('[APK-Bombardeio] Iniciando bombardeio para:', nomeUsuario, '(' + remetenteId + ')');
             const mensagemAviso = '⚠️ <b>APP DESATUALIZADO!</b><br><br>' +
