@@ -3122,7 +3122,7 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
     </div>
 
     <!-- PAINEL HISTÓRICO DE ATIVIDADES -->
-    <div id="panelHistorico" style="display:none; position:fixed; top:0; left:60px; width:400px; height:100%; background:rgba(10,10,10,0.96); z-index:10002; padding:15px; box-shadow: 4px 0 20px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
+    <div id="panelHistorico" style="display:none; position:fixed; top:0; right:0; width:calc(100vw - 60px); max-width:400px; height:100%; background:rgba(10,10,10,0.97); z-index:10002; padding:12px; box-shadow: -4px 0 20px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
         <div style="flex-shrink:0; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h3 style="color:#00897B; margin:0; font-size:18px;">🕐 Histórico de Atividades</h3>
             <button onclick="_togglePanelHistorico()" style="background:none; border:none; color:white; font-size:26px; cursor:pointer; min-width:40px; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; padding:4px 8px;">✕</button>
@@ -3130,7 +3130,7 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         <div id="historicoInfoCiclo" style="flex-shrink:0; background:rgba(0,137,123,0.15); border:1px solid rgba(0,137,123,0.3); border-radius:10px; padding:10px; margin-bottom:12px; text-align:center;">
             <span style="color:#80CBC4; font-size:13px;" id="historicoCicloTexto">Carregando...</span>
         </div>
-        <div id="historicoLista" style="flex:1; overflow-y:auto; padding-right:5px;">
+        <div id="historicoLista" style="flex:1; overflow-y:auto; padding-right:5px; -webkit-overflow-scrolling:touch; min-height:0;">
             <!-- Feed dinâmico renderizado aqui -->
         </div>
     </div>
