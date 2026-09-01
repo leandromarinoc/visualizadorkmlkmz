@@ -2136,6 +2136,29 @@ document.onkeydown = function(e) {
   <div style='width:60px;height:60px;border:4px solid rgba(66,133,244,0.3);border-top:4px solid #4285F4;border-radius:50%;animation:spin 0.8s linear infinite;'></div>
   <p style='color:#fff;margin-top:20px;font-family:Segoe UI,sans-serif;font-size:16px;'>Carregando Inspeção Pro...</p>
 </div>
+
+<!-- Tela de Atualização Automática -->
+<div id="updateOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#1a1a2e; z-index:9999999; flex-direction:column; align-items:center; justify-content:center;">
+  <div style="margin-bottom:30px;">
+    <svg viewBox="0 0 80 80" style="width:80px; height:80px;">
+      <circle cx="40" cy="40" r="35" fill="none" stroke="rgba(255,193,7,0.15)" stroke-width="4"/>
+      <path d="M40 20 A20 20 0 1 1 20 40" fill="none" stroke="#FFC107" stroke-width="4" stroke-linecap="round" style="animation:updateSpin 1.2s linear infinite; transform-origin:40px 40px;"/>
+    </svg>
+  </div>
+  <div style="margin-bottom:20px;">
+    <svg viewBox="0 0 48 48" style="width:48px; height:48px; fill:#FFC107;">
+      <path d="M24 4C12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20S35.05 4 24 4zm-4 30l-10-10 2.83-2.83L20 28.34l15.17-15.17L38 16 20 34z"/>
+    </svg>
+  </div>
+  <p style="color:#fff; font-family:'Segoe UI',sans-serif; font-size:18px; font-weight:600; margin:0 0 20px 0;">Atualizando o sistema...</p>
+  <div style="width:220px; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
+    <div id="updateProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg,#FFC107,#FF9800); border-radius:3px; transition:width 0.5s ease;"></div>
+  </div>
+  <p style="color:rgba(255,255,255,0.5); font-size:12px; margin-top:15px;">Aguarde, não feche o aplicativo</p>
+</div>
+<style>
+@keyframes updateSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 <style>@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}</style>
 <script>
 // Aplica classe modo-celular IMEDIATAMENTE antes de renderizar qualquer coisa
@@ -3041,6 +3064,7 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
         <button class="btn-circular btn-arvore" id="btnArvore" onclick="togglePanelArvore()" style="background: #2E7D32;">🌳<span>ÁRVORE</span></button>
         <button class="btn-circular btn-endereco" id="btnEndereco" onclick="abrirPanelEndereco()" style="background: #1976D2;">📍<span>ENDER.</span></button>
         <button class="btn-circular" id="btnDef" onclick="_mostrarInfoDef()" style="background: #E65100;">⚡<span>DEF</span></button>
+        <button class="btn-circular" id="btnHistorico" onclick="_togglePanelHistorico()" style="background: #00897B;">🕐<span>H</span></button>
         <button id="btnVersao" class="btn-circular" onclick="mostrarVersaoAtual()" style="background: #673AB7; font-size: 10px;">🔖<span>VERSAO</span></button>
     </div>
     
@@ -3094,6 +3118,20 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                 <input id="enderecoLngInput" type="number" class="ender-input" placeholder="Longitude" step="0.000001" min="-180" max="180">
             </div>
             <button class="ender-btn ender-btn-aplicar" onclick="_aplicarCoordsManuais()">✅ Aplicar coordenadas</button>
+        </div>
+    </div>
+
+    <!-- PAINEL HISTÓRICO DE ATIVIDADES -->
+    <div id="panelHistorico" style="display:none; position:fixed; top:0; left:60px; width:400px; height:100%; background:rgba(10,10,10,0.96); z-index:10002; padding:15px; box-shadow: 4px 0 20px rgba(0,0,0,0.5); flex-direction:column; overflow:hidden;">
+        <div style="flex-shrink:0; display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="color:#00897B; margin:0; font-size:18px;">🕐 Histórico de Atividades</h3>
+            <button onclick="_togglePanelHistorico()" style="background:none; border:none; color:white; font-size:26px; cursor:pointer; min-width:40px; min-height:40px; display:flex; align-items:center; justify-content:center; border-radius:8px; padding:4px 8px;">✕</button>
+        </div>
+        <div id="historicoInfoCiclo" style="flex-shrink:0; background:rgba(0,137,123,0.15); border:1px solid rgba(0,137,123,0.3); border-radius:10px; padding:10px; margin-bottom:12px; text-align:center;">
+            <span style="color:#80CBC4; font-size:13px;" id="historicoCicloTexto">Carregando...</span>
+        </div>
+        <div id="historicoLista" style="flex:1; overflow-y:auto; padding-right:5px;">
+            <!-- Feed dinâmico renderizado aqui -->
         </div>
     </div>
 
@@ -3639,6 +3677,19 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                         <span class="admin-config-toggle-txt" id="adminTxt_feat_comentarios_salvos">ON</span>
                         <label class="admin-config-pill" title="Habilitar/desabilitar visualização de comentários salvos">
                             <input type="checkbox" id="adminCheck_feat_comentarios_salvos" checked onchange="_adminSalvarConfig()">
+                            <span class="admin-config-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <!-- feat_historico -->
+            <div class="admin-config-card">
+                <div class="admin-config-row">
+                    <div class="admin-config-label"><span>🕐</span> Histórico (Feed)</div>
+                    <div class="admin-toggle-wrap">
+                        <span class="admin-config-toggle-txt" id="adminTxt_feat_historico">ON</span>
+                        <label class="admin-config-pill" title="Habilitar/desabilitar feed de histórico de atividades">
+                            <input type="checkbox" id="adminCheck_feat_historico" checked onchange="_adminSalvarConfig()">
                             <span class="admin-config-slider"></span>
                         </label>
                     </div>
@@ -6135,11 +6186,23 @@ window.addEventListener('load', () => {
 
         window.addEventListener('beforeunload', function() {
             mqttPublish(TEMA_MQTT, { acao: "SAIU_APP", remetente: meuID });
+            // Log de saída no histórico (best-effort, pode não completar no beforeunload)
+            try { _logAtividade('offline', 'Saiu do app'); } catch(e) {}
             // STEP 3-1: Tentar marcar offline via sendBeacon (best-effort)
             try {
                 if (window._heartbeatFirestoreInterval) clearInterval(window._heartbeatFirestoreInterval);
                 // Não há API síncrona para Firestore no beforeunload; o heartbeat expirará naturalmente em 5min
             } catch(e) {}
+        });
+
+        // Log de saída via visibilitychange (mais confiável que beforeunload em mobile)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden' && !window._logouSaidaApp) {
+                window._logouSaidaApp = true;
+                try { _logAtividade('offline', 'Saiu do app'); } catch(e) {}
+            } else if (document.visibilityState === 'visible') {
+                window._logouSaidaApp = false;
+            }
         });
 
         // ---- Indicador visual de status de conexão ----
@@ -6191,6 +6254,10 @@ window.addEventListener('load', () => {
             _heartbeatInterval = setInterval(() => {
                 if (!clienteMQTT || !clienteMQTT.connected) return;
                 const ll = userMarker ? userMarker.getLngLat() : null;
+                if (!window._logouEntradaOnline) {
+                    window._logouEntradaOnline = true;
+                    _logAtividade('online', 'Entrou online');
+                }
                 mqttPublish(TEMA_MQTT, {
                     acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
                     lng: ll ? ll.lng : null, lat: ll ? ll.lat : null,
@@ -6466,8 +6533,14 @@ window.addEventListener('load', () => {
                                 if (map.isStyleLoaded()) renderizarMapa();
                                 salvarTudoSeguro();
                                 if (msg.remetente !== meuID) {
-                                    tocarAlerta();
-                                    if (!document.hidden) mostrarNotificacaoRealTime(`🚨 <b>PODA PENDENTE!</b><br>${msg.autor} marcou o trecho:<br><span style="color:#FFEB3B;">${msg.trecho}</span>`, "#FF9800", false);
+                                    // Se alerta de clima ainda não concluiu, atrasar notificação de poda
+                                    if (!window._climaAlertaConcluido) {
+                                        if (!window._podaNotifFila) window._podaNotifFila = [];
+                                        window._podaNotifFila.push({ autor: msg.autor, trecho: msg.trecho });
+                                    } else {
+                                        tocarAlerta();
+                                        if (!document.hidden) mostrarNotificacaoRealTime(`🚨 <b>PODA PENDENTE!</b><br>${msg.autor} marcou o trecho:<br><span style="color:#FFEB3B;">${msg.trecho}</span>`, "#FF9800", false);
+                                    }
                                 }
                             }
                         }
@@ -9805,6 +9878,7 @@ document.getElementById('arquivoUpload').addEventListener('change', async functi
         let file = files[_idx];
         // Auto-detectar e corrigir extensão ausente por magic bytes
         file = await _corrigirExtensaoKmlKmz(file);
+        _logAtividade('import', 'Importou arquivo', file.name, 'dispositivo');
         // v8.54: detectar drag-drop manual de bancocap.kmz (já embutido)
         if (file.name.toLowerCase() === 'bancocap.kmz') {
           const jaCarregadoBC = geoJsonGlobal && geoJsonGlobal.features &&
@@ -11745,7 +11819,7 @@ function criarIconeQuadrado(corBase, tamanho) {
             if (localStorage.getItem('gpsPermitido') !== 'false') {
                 // Celular: centralizar no GPS do usuário rapidamente na primeira abertura
                 if (_isMobile && !localStorage.getItem('lastUserPos')) {
-                    try { navigator.geolocation.getCurrentPosition(p => { map.jumpTo({ center: [p.coords.longitude, p.coords.latitude], zoom: 14 }); }, () => {}, { enableHighAccuracy: false, timeout: 3000 }); } catch(e) {}
+                    try { navigator.geolocation.getCurrentPosition(p => { map.jumpTo({ center: [p.coords.longitude, p.coords.latitude], zoom: 16 }); }, () => {}, { enableHighAccuracy: false, timeout: 3000 }); } catch(e) {}
                 }
                 if (_isMobile) { setTimeout(atualizarLocalizacao, 2000); } else { atualizarLocalizacao(); }
             }
@@ -14578,6 +14652,8 @@ window.apagarChaveAtual = function() {
                         const el = _criarElMarker();
                         userMarker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
                         _animLast = { lng, lat };
+                        // Zoom inicial igual ao botão LOC para não iniciar longe
+                        map.flyTo({ center: [lng, lat], zoom: 16 });
                     } else {
                         _animateMarker(lng, lat);
                     }
@@ -14587,6 +14663,8 @@ window.apagarChaveAtual = function() {
                         const el = _criarElMarker();
                         userMarker = new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
                         _animLast = { lng, lat };
+                        // Zoom inicial igual ao botão LOC para não iniciar longe
+                        map.flyTo({ center: [lng, lat], zoom: 16 });
                     } else {
                         _animateMarker(lng, lat);
                     }
@@ -16966,6 +17044,7 @@ _registrarListenersMapa();
                 ? document.getElementById('inputBuscaDiv').innerText.trim()
                 : document.getElementById('inputBusca').value.trim(); 
             if(!valRaw) return;
+            _logAtividade('pesquisa', 'Pesquisou', valRaw);
 
             // --- PARSER 0: Shortlink Google Maps (nao pode ser resolvido por CORS) ---
             if (/maps\.app\.goo\.gl|goo\.gl\/maps/.test(valRaw)) {
@@ -17284,8 +17363,24 @@ function verificarCidadeEEstado(lng, lat) {
                 navigator.serviceWorker.register(swFile, { updateViaCache: 'none', scope: './' })
                     .then(reg => {
                         
-                        // Verifica atualizações do SW a cada 60 segundos (antes era 1 hora)
-                        // Só inicia se auto-update estiver ativado
+                        // ── Verificação de atualização na inicialização ──────────────
+                        // Se acabou de recarregar por atualização, não verificar de novo
+                        if (!sessionStorage.getItem('sw_reloaded')) {
+                            window.__updateCheckInicial = true;
+                            reg.update().then(function() {
+                                // Se não encontrou update em 4 segundos, liberar
+                                setTimeout(function() {
+                                    if (window.__updateCheckInicial) {
+                                        window.__updateCheckInicial = false;
+                                        console.log('[SW] Nenhuma atualização encontrada na inicialização.');
+                                    }
+                                }, 4000);
+                            }).catch(function() {
+                                window.__updateCheckInicial = false;
+                            });
+                        }
+                        
+                        // Verifica atualizações do SW a cada 60 segundos
                         if (!window.__autoUpdateDesativado) {
                             window.__autoUpdateIntervalId = setInterval(() => { reg.update(); }, 60 * 1000);
                         }
@@ -17299,10 +17394,36 @@ function verificarCidadeEEstado(lng, lat) {
                         reg.addEventListener('updatefound', () => {
                             const novo = reg.installing;
                             if (!novo) return;
+                            
+                            // Se é verificação inicial, mostrar tela de atualização
+                            if (window.__updateCheckInicial) {
+                                window.__updateCheckInicial = false;
+                                window.__atualizandoInicial = true;
+                                console.log('[SW] Atualização encontrada na inicialização! Mostrando tela de update...');
+                                var overlay = document.getElementById('updateOverlay');
+                                if (overlay) {
+                                    overlay.style.display = 'flex';
+                                    // Esconder splash se ainda visível
+                                    var splash = document.getElementById('splashScreen');
+                                    if (splash) splash.style.display = 'none';
+                                }
+                                // Barra de progresso animada
+                                var bar = document.getElementById('updateProgressBar');
+                                if (bar) {
+                                    bar.style.width = '30%';
+                                    setTimeout(function() { bar.style.width = '60%'; }, 800);
+                                    setTimeout(function() { bar.style.width = '80%'; }, 1500);
+                                }
+                            }
+                            
                             novo.addEventListener('statechange', () => {
                                 if (novo.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Só envia SKIP_WAITING se auto-update estiver ativado
                                     if (window.__autoUpdateDesativado) return;
+                                    
+                                    // Progresso 90%
+                                    var bar = document.getElementById('updateProgressBar');
+                                    if (bar && window.__atualizandoInicial) bar.style.width = '90%';
+                                    
                                     // Há SW novo pronto — pedir para assumir imediatamente
                                     novo.postMessage({ type: 'SKIP_WAITING' });
                                 }
@@ -17311,8 +17432,7 @@ function verificarCidadeEEstado(lng, lat) {
                     })
                     .catch(err => console.error('❌ Erro ao registrar Service Worker:', err));
                 
-                // BUG 3 FIX: Em vez de reload automático (que reseta permissão do FileSystemHandle),
-                // mostrar toast discreto para o usuário decidir quando atualizar.
+                // Controllerchange: SW novo assumiu
                 let _swRecarregando = false;
                 navigator.serviceWorker.addEventListener('controllerchange', () => {
                     if (_swRecarregando) return;
@@ -17322,13 +17442,22 @@ function verificarCidadeEEstado(lng, lat) {
                         return;
                     }
                     _swRecarregando = true;
+                    
+                    // Se é atualização inicial — reload automático com tela de progresso
+                    if (window.__atualizandoInicial) {
+                        console.log('[SW] Atualização inicial concluída — recarregando app...');
+                        var bar = document.getElementById('updateProgressBar');
+                        if (bar) bar.style.width = '100%';
+                        sessionStorage.setItem('sw_reloaded', 'true');
+                        setTimeout(function() { location.reload(); }, 600);
+                        return;
+                    }
+                    
+                    // Se não é inicial — mostrar toast discreto (comportamento anterior)
                     console.log('[SW] Nova versão disponível — aguardando ação do usuário.');
-
-                    // Mostrar toast discreto em vez de reload imediato
                     (function _mostrarToastSW() {
-                        // Evita duplicar o toast
                         if (document.getElementById('sw-update-toast')) return;
-                        const toast = document.createElement('div');
+                        var toast = document.createElement('div');
                         toast.id = 'sw-update-toast';
                         toast.style.cssText = [
                             'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
@@ -29445,6 +29574,159 @@ if ('launchQueue' in window) {
         }
     });
 
+    // --- Alerta automático de chuva ao abrir o app ---
+    var DIAS_COMPLETOS = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+
+    function _climaAlertaAutomatico() {
+        if (sessionStorage.getItem('_climaAlertaExibido')) return; // só 1x por sessão
+        sessionStorage.setItem('_climaAlertaExibido', '1');
+
+        // Obter localização: GPS rápido ou lastUserPos ou centro do mapa
+        function _obterCoordsEVerificar() {
+            var saved = localStorage.getItem('lastUserPos');
+            if (saved) {
+                try {
+                    var pos = JSON.parse(saved);
+                    _fetchAlertaClima(pos[1], pos[0]); // [lng, lat] -> lat, lon
+                    return;
+                } catch(e) {}
+            }
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(p) {
+                    _fetchAlertaClima(p.coords.latitude, p.coords.longitude);
+                }, function() {
+                    // fallback: centro do mapa
+                    if (typeof map !== 'undefined' && map.getCenter) {
+                        var c = map.getCenter();
+                        _fetchAlertaClima(c.lat, c.lng);
+                    }
+                }, { enableHighAccuracy: false, timeout: 5000 });
+            } else if (typeof map !== 'undefined' && map.getCenter) {
+                var c = map.getCenter();
+                _fetchAlertaClima(c.lat, c.lng);
+            }
+        }
+
+        function _fetchAlertaClima(lat, lon) {
+            var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon +
+                '&hourly=precipitation_probability,precipitation' +
+                '&daily=weather_code,precipitation_probability_max,precipitation_sum' +
+                '&timezone=America%2FSao_Paulo&forecast_days=7';
+            fetch(url)
+                .then(function(r) { return r.json(); })
+                .then(function(data) { _analisarAlertaChuva(data); })
+                .catch(function(e) {
+                    console.warn('[CLIMA-ALERTA] erro fetch:', e);
+                    _liberarFilaPodas(); // falhou, liberar podas mesmo assim
+                });
+        }
+
+        function _analisarAlertaChuva(data) {
+            var alertas = [];
+            var hourly = data.hourly;
+            var daily = data.daily;
+
+            // 1) Verificar dia atual — horários com chuva significativa
+            if (hourly && hourly.time && hourly.precipitation_probability) {
+                var hoje = new Date();
+                var hojeStr = hoje.toISOString().split('T')[0];
+                for (var i = 0; i < hourly.time.length; i++) {
+                    var hTime = hourly.time[i]; // ex: "2026-09-01T13:00"
+                    if (!hTime.startsWith(hojeStr)) continue;
+                    var prob = hourly.precipitation_probability[i] || 0;
+                    var precip = (hourly.precipitation && hourly.precipitation[i]) || 0;
+                    if (prob >= 40) {
+                        var hora = hTime.split('T')[1].substring(0,5);
+                        var diaSemana = DIAS_COMPLETOS[hoje.getDay()];
+                        var dataFmt = hoje.toLocaleDateString('pt-BR');
+                        alertas.push({
+                            tipo: 'hoje',
+                            texto: '⚠️ <b>Hoje ' + diaSemana + '</b> às ~<b>' + hora + '</b> — ' + prob + '% chance de chuva' + (precip > 0 ? ' (~' + precip.toFixed(1) + 'mm)' : '') + ' — ' + dataFmt
+                        });
+                        break; // só o primeiro horário crítico de hoje
+                    }
+                }
+            }
+
+            // 2) Verificar próximos dias — previsão diária
+            if (daily && daily.time && daily.precipitation_probability_max) {
+                for (var d = 1; d < daily.time.length && d < 7; d++) {
+                    var probMax = daily.precipitation_probability_max[d] || 0;
+                    var precipSum = (daily.precipitation_sum && daily.precipitation_sum[d]) || 0;
+                    if (probMax >= 50) {
+                        var dataD = new Date(daily.time[d] + 'T12:00:00');
+                        var diaNome = DIAS_COMPLETOS[dataD.getDay()];
+                        var dataFmtD = dataD.toLocaleDateString('pt-BR');
+                        alertas.push({
+                            tipo: 'futuro',
+                            texto: '🌧️ <b>' + diaNome + '</b> ' + dataFmtD + ' — ' + probMax + '% chance de chuva' + (precipSum > 0 ? ' (~' + precipSum.toFixed(1) + 'mm)' : '')
+                        });
+                    }
+                }
+            }
+
+            if (alertas.length === 0) {
+                _liberarFilaPodas(); // tempo bom, liberar podas imediatamente
+                return;
+            }
+
+            // Montar notificação
+            var html = '<div style="font-size:13px;">';
+            html += '<div style="font-weight:bold; margin-bottom:6px; font-size:14px;">🌦️ Alerta de Clima</div>';
+            for (var a = 0; a < alertas.length && a < 3; a++) {
+                html += '<div style="margin-bottom:4px;">' + alertas[a].texto + '</div>';
+            }
+            if (alertas.length > 3) {
+                html += '<div style="color:#FFEB3B; font-size:11px;">...e mais ' + (alertas.length - 3) + ' dia(s)</div>';
+            }
+            html += '<div style="margin-top:8px; color:#FFEB3B; font-size:12px; font-weight:bold;">⚡ Fique alerta e nunca esqueça de trabalhar com segurança!</div>';
+            html += '</div>';
+
+            if (typeof mostrarNotificacaoRealTime === 'function') {
+                mostrarNotificacaoRealTime(html, '#E65100', false, 30000);
+            }
+            console.log('[CLIMA-ALERTA] ' + alertas.length + ' alerta(s) de chuva exibido(s)');
+
+            // Liberar fila de podas após a notificação de clima ter tempo de aparecer
+            setTimeout(_liberarFilaPodas, 31000);
+        }
+
+        function _liberarFilaPodas() {
+            window._climaAlertaConcluido = true;
+            if (window._podaNotifFila && window._podaNotifFila.length > 0) {
+                var fila = window._podaNotifFila;
+                window._podaNotifFila = [];
+                var delay = 0;
+                for (var p = 0; p < fila.length; p++) {
+                    (function(item) {
+                        setTimeout(function() {
+                            if (typeof tocarAlerta === 'function') tocarAlerta();
+                            if (!document.hidden && typeof mostrarNotificacaoRealTime === 'function') {
+                                mostrarNotificacaoRealTime('🚨 <b>PODA PENDENTE!</b><br>' + item.autor + ' marcou o trecho:<br><span style="color:#FFEB3B;">' + item.trecho + '</span>', '#FF9800', false);
+                            }
+                        }, delay);
+                        delay += 2000; // espaçar 2s entre cada notificação de poda
+                    })(fila[p]);
+                }
+                console.log('[CLIMA-ALERTA] liberou fila de ' + fila.length + ' notificações de poda');
+            }
+        }
+
+        // Aguardar mapa carregar e GPS resolver, depois verificar
+        setTimeout(_obterCoordsEVerificar, 6000);
+
+        // Safety net: se clima não respondeu em 40s, liberar podas mesmo assim
+        setTimeout(function() {
+            if (!window._climaAlertaConcluido) {
+                console.warn('[CLIMA-ALERTA] timeout 40s, liberando fila de podas');
+                _liberarFilaPodas();
+            }
+        }, 40000);
+    }
+
+    // Disparar alerta ao iniciar
+    _climaAlertaAutomatico();
+
     console.log('[v8.63 CLIMA] init completo');
 })();
 </script>
@@ -29904,6 +30186,7 @@ if ('launchQueue' in window) {
     document.getElementById('__btnDefeitoConfirmar').onclick = function(){
       var cidade = (document.getElementById('__defeitoCidade').value || '').trim();
       var alimentador = (document.getElementById('__defeitoAlimentador').value || '').trim();
+      _logAtividade('defeito', 'Reportou defeito na rede');
       _fechar();
       onConfirmar(cidade, alimentador);
     };
@@ -30392,6 +30675,8 @@ if ('launchQueue' in window) {
 
   // ── Carregar no mapa: getDownloadURL() → fetch (cache:no-store) → fallback ─
   window._kmlcCarregarNoMapa = function(idx) {
+    var arqNome = _kmlcItems && _kmlcItems[idx] ? _kmlcItems[idx].nome : 'arquivo';
+    _logAtividade('import', 'Importou arquivo', arqNome, 'compartilhados');
     var item = _kmlcItems[idx];
     if (!item) { console.error('[KML-Firebase] item não encontrado:', idx); return; }
     var nome = item.nome;
@@ -31149,7 +31434,8 @@ if ('launchQueue' in window) {
                     'feat_editar_chave',
                     'feat_sobre',
                     'feat_alteracoes',
-                    'feat_comentarios_salvos'
+                    'feat_comentarios_salvos',
+                    'feat_historico'
                 ];
                 featIds.forEach(function(f) {
                     var ativo = cfg[f] !== false; // default true se não existir
@@ -31213,7 +31499,8 @@ if ('launchQueue' in window) {
             'feat_editar_chave',
             'feat_sobre',
             'feat_alteracoes',
-            'feat_comentarios_salvos'
+            'feat_comentarios_salvos',
+            'feat_historico'
         ];
         var featFlags = {};
         featIds.forEach(function(f) {
@@ -31289,7 +31576,8 @@ if ('launchQueue' in window) {
             feat_expor_rocada:      ['btnExportarPodaManuais'],
             feat_cadastrar_chave:   ['btn-cadastrar-chave-aqui'],
             feat_editar_chave:      ['btn-apagar-chave', 'btn-escolha-editar-chave', 'btn-escolha-apagar-chave'],
-            feat_sobre:             ['btn-sobre']
+            feat_sobre:             ['btn-sobre'],
+            feat_historico:         ['btnHistorico']
         };
 
         Object.keys(flags).forEach(function(feat) {
@@ -31303,6 +31591,12 @@ if ('launchQueue' in window) {
             }
         });
 
+        // Admin sempre vê o botão H independente do toggle
+        if (window._meuRole === 'admin') {
+            var btnH = document.getElementById('btnHistorico');
+            if (btnH) btnH.style.display = '';
+        }
+
         // Flags dinâmicas (sem elemento estático) — guardadas em window para uso nos popups
         window._featDefeito      = (cfg.feat_defeito      !== false) && (perm.feat_defeito      !== false);
         window._featInterligacao = (cfg.feat_interligacao !== false) && (perm.feat_interligacao !== false);
@@ -31312,6 +31606,7 @@ if ('launchQueue' in window) {
         window._featSobre = (cfg.feat_sobre !== false) && (perm.feat_sobre !== false);
         window._featAlteracoes = (cfg.feat_alteracoes !== false) && (perm.feat_alteracoes !== false);
         window._featComentariosSalvos = (cfg.feat_comentarios_salvos !== false) && (perm.feat_comentarios_salvos !== false);
+        window._featHistorico = (cfg.feat_historico !== false) && (perm.feat_historico !== false);
 
         console.log('[Admin] Feature flags aplicadas para usuário comum');
     }
@@ -31353,7 +31648,8 @@ if ('launchQueue' in window) {
         feat_editar_chave:      '✏️ Editar / Apagar Chave',
         feat_sobre:             '📖 Sobre / Documentação',
         feat_alteracoes:        '📝 Alterações (arquivos)',
-        feat_comentarios_salvos:'💬 Comentários Salvos'
+        feat_comentarios_salvos:'💬 Comentários Salvos',
+        feat_historico:         '🕐 Histórico (Feed)'
     };
 
     var _adminFeatIds = Object.keys(_adminFeatLabels);
@@ -31497,4 +31793,187 @@ if ('launchQueue' in window) {
 })();
 </script>
 <!-- ===== FIM PAINEL ADMIN ===== -->
+
+<script>
+// ===== MÓDULO HISTÓRICO DE ATIVIDADES =====
+
+function _togglePanelHistorico() {
+    var panel = document.getElementById('panelHistorico');
+    if (!panel) return;
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'flex';
+        _carregarHistorico();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function _getCicloAtual() {
+    var agora = new Date();
+    var hora = agora.getHours();
+    var inicio, fim;
+    if (hora >= 6 && hora < 18) {
+        inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 6, 0, 0);
+        fim = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 18, 0, 0);
+    } else {
+        if (hora >= 18) {
+            inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 18, 0, 0);
+            fim = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() + 1, 6, 0, 0);
+        } else {
+            inicio = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1, 18, 0, 0);
+            fim = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 6, 0, 0);
+        }
+    }
+    var horaInicio = inicio.getHours().toString().padStart(2,'0') + ':00';
+    var horaFim = fim.getHours().toString().padStart(2,'0') + ':00';
+    return { inicio: inicio, fim: fim, label: horaInicio + ' → ' + horaFim };
+}
+
+async function _carregarHistorico() {
+    var container = document.getElementById('historicoLista');
+    var cicloTexto = document.getElementById('historicoCicloTexto');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center;color:#888;padding:30px;">Carregando...</div>';
+
+    var ciclo = _getCicloAtual();
+    cicloTexto.textContent = 'Ciclo: ' + ciclo.label + ' | Hoje ' + new Date().toLocaleDateString('pt-BR');
+
+    try {
+        var db = window._kmlFirestore;
+        if (!db) { container.innerHTML = '<div style="text-align:center;color:#f44;">Firestore não disponível</div>'; return; }
+
+        var snapshot = await db.collection('atividades')
+            .where('timestamp', '>=', ciclo.inicio)
+            .where('timestamp', '<', ciclo.fim)
+            .orderBy('timestamp', 'desc')
+            .limit(200)
+            .get();
+
+        if (snapshot.empty) {
+            container.innerHTML = '<div style="text-align:center;color:#888;padding:30px;">Nenhuma atividade neste ciclo ainda.</div>';
+            return;
+        }
+
+        var porUsuario = {};
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            var uid = d.uid || 'desconhecido';
+            if (!porUsuario[uid]) {
+                porUsuario[uid] = { nome: d.nome || 'Desconhecido', atividades: [], primeiroAcesso: null, ultimoAcesso: null };
+            }
+            porUsuario[uid].atividades.push(d);
+            var ts = d.timestamp && d.timestamp.toDate ? d.timestamp.toDate() : new Date(d.timestamp);
+            if (!porUsuario[uid].primeiroAcesso || ts < porUsuario[uid].primeiroAcesso) porUsuario[uid].primeiroAcesso = ts;
+            if (!porUsuario[uid].ultimoAcesso || ts > porUsuario[uid].ultimoAcesso) porUsuario[uid].ultimoAcesso = ts;
+        });
+
+        var html = '';
+        var totalAtividades = 0;
+        var totalUsuarios = Object.keys(porUsuario).length;
+
+        for (var uid in porUsuario) {
+            var u = porUsuario[uid];
+            totalAtividades += u.atividades.length;
+            var tempoOnline = '';
+            if (u.primeiroAcesso && u.ultimoAcesso) {
+                var diffMs = u.ultimoAcesso - u.primeiroAcesso;
+                var diffMin = Math.round(diffMs / 60000);
+                if (diffMin < 60) tempoOnline = diffMin + 'min';
+                else tempoOnline = Math.floor(diffMin/60) + 'h' + (diffMin%60 > 0 ? (diffMin%60) + 'min' : '');
+            }
+
+            var horaEntrada = u.primeiroAcesso ? u.primeiroAcesso.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) : '';
+
+            var pesquisas = u.atividades.filter(function(a){return a.tipo === 'pesquisa';});
+            var imports = u.atividades.filter(function(a){return a.tipo === 'import';});
+            var chaves = u.atividades.filter(function(a){return a.tipo === 'chave';});
+            var podas = u.atividades.filter(function(a){return a.tipo === 'poda';});
+            var comentarios = u.atividades.filter(function(a){return a.tipo === 'comentario';});
+            var defeitos = u.atividades.filter(function(a){return a.tipo === 'defeito';});
+            var entradas = u.atividades.filter(function(a){return a.tipo === 'online';});
+
+            html += '<div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; margin-bottom:10px; cursor:pointer;" onclick="this.querySelector(\'.hist-detalhe\').style.display = this.querySelector(\'.hist-detalhe\').style.display === \'none\' ? \'block\' : \'none\'">';
+            html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+            html += '<div><span style="font-size:15px; font-weight:bold; color:#fff;">👤 ' + u.nome + '</span></div>';
+            html += '<div style="text-align:right;"><span style="color:#80CBC4; font-size:12px;">' + horaEntrada + '</span>';
+            if (tempoOnline) html += '<br><span style="color:#aaa; font-size:11px;">⏱️ ' + tempoOnline + '</span>';
+            html += '</div></div>';
+
+            var resumo = [];
+            if (pesquisas.length > 0) resumo.push('🔍' + pesquisas.length);
+            if (imports.length > 0) resumo.push('📂' + imports.length);
+            if (chaves.length > 0) resumo.push('🔑' + chaves.length);
+            if (podas.length > 0) resumo.push('🌳' + podas.length);
+            if (comentarios.length > 0) resumo.push('💬' + comentarios.length);
+            if (defeitos.length > 0) resumo.push('⚡' + defeitos.length);
+            if (entradas.length > 0) resumo.push('🟢' + entradas.length + 'x');
+            if (resumo.length > 0) {
+                html += '<div style="margin-top:6px; color:#aaa; font-size:12px;">' + resumo.join(' · ') + '</div>';
+            }
+
+            html += '<div class="hist-detalhe" style="display:none; margin-top:10px; border-top:1px solid rgba(255,255,255,0.1); padding-top:8px;">';
+            u.atividades.sort(function(a,b){
+                var ta = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate().getTime() : a.timestamp;
+                var tb = b.timestamp && b.timestamp.toDate ? b.timestamp.toDate().getTime() : b.timestamp;
+                return ta - tb;
+            });
+            u.atividades.forEach(function(a) {
+                var ts = a.timestamp && a.timestamp.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+                var hora = ts.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+                var icone = '📌';
+                var texto = a.descricao || '';
+                if (a.tipo === 'online') { icone = '🟢'; texto = 'Entrou online'; }
+                else if (a.tipo === 'offline') { icone = '🔴'; texto = 'Saiu do app'; }
+                else if (a.tipo === 'pesquisa') { icone = '🔍'; texto = 'Pesquisou: <b>' + (a.detalhe || '') + '</b>'; }
+                else if (a.tipo === 'import') { icone = '📂'; texto = 'Importou <b>' + (a.detalhe || '') + '</b>' + (a.origem ? ' (' + a.origem + ')' : ''); }
+                else if (a.tipo === 'chave') { icone = '🔑'; texto = (a.descricao || 'Ação em chave') + (a.detalhe ? ': <b>' + a.detalhe + '</b>' : ''); }
+                else if (a.tipo === 'poda') { icone = '🌳'; texto = (a.descricao || 'Ação de poda'); }
+                else if (a.tipo === 'comentario') { icone = '💬'; texto = 'Comentou em <b>' + (a.detalhe || '') + '</b>'; }
+                else if (a.tipo === 'defeito') { icone = '⚡'; texto = 'Reportou defeito' + (a.detalhe ? ': <b>' + a.detalhe + '</b>' : ''); }
+                html += '<div style="padding:4px 0; font-size:12px; color:#ccc;"><span style="color:#80CBC4;">' + hora + '</span> ' + icone + ' ' + texto + '</div>';
+            });
+            html += '</div>';
+            html += '</div>';
+        }
+
+        var headerHtml = '<div style="text-align:center; color:#80CBC4; font-size:12px; margin-bottom:10px;">' + totalAtividades + ' atividades · ' + totalUsuarios + ' usuários</div>';
+        container.innerHTML = headerHtml + html;
+
+    } catch(e) {
+        console.error('[Historico] Erro ao carregar:', e);
+        container.innerHTML = '<div style="text-align:center;color:#f44;padding:30px;">Erro ao carregar histórico</div>';
+    }
+}
+
+function _logAtividade(tipo, descricao, detalhe, origem) {
+    var db = window._kmlFirestore;
+    if (!db) return;
+
+    var uid = '';
+    try { uid = firebase.auth().currentUser ? firebase.auth().currentUser.uid : ''; } catch(e) {}
+    if (!uid) return;
+
+    var nome = '';
+    try { nome = getAutorFormatado(); } catch(e) { nome = 'Desconhecido'; }
+
+    var doc = {
+        uid: uid,
+        nome: nome,
+        tipo: tipo,
+        descricao: descricao || '',
+        detalhe: detalhe || '',
+        origem: origem || '',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        plataforma: 'pwa'
+    };
+
+    db.collection('atividades').add(doc).catch(function(e) {
+        console.warn('[Historico] Erro ao salvar atividade:', e);
+    });
+}
+
+console.log('[Historico] Módulo histórico de atividades carregado');
+</script>
+<!-- ===== FIM MÓDULO HISTÓRICO ===== -->
 
