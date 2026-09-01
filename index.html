@@ -3694,6 +3694,15 @@ window._plantNetApiKey = '2b10BzExNfMHgLGiVFWhQTW9AO';
                         </label>
                     </div>
                 </div>
+                <!-- Gerenciamento do Histórico -->
+                <div style="margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size:11px; color:#888; margin-bottom:8px;">Gerenciar registros de atividades do feed.</div>
+                    <div id="adminHistoricoLista" style="max-height:200px; overflow-y:auto; margin-bottom:8px;"></div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="_adminCarregarHistoricoUsuarios()" style="flex:1; padding:8px; background:#00897B; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🔄 Ver Usuários</button>
+                        <button onclick="_adminLimparHistoricoTodo()" style="flex:1; padding:8px; background:#c62828; color:#fff; border:none; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">🗑️ Limpar Tudo</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Card: Enviar Aviso Push para Todos -->
@@ -4522,6 +4531,9 @@ function resetGeral() {
             });
         }
         
+        // Salvar posição para restaurar com zoom 16 após reload
+        try { var c = map.getCenter(); sessionStorage.setItem('sw_reload_pos', JSON.stringify([c.lng, c.lat])); } catch(e) {}
+        
         // Forca o recarregamento da pagina ignorando o cache
         window.location.reload();
     }
@@ -4990,7 +5002,8 @@ function salvarCadastro() {
     localStorage.setItem('mostrarModalPermissoesPosReload', 'true');
     
     setTimeout(() => {
-        const ll = userMarker ? userMarker.getLngLat() : null;
+        let ll = userMarker ? userMarker.getLngLat() : null;
+        if (!ll) { try { var saved = localStorage.getItem('lastUserPos'); if (saved) { var p = JSON.parse(saved); ll = { lng: p[0], lat: p[1] }; } } catch(e) {} }
         mqttPublish(TEMA_MQTT, { acao: "PRESENCA_ONLINE", remetente: typeof meuID !== 'undefined' ? meuID : 'desconhecido', autor: getAutorFormatado(), lng: ll ? ll.lng : null, lat: ll ? ll.lat : null, plataforma: 'pwa' });
         location.reload(); // Recarrega para aplicar as mudanças no sistema
     }, 1500);
@@ -6253,7 +6266,17 @@ window.addEventListener('load', () => {
             if (_heartbeatInterval) clearInterval(_heartbeatInterval);
             _heartbeatInterval = setInterval(() => {
                 if (!clienteMQTT || !clienteMQTT.connected) return;
-                const ll = userMarker ? userMarker.getLngLat() : null;
+                let ll = userMarker ? userMarker.getLngLat() : null;
+                // Fallback: se marker não existe, usar última posição salva ou centro do mapa
+                if (!ll) {
+                    try {
+                        var saved = localStorage.getItem('lastUserPos');
+                        if (saved) { var p = JSON.parse(saved); ll = { lng: p[0], lat: p[1] }; }
+                    } catch(e) {}
+                }
+                if (!ll && typeof map !== 'undefined' && map.getCenter) {
+                    try { var c = map.getCenter(); ll = { lng: c.lng, lat: c.lat }; } catch(e) {}
+                }
                 if (!window._logouEntradaOnline) {
                     window._logouEntradaOnline = true;
                     _logAtividade('online', 'Entrou online');
@@ -6307,7 +6330,8 @@ window.addEventListener('load', () => {
                     clienteMQTT.subscribe(TEMA_MQTT + '/pendencia/+',    { qos: 1 });
                     // Anuncia presença ao conectar/reconectar
                     setTimeout(() => {
-                        const ll = userMarker ? userMarker.getLngLat() : null;
+                        let ll = userMarker ? userMarker.getLngLat() : null;
+                        if (!ll) { try { var saved = localStorage.getItem('lastUserPos'); if (saved) { var p = JSON.parse(saved); ll = { lng: p[0], lat: p[1] }; } } catch(e) {} }
                         mqttPublish(TEMA_MQTT, {
                             acao: "PRESENCA_ONLINE", remetente: meuID, autor: getAutorFormatado(),
                             lng: ll ? ll.lng : null, lat: ll ? ll.lat : null,
@@ -11800,6 +11824,26 @@ function criarIconeQuadrado(corBase, tamanho) {
 
 
         map.on('load', async () => {
+            // ── Restaurar posição após reload de atualização ─────────────
+            try {
+                var _swPos = sessionStorage.getItem('sw_reload_pos');
+                if (_swPos) {
+                    sessionStorage.removeItem('sw_reload_pos');
+                    var _coords = JSON.parse(_swPos);
+                    map.jumpTo({ center: _coords, zoom: 16 });
+                    console.log('[SW] Posição restaurada após atualização com zoom 16');
+                }
+            } catch(e) {}
+            
+            // ── Auto-clicar LOC na primeira abertura do app ──────────────
+            // Centraliza na localização do usuário (exata ou aproximada) com zoom 16
+            setTimeout(function() {
+                if (typeof centralizarGPS === 'function') {
+                    centralizarGPS();
+                    console.log('[LOC] Auto-centralização GPS na inicialização');
+                }
+            }, 2000);
+            
             // ── Círculo de precisão GPS (accuracy circle) ──────────────
             map.addSource('user-accuracy', {
                     type: 'geojson',
@@ -17449,6 +17493,8 @@ function verificarCidadeEEstado(lng, lat) {
                         var bar = document.getElementById('updateProgressBar');
                         if (bar) bar.style.width = '100%';
                         sessionStorage.setItem('sw_reloaded', 'true');
+                        // Salvar posição para restaurar com zoom 16 após reload
+                        try { var c = map.getCenter(); sessionStorage.setItem('sw_reload_pos', JSON.stringify([c.lng, c.lat])); } catch(e) {}
                         setTimeout(function() { location.reload(); }, 600);
                         return;
                     }
@@ -17475,6 +17521,7 @@ function verificarCidadeEEstado(lng, lat) {
                         document.body.appendChild(toast);
                         document.getElementById('sw-update-btn').addEventListener('click', function() {
                             sessionStorage.setItem('sw_reloaded', 'true');
+                            try { var c = map.getCenter(); sessionStorage.setItem('sw_reload_pos', JSON.stringify([c.lng, c.lat])); } catch(e) {}
                             location.reload();
                         });
                         document.getElementById('sw-dismiss-btn').addEventListener('click', function() {
@@ -31971,6 +32018,136 @@ function _logAtividade(tipo, descricao, detalhe, origem) {
     db.collection('atividades').add(doc).catch(function(e) {
         console.warn('[Historico] Erro ao salvar atividade:', e);
     });
+}
+
+// ── Admin: Gerenciamento do Histórico de Atividades ──────────────
+
+async function _adminCarregarHistoricoUsuarios() {
+    var container = document.getElementById('adminHistoricoLista');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;color:#888;font-size:12px;padding:8px;">Carregando...</div>';
+    
+    var db = window._kmlFirestore;
+    if (!db) { container.innerHTML = '<div style="color:#f44;font-size:12px;">Firestore indisponível</div>'; return; }
+    
+    try {
+        var ciclo = _getCicloAtual();
+        var snapshot = await db.collection('atividades')
+            .where('timestamp', '>=', ciclo.inicio)
+            .where('timestamp', '<', ciclo.fim)
+            .orderBy('timestamp', 'desc')
+            .limit(500)
+            .get();
+        
+        if (snapshot.empty) {
+            container.innerHTML = '<div style="text-align:center;color:#888;font-size:12px;padding:8px;">Nenhuma atividade no ciclo atual.</div>';
+            return;
+        }
+        
+        // Agrupar por usuário
+        var porUsuario = {};
+        snapshot.forEach(function(doc) {
+            var d = doc.data();
+            var uid = d.uid || 'desconhecido';
+            if (!porUsuario[uid]) { porUsuario[uid] = { nome: d.nome || 'Desconhecido', count: 0, uid: uid }; }
+            porUsuario[uid].count++;
+        });
+        
+        var html = '';
+        for (var uid in porUsuario) {
+            var u = porUsuario[uid];
+            html += '<div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px; margin-bottom:4px; background:rgba(255,255,255,0.05); border-radius:6px;">';
+            html += '<div style="flex:1;"><span style="color:#fff; font-size:12px; font-weight:bold;">👤 ' + u.nome + '</span><span style="color:#888; font-size:11px; margin-left:6px;">(' + u.count + ' atividades)</span></div>';
+            html += '<button onclick="_adminApagarHistoricoUsuario(\'' + u.uid + '\', \'' + u.nome.replace(/'/g, "\\'") + '\')" style="background:#c62828; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:11px; cursor:pointer; white-space:nowrap;">🗑️ Apagar</button>';
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    } catch(e) {
+        console.error('[Admin-Historico] Erro:', e);
+        container.innerHTML = '<div style="color:#f44;font-size:12px;">Erro ao carregar: ' + e.message + '</div>';
+    }
+}
+
+async function _adminApagarHistoricoUsuario(uid, nome) {
+    if (!confirm('Apagar todos os registros de atividade de "' + nome + '" no ciclo atual?')) return;
+    
+    var db = window._kmlFirestore;
+    if (!db) { alert('Firestore indisponível'); return; }
+    
+    try {
+        var ciclo = _getCicloAtual();
+        // Query simples (só uid) para evitar necessidade de índice composto no Firestore
+        var snapshot = await db.collection('atividades')
+            .where('uid', '==', uid)
+            .get();
+        
+        // Filtrar pelo ciclo atual em JavaScript
+        var docsNoCiclo = [];
+        snapshot.forEach(function(doc) {
+            var ts = doc.data().timestamp;
+            if (ts && ts >= ciclo.inicio && ts < ciclo.fim) {
+                docsNoCiclo.push(doc.ref);
+            }
+        });
+        
+        if (docsNoCiclo.length === 0) { alert('Nenhum registro encontrado no ciclo atual.'); return; }
+        
+        // Firestore batch suporta até 500 operações — dividir se necessário
+        var count = 0;
+        for (var i = 0; i < docsNoCiclo.length; i += 500) {
+            var batch = db.batch();
+            var chunk = docsNoCiclo.slice(i, i + 500);
+            chunk.forEach(function(ref) { batch.delete(ref); });
+            await batch.commit();
+            count += chunk.length;
+        }
+        
+        alert('✅ ' + count + ' registro(s) de "' + nome + '" apagados com sucesso!');
+        console.log('[Admin-Historico] Apagados ' + count + ' registros de ' + nome + ' (UID: ' + uid + ')');
+        _adminCarregarHistoricoUsuarios(); // Atualizar lista
+    } catch(e) {
+        console.error('[Admin-Historico] Erro ao apagar:', e);
+        alert('Erro ao apagar: ' + e.message);
+    }
+}
+
+async function _adminLimparHistoricoTodo() {
+    if (!confirm('⚠️ Tem certeza que deseja APAGAR TODOS os registros de atividade do ciclo atual?\n\nIsso não pode ser desfeito.')) return;
+    
+    var db = window._kmlFirestore;
+    if (!db) { alert('Firestore indisponível'); return; }
+    
+    try {
+        var ciclo = _getCicloAtual();
+        var total = 0;
+        
+        // Firestore batch máximo é 500, então fazer em lotes
+        while (true) {
+            var snapshot = await db.collection('atividades')
+                .where('timestamp', '>=', ciclo.inicio)
+                .where('timestamp', '<', ciclo.fim)
+                .limit(500)
+                .get();
+            
+            if (snapshot.empty) break;
+            
+            var batch = db.batch();
+            snapshot.forEach(function(doc) {
+                batch.delete(doc.ref);
+                total++;
+            });
+            await batch.commit();
+        }
+        
+        alert('✅ ' + total + ' registro(s) de atividade apagados com sucesso!');
+        console.log('[Admin-Historico] Limpos ' + total + ' registros do ciclo atual');
+        
+        var container = document.getElementById('adminHistoricoLista');
+        if (container) container.innerHTML = '<div style="text-align:center;color:#888;font-size:12px;padding:8px;">Lista limpa.</div>';
+    } catch(e) {
+        console.error('[Admin-Historico] Erro ao limpar:', e);
+        alert('Erro ao limpar: ' + e.message);
+    }
 }
 
 console.log('[Historico] Módulo histórico de atividades carregado');
