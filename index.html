@@ -4399,9 +4399,20 @@ function criarImagemCanvas(formato, cor = '#FFFFFF') {
         const paleta = ['#FF1A1A','#FF6600','#FFD700','#00E676','#00B0FF','#2979FF','#D500F9','#FF1744','#FF3D00','#76FF03','#FFEA00','#00E5FF','#F50057','#64DD17','#FF6D00','#18FFFF','#FF4081','#C6FF00'];
         const _isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-        // Posição inicial: celular usa última posição GPS salva, desktop usa coordenada padrão
-        const _lastPos = _isMobile ? localStorage.getItem('lastUserPos') : null;
+        // Posição inicial: usa última posição GPS salva (celular e desktop)
+        const _lastPos = localStorage.getItem('lastUserPos');
         const _initCenter = _lastPos ? JSON.parse(_lastPos) : [-48.4789, -20.9496];
+        const _initZoom = _lastPos ? 16 : 12;
+
+        // Pedir GPS antecipadamente para eliminar delay
+        var _earlyGeoResult = null;
+        var _earlyGeoReady = false;
+        if (navigator.geolocation && localStorage.getItem('gpsPermitido') !== 'false') {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                _earlyGeoResult = pos;
+                _earlyGeoReady = true;
+            }, function() { _earlyGeoReady = true; }, { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 });
+        }
 
       const map = new maplibregl.Map({
     preserveDrawingBuffer: true,
@@ -4479,9 +4490,9 @@ function criarImagemCanvas(formato, cor = '#FFFFFF') {
         }] 
     },
     center: _initCenter, 
-    zoom: 12,
+    zoom: _initZoom,
     minZoom: _isMobile ? 7 : 0,
-    maxTileCacheSize: _isMobile ? 30 : 100,
+    maxTileCacheSize: _isMobile ? 150 : 300,
     antialias: _isMobile ? false : true,
     doubleClickZoom: false 
 });
@@ -11825,24 +11836,68 @@ function criarIconeQuadrado(corBase, tamanho) {
 
         map.on('load', async () => {
             // ── Restaurar posição após reload de atualização ─────────────
+            var _swPosRestored = false;
             try {
                 var _swPos = sessionStorage.getItem('sw_reload_pos');
                 if (_swPos) {
                     sessionStorage.removeItem('sw_reload_pos');
                     var _coords = JSON.parse(_swPos);
                     map.jumpTo({ center: _coords, zoom: 16 });
+                    _swPosRestored = true;
                     console.log('[SW] Posição restaurada após atualização com zoom 16');
                 }
             } catch(e) {}
             
-            // ── Auto-clicar LOC na primeira abertura do app ──────────────
-            // Centraliza na localização do usuário (exata ou aproximada) com zoom 16
+            // ── Criar marker azul instantaneamente usando posição cacheada ──────
+            if (!userMarker && _lastPos) {
+                try {
+                    var _cachedPos = JSON.parse(_lastPos);
+                    var _wrapperInit = document.createElement('div'); _wrapperInit.className = 'user-location-wrapper';
+                    var _dotInit = document.createElement('div'); _dotInit.className = 'user-location-marker-mobile';
+                    var _arrowInit = document.createElement('div'); _arrowInit.className = 'user-direction-arrow';
+                    _wrapperInit.appendChild(_arrowInit); _wrapperInit.appendChild(_dotInit);
+                    userMarker = new maplibregl.Marker({ element: _wrapperInit, anchor: 'center' }).setLngLat(_cachedPos).addTo(map);
+                    _animLast = { lng: _cachedPos[0], lat: _cachedPos[1] };
+                    console.log('[LOC] Marker azul criado instantaneamente na posição cacheada');
+                } catch(e) { console.warn('[LOC] Falha ao criar marker cacheado:', e); }
+            }
+            
+            // ── Auto-centralização imediata usando GPS antecipado ──────────────
+            if (!_swPosRestored) {
+                (function _autoLoc() {
+                    if (_earlyGeoReady && _earlyGeoResult) {
+                        // GPS já chegou antes do mapa carregar — aplicar imediatamente
+                        var pos = _earlyGeoResult;
+                        var lng = pos.coords.longitude, lat = pos.coords.latitude;
+                        localStorage.setItem('lastUserPos', JSON.stringify([lng, lat]));
+                        if (typeof centralizarGPS === 'function') { centralizarGPS(); }
+                        console.log('[LOC] Auto-centralização GPS instantânea (antecipado)');
+                    } else if (_earlyGeoReady && !_earlyGeoResult) {
+                        // GPS falhou — chamar centralizarGPS normalmente como fallback
+                        if (typeof centralizarGPS === 'function') { centralizarGPS(); }
+                        console.log('[LOC] Auto-centralização GPS (fallback, antecipado falhou)');
+                    } else {
+                        // GPS ainda não respondeu — esperar mais um pouco (máx 500ms)
+                        setTimeout(function() {
+                            if (_earlyGeoResult) {
+                                var pos = _earlyGeoResult;
+                                var lng = pos.coords.longitude, lat = pos.coords.latitude;
+                                localStorage.setItem('lastUserPos', JSON.stringify([lng, lat]));
+                            }
+                            if (typeof centralizarGPS === 'function') { centralizarGPS(); }
+                            console.log('[LOC] Auto-centralização GPS (após breve espera)');
+                        }, 500);
+                    }
+                })();
+            } else {
+                console.log('[LOC] Skip auto-loc: posição restaurada via sw_reload_pos');
+            }
+            // Prefetch tiles ao redor da posição do usuário para cache
             setTimeout(function() {
-                if (typeof centralizarGPS === 'function') {
-                    centralizarGPS();
-                    console.log('[LOC] Auto-centralização GPS na inicialização');
+                if (typeof _prefetchTilesAroundUser === 'function') {
+                    _prefetchTilesAroundUser();
                 }
-            }, 2000);
+            }, 3000);
             
             // ── Círculo de precisão GPS (accuracy circle) ──────────────
             map.addSource('user-accuracy', {
@@ -14804,6 +14859,46 @@ window.apagarChaveAtual = function() {
         }
 
 
+        function _lngLatToTile(lng, lat, zoom) {
+            var n = Math.pow(2, zoom);
+            var x = Math.floor((lng + 180) / 360 * n);
+            var latRad = lat * Math.PI / 180;
+            var y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+            return { x: x, y: y };
+        }
+
+        function _prefetchTilesAroundUser() {
+            var center = map.getCenter();
+            var lng = center.lng, lat = center.lat;
+            var zooms = [15, 16, 17];
+            var radius = 2; // 5x5 grid (2 tiles each side)
+            var urls = [];
+            var servers = ['mt0', 'mt1', 'mt2', 'mt3'];
+            var scale = _isMobile ? 2 : 4;
+
+            zooms.forEach(function(z) {
+                var tile = _lngLatToTile(lng, lat, z);
+                for (var dx = -radius; dx <= radius; dx++) {
+                    for (var dy = -radius; dy <= radius; dy++) {
+                        var tx = tile.x + dx;
+                        var ty = tile.y + dy;
+                        var server = servers[Math.abs((tx + ty) % 4)];
+                        urls.push('https://' + server + '.google.com/vt/lyrs=m&x=' + tx + '&y=' + ty + '&z=' + z + '&scale=' + scale);
+                    }
+                }
+            });
+
+            // Fetch em background sem bloquear — 3 lanes paralelas
+            var i = 0;
+            function _next() {
+                if (i >= urls.length) return;
+                var url = urls[i++];
+                fetch(url, { mode: 'no-cors' }).then(_next).catch(_next);
+            }
+            _next(); _next(); _next();
+            console.log('[TILES] Prefetch iniciado: ' + urls.length + ' tiles ao redor da posição');
+        }
+
         function centralizarGPS() { 
     if (!userMarker) {
         // Se não tem marker ainda, pedir GPS agora
@@ -14820,6 +14915,8 @@ window.apagarChaveAtual = function() {
                 userMarker = new maplibregl.Marker({ element: wrapper, anchor: 'center' }).setLngLat([lng, lat]).addTo(map);
                 _animLast = { lng, lat };
                 map.flyTo({ center: [lng, lat], zoom: 16 });
+                // Cachear tiles da nova posição para próxima abertura
+                setTimeout(function() { if (typeof _prefetchTilesAroundUser === 'function') _prefetchTilesAroundUser(); }, 2000);
                 // Feedback de precisão ruim em desktop
                 if (!_isMobile && accuracy > 500) {
                     const precKm = (accuracy / 1000).toFixed(1);
