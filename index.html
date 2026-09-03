@@ -6568,14 +6568,16 @@ window.addEventListener('load', () => {
                                 if (map.isStyleLoaded()) renderizarMapa();
                                 salvarTudoSeguro();
                                 if (msg.remetente !== meuID) {
-                                    // Se alerta de clima ainda não concluiu, atrasar notificação de poda
-                                    if (!window._climaAlertaConcluido) {
-                                        if (!window._podaNotifFila) window._podaNotifFila = [];
-                                        window._podaNotifFila.push({ autor: msg.autor, trecho: msg.trecho });
-                                    } else {
-                                        tocarAlerta();
-                                        if (!document.hidden) mostrarNotificacaoRealTime(`🚨 <b>PODA PENDENTE!</b><br>${msg.autor} marcou o trecho:<br><span style="color:#FFEB3B;">${msg.trecho}</span>`, "#FF9800", false);
-                                    }
+                                    if (!window._podaNotifFila) window._podaNotifFila = [];
+                                    window._podaNotifFila.push({ autor: msg.autor, trecho: msg.trecho });
+                                    // Agrupar notificações — esperar 3s sem novas podas para mostrar resumo
+                                    if (window._podaBatchTimeout) clearTimeout(window._podaBatchTimeout);
+                                    window._podaBatchTimeout = setTimeout(function() {
+                                        if (window._climaAlertaConcluido) {
+                                            _liberarFilaPodas();
+                                        }
+                                        // Se clima não concluiu, _liberarFilaPodas será chamada depois pelo fluxo de clima
+                                    }, 3000);
                                 }
                             }
                         }
@@ -29840,19 +29842,11 @@ if ('launchQueue' in window) {
             if (window._podaNotifFila && window._podaNotifFila.length > 0) {
                 var fila = window._podaNotifFila;
                 window._podaNotifFila = [];
-                var delay = 0;
-                for (var p = 0; p < fila.length; p++) {
-                    (function(item) {
-                        setTimeout(function() {
-                            if (typeof tocarAlerta === 'function') tocarAlerta();
-                            if (!document.hidden && typeof mostrarNotificacaoRealTime === 'function') {
-                                mostrarNotificacaoRealTime('🚨 <b>PODA PENDENTE!</b><br>' + item.autor + ' marcou o trecho:<br><span style="color:#FFEB3B;">' + item.trecho + '</span>', '#FF9800', false);
-                            }
-                        }, delay);
-                        delay += 2000; // espaçar 2s entre cada notificação de poda
-                    })(fila[p]);
+                if (typeof tocarAlerta === 'function') tocarAlerta();
+                if (!document.hidden && typeof mostrarNotificacaoRealTime === 'function') {
+                    mostrarNotificacaoRealTime('🚨 <b>' + fila.length + ' poda(s) pendente(s)</b>', '#FF9800', false, 10000);
                 }
-                console.log('[CLIMA-ALERTA] liberou fila de ' + fila.length + ' notificações de poda');
+                console.log('[CLIMA-ALERTA] liberou resumo de ' + fila.length + ' podas pendentes');
             }
         }
 
