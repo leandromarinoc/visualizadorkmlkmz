@@ -5950,7 +5950,7 @@ window.addEventListener('load', () => {
             _tocarSomNotificacao();
             const toast = document.getElementById('liveToast');
             // Sempre mostrar botão fechar para garantir que o usuário possa dispensar manualmente
-            const botaoFechar = `<div style="margin-top:10px;"><button onclick="event.stopPropagation();clearTimeout(window._liveToastTimeout);document.getElementById('liveToast').classList.remove('show')" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:5px 18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">✕ Fechar</button></div>`;
+            const botaoFechar = `<div style="margin-top:10px;"><button onclick="event.stopPropagation();clearTimeout(window._liveToastTimeout);document.getElementById('liveToast').classList.remove('show');if(typeof window._climaOnClose==='function')window._climaOnClose();" style="background:rgba(255,255,255,0.2);color:white;border:1px solid rgba(255,255,255,0.4);border-radius:20px;padding:5px 18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">✕ Fechar</button></div>`;
             toast.innerHTML = mensagemHTML + botaoFechar;
             toast.style.borderColor = corBorda;
             toast.classList.add('show');
@@ -5964,7 +5964,7 @@ window.addEventListener('load', () => {
             clearTimeout(window._liveToastTimeout);
             // Garantir auto-hide: mínimo 5s, padrão 6s; se duracaoMs=0 usar 8s como fallback
             const duracao = duracaoMs > 0 ? duracaoMs : 8000;
-            liveToastTimeout = setTimeout(() => { toast.classList.remove('show'); }, duracao);
+            liveToastTimeout = setTimeout(() => { toast.classList.remove('show'); if(typeof window._climaOnClose==='function') window._climaOnClose(); }, duracao);
             window._liveToastTimeout = liveToastTimeout;
         }
 
@@ -29812,7 +29812,8 @@ if ('launchQueue' in window) {
             }
 
             if (alertas.length === 0) {
-                _liberarFilaPodas(); // tempo bom, liberar podas imediatamente
+                // Tempo bom — liberar podas após 2s para não sobrepor outras notificações
+                setTimeout(_liberarFilaPodas, 2000);
                 return;
             }
 
@@ -29833,12 +29834,19 @@ if ('launchQueue' in window) {
             }
             console.log('[CLIMA-ALERTA] ' + alertas.length + ' alerta(s) de chuva exibido(s)');
 
-            // Liberar fila de podas após a notificação de clima ter tempo de aparecer
-            setTimeout(_liberarFilaPodas, 31000);
+            // Liberar fila de podas logo após a notificação de clima sumir
+            // Se usuário fechar manualmente antes dos 30s, _climaOnClose dispara imediatamente
+            window._climaLiberarPodaTimeout = setTimeout(_liberarFilaPodas, 31000);
+            window._climaOnClose = function() {
+                clearTimeout(window._climaLiberarPodaTimeout);
+                setTimeout(_liberarFilaPodas, 1000); // 1s após fechar clima
+                window._climaOnClose = null;
+            };
         }
 
         function _liberarFilaPodas() {
             window._climaAlertaConcluido = true;
+            window._climaOnClose = null; // Evitar disparo duplo
             if (window._podaNotifFila && window._podaNotifFila.length > 0) {
                 var fila = window._podaNotifFila;
                 window._podaNotifFila = [];
